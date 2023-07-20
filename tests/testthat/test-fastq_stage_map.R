@@ -50,10 +50,24 @@ for (i in seq_along(selections)) {
   stage1_fastq_gz[i] <- tempfile(fileext = ".fastq.gz")
   stage2_fastq[i] <- tempfile(fileext = ".fastq")
   stage2_fastq_gz[i] <- tempfile(fileext = ".fastq.gz")
-  Biostrings::writeQualityScaledXStringSet(test_qsdss1[as.logical(selections[[i]])], stage1_fastq[i])
-  Biostrings::writeQualityScaledXStringSet(test_qsdss1[as.logical(selections[[i]])], stage1_fastq_gz[i], compress = "gzip")
-  Biostrings::writeQualityScaledXStringSet(test_qsdss2[as.logical(selections[[i]])], stage2_fastq[i])
-  Biostrings::writeQualityScaledXStringSet(test_qsdss2[as.logical(selections[[i]])], stage2_fastq_gz[i], compress = "gzip")
+  Biostrings::writeQualityScaledXStringSet(
+    test_qsdss1[as.logical(selections[[i]])],
+    stage1_fastq[i]
+  )
+  Biostrings::writeQualityScaledXStringSet(
+    test_qsdss1[as.logical(selections[[i]])],
+    stage1_fastq_gz[i],
+    compress = "gzip"
+  )
+  Biostrings::writeQualityScaledXStringSet(
+    test_qsdss2[as.logical(selections[[i]])],
+    stage2_fastq[i]
+  )
+  Biostrings::writeQualityScaledXStringSet(
+    test_qsdss2[as.logical(selections[[i]])],
+    stage2_fastq_gz[i],
+    compress = "gzip"
+  )
 }
 
 test_flags <- as.raw(test_flags)
@@ -69,17 +83,29 @@ test_result2 <- data.frame(
 )
 
 test_that("fastq_stage_map compressed with numbers", {
-  expect_equal(fastq_stage_map(raw1_fastq_gz, stage1_fastq_gz), test_result1)
+  expect_equal(
+    fastq_stage_map(raw1_fastq_gz, stage1_fastq_gz),
+    test_result1
+  )
 })
 
 test_that("fastq_stage_map uncompressed with numbers", {
-  expect_equal(fastq_stage_map(raw1_fastq, stage1_fastq), test_result1)
+  expect_equal(
+    fastq_stage_map(raw1_fastq, stage1_fastq),
+    test_result1
+  )
 })
 
 test_that("fastq_stage_map compressed with names", {
-  expect_equal(fastq_stage_map(raw2_fastq_gz, stage2_fastq_gz), test_result2)
+  expect_equal(
+    fastq_stage_map(raw2_fastq_gz, stage2_fastq_gz),
+    test_result2
+  )
 })
 
 test_that("fastq_stage_map uncompressed with names", {
-  expect_equal(fastq_stage_map(raw2_fastq, stage2_fastq), test_result2)
+  expect_equal(
+    fastq_stage_map(raw2_fastq, stage2_fastq),
+    test_result2
+  )
 })
