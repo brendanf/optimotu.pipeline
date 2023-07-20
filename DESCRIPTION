@@ -1,0 +1,22 @@
+Package: optimotu.pipeline
+Type: Package
+Title: Pipeline for environmental DNA metabarcoding
+Version: 0.1.0
+Authors@R: 
+    person(given = "Brendan",
+           family = "Furneaux",
+           role = c("aut", "cre"),
+           email = "brendan.furneaux@gmail.com",
+           comment = c(ORCID = "0000-0003-3522-7363"))
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3
+LinkingTo: 
+    Rcpp,
+    BH
+Imports: 
+    Rcpp
+Roxygen: list(markdown = TRUE)
