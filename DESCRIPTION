@@ -20,3 +20,7 @@ LinkingTo:
 Imports: 
     Rcpp
 Roxygen: list(markdown = TRUE)
+Suggests:
+    Biostrings,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
