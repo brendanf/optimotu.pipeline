@@ -24,5 +24,6 @@ Roxygen: list(markdown = TRUE)
 Suggests:
     Biostrings,
     S4Vectors,
+    rlang,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
