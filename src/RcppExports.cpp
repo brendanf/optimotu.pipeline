@@ -56,12 +56,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// fastq_qual_bins
+Rcpp::IntegerVector fastq_qual_bins(std::vector<std::string> fastq, int max_n, int offset);
+RcppExport SEXP _optimotu_pipeline_fastq_qual_bins(SEXP fastqSEXP, SEXP max_nSEXP, SEXP offsetSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type fastq(fastqSEXP);
+    Rcpp::traits::input_parameter< int >::type max_n(max_nSEXP);
+    Rcpp::traits::input_parameter< int >::type offset(offsetSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_qual_bins(fastq, max_n, offset));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_derep_map_only", (DL_FUNC) &_optimotu_pipeline_derep_map_only, 1},
     {"_optimotu_pipeline_fastq_names", (DL_FUNC) &_optimotu_pipeline_fastq_names, 1},
     {"_optimotu_pipeline_fastq_stage_map", (DL_FUNC) &_optimotu_pipeline_fastq_stage_map, 2},
     {"_optimotu_pipeline_fastq_stage_map2", (DL_FUNC) &_optimotu_pipeline_fastq_stage_map2, 3},
+    {"_optimotu_pipeline_fastq_qual_bins", (DL_FUNC) &_optimotu_pipeline_fastq_qual_bins, 3},
     {NULL, NULL, 0}
 };
 

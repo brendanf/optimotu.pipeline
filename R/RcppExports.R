@@ -17,3 +17,7 @@ fastq_stage_map2 <- function(raw, stage1, stage2) {
     .Call(`_optimotu_pipeline_fastq_stage_map2`, raw, stage1, stage2)
 }
 
+fastq_qual_bins <- function(fastq, max_n = 1e9L, offset = 33L) {
+    .Call(`_optimotu_pipeline_fastq_qual_bins`, fastq, max_n, offset)
+}
+
