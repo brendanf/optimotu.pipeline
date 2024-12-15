@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <array>
+#include <cstdint>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -13,10 +15,11 @@ filter_stream_in;
 
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::export]]
-Rcpp::IntegerVector fastq_qual_bins(std::vector<std::string> fastq,
-                                    int max_n = 1e9,
-                                    int offset = 33
-                                    ) {
+Rcpp::IntegerVector fastq_qual_bins(
+    std::vector<std::string> fastq,
+    int max_n = 1e9,
+    int offset = 33
+) {
    int i = 0;
    std::array<bool, 256> hits;
    hits.fill(false);
