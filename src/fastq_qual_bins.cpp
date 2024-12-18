@@ -39,7 +39,7 @@ Rcpp::IntegerVector fastq_qual_bins(
          instream.ignore(NO_LIMIT, '\n');
          while ((c = instream.get()) != '\n') {
             if (instream.eof()) break;
-            if (c == 13) break; // ignore carriage return (for Windows)
+            if (c == 13) continue; // ignore carriage return (for Windows)
             hits[c] = true;
          }
          ++i;
