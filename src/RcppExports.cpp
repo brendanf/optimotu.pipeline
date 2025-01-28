@@ -20,6 +20,56 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// fastq_stage_flags
+Rcpp::DataFrame fastq_stage_flags(std::string raw, std::vector<std::string> stages);
+RcppExport SEXP _optimotu_pipeline_fastq_stage_flags(SEXP rawSEXP, SEXP stagesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type raw(rawSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type stages(stagesSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_stage_flags(raw, stages));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fastq_stage_flag2
+Rcpp::DataFrame fastq_stage_flag2(std::string raw, std::string stage1, std::string stage2);
+RcppExport SEXP _optimotu_pipeline_fastq_stage_flag2(SEXP rawSEXP, SEXP stage1SEXP, SEXP stage2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type raw(rawSEXP);
+    Rcpp::traits::input_parameter< std::string >::type stage1(stage1SEXP);
+    Rcpp::traits::input_parameter< std::string >::type stage2(stage2SEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_stage_flag2(raw, stage1, stage2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fastq_stage_map
+Rcpp::DataFrame fastq_stage_map(std::string raw, Rcpp::CharacterVector stages);
+RcppExport SEXP _optimotu_pipeline_fastq_stage_map(SEXP rawSEXP, SEXP stagesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type raw(rawSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type stages(stagesSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_stage_map(raw, stages));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fastq_seq_map
+Rcpp::DataFrame fastq_seq_map(std::string fq_raw, std::string fq_trim, std::string fq_filt);
+RcppExport SEXP _optimotu_pipeline_fastq_seq_map(SEXP fq_rawSEXP, SEXP fq_trimSEXP, SEXP fq_filtSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type fq_raw(fq_rawSEXP);
+    Rcpp::traits::input_parameter< std::string >::type fq_trim(fq_trimSEXP);
+    Rcpp::traits::input_parameter< std::string >::type fq_filt(fq_filtSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_seq_map(fq_raw, fq_trim, fq_filt));
+    return rcpp_result_gen;
+END_RCPP
+}
 // fastq_names
 Rcpp::CharacterVector fastq_names(std::string x);
 RcppExport SEXP _optimotu_pipeline_fastq_names(SEXP xSEXP) {
@@ -28,31 +78,6 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::string >::type x(xSEXP);
     rcpp_result_gen = Rcpp::wrap(fastq_names(x));
-    return rcpp_result_gen;
-END_RCPP
-}
-// fastq_stage_map
-Rcpp::DataFrame fastq_stage_map(std::string raw, std::vector<std::string> stages);
-RcppExport SEXP _optimotu_pipeline_fastq_stage_map(SEXP rawSEXP, SEXP stagesSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type raw(rawSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::string> >::type stages(stagesSEXP);
-    rcpp_result_gen = Rcpp::wrap(fastq_stage_map(raw, stages));
-    return rcpp_result_gen;
-END_RCPP
-}
-// fastq_stage_map2
-Rcpp::DataFrame fastq_stage_map2(std::string raw, std::string stage1, std::string stage2);
-RcppExport SEXP _optimotu_pipeline_fastq_stage_map2(SEXP rawSEXP, SEXP stage1SEXP, SEXP stage2SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type raw(rawSEXP);
-    Rcpp::traits::input_parameter< std::string >::type stage1(stage1SEXP);
-    Rcpp::traits::input_parameter< std::string >::type stage2(stage2SEXP);
-    rcpp_result_gen = Rcpp::wrap(fastq_stage_map2(raw, stage1, stage2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -69,13 +94,99 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// fastq_combine
+std::string fastq_combine(const std::vector<std::string>& infiles, const std::string outfile, const bool compress);
+RcppExport SEXP _optimotu_pipeline_fastq_combine(SEXP infilesSEXP, SEXP outfileSEXP, SEXP compressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type infiles(infilesSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type outfile(outfileSEXP);
+    Rcpp::traits::input_parameter< const bool >::type compress(compressSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_combine(infiles, outfile, compress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fasta_combine
+std::string fasta_combine(const std::vector<std::string>& infiles, const std::string outfile, const bool compress);
+RcppExport SEXP _optimotu_pipeline_fasta_combine(SEXP infilesSEXP, SEXP outfileSEXP, SEXP compressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type infiles(infilesSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type outfile(outfileSEXP);
+    Rcpp::traits::input_parameter< const bool >::type compress(compressSEXP);
+    rcpp_result_gen = Rcpp::wrap(fasta_combine(infiles, outfile, compress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fastq_rename
+std::string fastq_rename(std::string infile, Rcpp::CharacterVector names, std::string outfile);
+RcppExport SEXP _optimotu_pipeline_fastq_rename(SEXP infileSEXP, SEXP namesSEXP, SEXP outfileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type infile(infileSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type names(namesSEXP);
+    Rcpp::traits::input_parameter< std::string >::type outfile(outfileSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_rename(infile, names, outfile));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fasta_rename
+std::string fasta_rename(std::string infile, Rcpp::CharacterVector names, std::string outfile);
+RcppExport SEXP _optimotu_pipeline_fasta_rename(SEXP infileSEXP, SEXP namesSEXP, SEXP outfileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type infile(infileSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type names(namesSEXP);
+    Rcpp::traits::input_parameter< std::string >::type outfile(outfileSEXP);
+    rcpp_result_gen = Rcpp::wrap(fasta_rename(infile, names, outfile));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fastq_split
+Rcpp::CharacterVector fastq_split(std::string infile, std::vector<std::string> outfiles, bool compress);
+RcppExport SEXP _optimotu_pipeline_fastq_split(SEXP infileSEXP, SEXP outfilesSEXP, SEXP compressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type infile(infileSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type outfiles(outfilesSEXP);
+    Rcpp::traits::input_parameter< bool >::type compress(compressSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_split(infile, outfiles, compress));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fasta_split
+Rcpp::CharacterVector fasta_split(std::string infile, std::vector<std::string> outfiles, bool compress);
+RcppExport SEXP _optimotu_pipeline_fasta_split(SEXP infileSEXP, SEXP outfilesSEXP, SEXP compressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type infile(infileSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type outfiles(outfilesSEXP);
+    Rcpp::traits::input_parameter< bool >::type compress(compressSEXP);
+    rcpp_result_gen = Rcpp::wrap(fasta_split(infile, outfiles, compress));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_derep_map_only", (DL_FUNC) &_optimotu_pipeline_derep_map_only, 1},
-    {"_optimotu_pipeline_fastq_names", (DL_FUNC) &_optimotu_pipeline_fastq_names, 1},
+    {"_optimotu_pipeline_fastq_stage_flags", (DL_FUNC) &_optimotu_pipeline_fastq_stage_flags, 2},
+    {"_optimotu_pipeline_fastq_stage_flag2", (DL_FUNC) &_optimotu_pipeline_fastq_stage_flag2, 3},
     {"_optimotu_pipeline_fastq_stage_map", (DL_FUNC) &_optimotu_pipeline_fastq_stage_map, 2},
-    {"_optimotu_pipeline_fastq_stage_map2", (DL_FUNC) &_optimotu_pipeline_fastq_stage_map2, 3},
+    {"_optimotu_pipeline_fastq_seq_map", (DL_FUNC) &_optimotu_pipeline_fastq_seq_map, 3},
+    {"_optimotu_pipeline_fastq_names", (DL_FUNC) &_optimotu_pipeline_fastq_names, 1},
     {"_optimotu_pipeline_fastq_qual_bins", (DL_FUNC) &_optimotu_pipeline_fastq_qual_bins, 3},
+    {"_optimotu_pipeline_fastq_combine", (DL_FUNC) &_optimotu_pipeline_fastq_combine, 3},
+    {"_optimotu_pipeline_fasta_combine", (DL_FUNC) &_optimotu_pipeline_fasta_combine, 3},
+    {"_optimotu_pipeline_fastq_rename", (DL_FUNC) &_optimotu_pipeline_fastq_rename, 3},
+    {"_optimotu_pipeline_fasta_rename", (DL_FUNC) &_optimotu_pipeline_fasta_rename, 3},
+    {"_optimotu_pipeline_fastq_split", (DL_FUNC) &_optimotu_pipeline_fastq_split, 3},
+    {"_optimotu_pipeline_fasta_split", (DL_FUNC) &_optimotu_pipeline_fasta_split, 3},
     {NULL, NULL, 0}
 };
 

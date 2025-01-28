@@ -14,9 +14,16 @@
 // than using it (possibly importing code).
 #define BOOST_IOSTREAMS_SOURCE
 
+// disable warnings for use of auto_ptr and unnecessary parentheses in boost
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wparentheses"
+
 #include <boost/iostreams/detail/config/dyn_link.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/throw_exception.hpp>
+
+#pragma GCC diagnostic pop
 
 namespace boost { namespace iostreams {
 

@@ -14,9 +14,17 @@
 // than using it (possibly importing code).
 #define BOOST_IOSTREAMS_SOURCE
 
+// disable warnings for use of auto_ptr and unnecessary parentheses in boost
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wparentheses"
+
 #include <boost/throw_exception.hpp>
 #include <boost/iostreams/detail/config/dyn_link.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
+
+#pragma GCC diagnostic pop
+
 #include "zlib.h"   // Jean-loup Gailly's and Mark Adler's "zlib.h" header.
 // To configure Boost to work with zlib, see the
 // installation instructions here:

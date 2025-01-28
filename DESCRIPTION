@@ -13,18 +13,46 @@ Description: More about what it does (maybe more than one line)
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 SystemRequirements: zlib
 LinkingTo: 
     Rcpp,
     BH
-Imports: 
-    Rcpp
+Imports:
+    BiocGenerics,
+    Biostrings,
+    checkmate,
+    dada2,
+    digest,
+    dplyr,
+    glue,
+    IRanges,
+    methods,
+    optimotu,
+    processx,
+    purrr,
+    readr,
+    rlang,
+    stringr,
+    tarchetypes,
+    tibble,
+    tidyr,
+    vctrs,
+    withr,
+    Rcpp,
+    RcppParallel
 Roxygen: list(markdown = TRUE)
 Suggests:
-    Biostrings,
-    dada2,
+    ggplot2,
     rlang,
     S4Vectors,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    zlib
+Remotes:
+    brendanf/optimotu,
+    bioc::BiocGenerics,
+    bioc::Biostrings,
+    bioc::dada2,
+    bioc::IRanges,
+    bioc::S4Vectors
 Config/testthat/edition: 3
