@@ -27,8 +27,8 @@
 #' @param default (`character string`) default taxon to define threshold to use
 #' when taxonomy is unknown. default: `ingroup_taxon()`
 #'
-#'
 #' @return (named `list` of `double` vectors)
+#' @export
 calc_subtaxon_thresholds <- function(rank, taxon_table, optima,
                                      conf_level = NULL, metric = NULL,
                                      default = ingroup_taxon()) {
@@ -37,13 +37,17 @@ calc_subtaxon_thresholds <- function(rank, taxon_table, optima,
 
   # check arguments
   checkmate::assert_character(rank)
-  checkmate::assert_subset(tax_ranks(), rank)
+  checkmate::assert_subset(rank, tax_ranks())
+  checkmate::assert_true(rank2factor(rank) > rank2factor(tip_rank()))
   checkmate::assert_data_frame(taxon_table)
-  checkmate::assert_names(names(taxon_table), c("seq_id", tax_ranks()))
+  checkmate::assert_names(
+    names(taxon_table),
+    must.include = c("seq_id", superranks(rank), rank, subranks(rank)[1])
+  )
   checkmate::assert_data_frame(optima)
   checkmate::assert_names(
     names(optima),
-    c("rank", "superrank", "supertaxon", "threshold")
+    must.include = c("rank", "superrank", "supertaxon", "threshold")
   )
   checkmate::assert_string(conf_level, null.ok = TRUE)
   checkmate::assert_string(metric, null.ok = TRUE)
@@ -65,8 +69,8 @@ calc_subtaxon_thresholds <- function(rank, taxon_table, optima,
             optima,
             rank %in% subranks(!!rank),
             superrank == r,
-            if (is.null(conf_level)) TRUE else conf_level == !!conf_level,
-            if (is.null(metric)) TRUE else metric == !!metric
+            if (is.null(!!conf_level)) TRUE else conf_level == !!conf_level,
+            if (is.null(!!metric)) TRUE else metric == !!metric
           ) |>
             dplyr::select(
               subrank = rank,
@@ -99,8 +103,8 @@ calc_subtaxon_thresholds <- function(rank, taxon_table, optima,
         optima,
         rank %in% subranks({{rank}}),
         supertaxon == default,
-        if (is.null(conf_level)) TRUE else conf_level == !!conf_level,
-        if (is.null(metric)) TRUE else metric == !!metric
+        if (is.null(!!conf_level)) TRUE else conf_level == !!conf_level,
+        if (is.null(!!metric)) TRUE else metric == !!metric
       ) |>
         dplyr::transmute(rank = rank2factor(rank), threshold_as_dist(threshold)) |>
         dplyr::arrange(rank) |>

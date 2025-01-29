@@ -1,3 +1,14 @@
+# optimotu.pipeline 0.4.0
+* Change arguments of `calc_taxon_thresholds()` and `calc_subtaxon_thresholds()`
+to accept optional arguments "conf_level" and "metric", which are used to filter
+the "optima" table (which is renamed from "fmeasure_optima" because a different
+optimization target may be used instead)
+
+# optimotu.pipeline 0.3.0
+* Move a large number of functions from `optimotu_targets` to `optimotu.pipeline`
+* New C++ implementations of `fastq_names()`, `fastx_split()` and
+`fastx_combine()`
+
 # optimotu.pipeline 0.2.1
 
 * Fix `fastq_qual_bins()` incorrectly detecting carriage return as quality score
