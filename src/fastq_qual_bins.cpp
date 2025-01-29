@@ -1,4 +1,6 @@
 #include "fastq.h"
+#include <cstdint>
+#include <array>
 
 //' Get the unique quality scores in a set of FASTQ files
 //' @param fastq (`character`) FASTQ file paths, optionally gzipped.
