@@ -44,7 +44,6 @@ Imports:
 Roxygen: list(markdown = TRUE)
 Suggests:
     ggplot2,
-    rlang,
     S4Vectors,
     testthat (>= 3.0.0),
     zlib
