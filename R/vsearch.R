@@ -157,6 +157,7 @@ vsearch_uchime_ref <- function(query, ref, ncpu = local_cpus(), id_only = FALSE,
 #' @return `tibble::tibble` with columns `seq_id` and `cluster`, where `seq_id`
 #' is the name of a sequence from `query`, and `cluster` is the closest match
 #' to that sequence in `ref`
+#' @export
 vsearch_usearch_global_closed_ref <- function(query, ref, threshold, ...) {
   # avoid R CMD check NOTE for undeclared global variables due to NSE
   seq_id <- cluster <- NULL
