@@ -58,6 +58,14 @@ bimera_denovo_table.matrix <- function(
     multithread = FALSE,
     ...
 ) {
+  if (!requireNamespace("dada2", quietly = TRUE)) {
+    stop("dada2 package must be installed to run bimera_denovo_table()")
+  }
+  # additional check shouldn't be required for RcppParallel, but let's be clear
+  if (!requireNamespace("RcppParallel", quietly = TRUE)) {
+    stop("RcppParallel package must be installed to run bimera_denovo_table()")
+  }
+
   if (is.null(seqs)) seqs <- colnames(seqtab)
   if (isTRUE(multithread)) {
     RcppParallel::setThreadOptions(numThreads = "auto")

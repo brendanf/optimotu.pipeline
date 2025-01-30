@@ -24,7 +24,6 @@ Imports:
     BiocGenerics,
     Biostrings,
     checkmate,
-    dada2,
     digest,
     dplyr,
     glue,
@@ -41,11 +40,12 @@ Imports:
     tidyr,
     vctrs,
     withr,
-    Rcpp,
-    RcppParallel
+    Rcpp
 Roxygen: list(markdown = TRUE)
 Suggests:
+    dada2,
     ggplot2,
+    RcppParallel,
     S4Vectors,
     testthat (>= 3.0.0),
     zlib
