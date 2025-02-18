@@ -7,9 +7,10 @@
 
 [![R-CMD-check](https://github.com/brendanf/optimotu.pipeline/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/brendanf/optimotu.pipeline/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
-coverage](https://codecov.io/gh/brendanf/optimotu.pipeline/branch/main/graph/badge.svg)](https://app.codecov.io/gh/brendanf/optimotu.pipeline?branch=main)
+coverage](https://codecov.io/gh/brendanf/optimotu.pipeline/graph/badge.svg)](https://app.codecov.io/gh/brendanf/optimotu.pipeline)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+
 <!-- badges: end -->
 
 Optimotu.pipeline is a workflow for DNA metabarcoding analysis,
