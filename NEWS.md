@@ -1,3 +1,7 @@
+# optimotu.pipeline 0.5.0
+* `calc_taxon_thresholds()` and `calc_subtaxon_thresholds()` have been moved to
+the `optimotu` package (version >= 0.9)
+
 # optimotu.pipeline 0.4.0
 * Change arguments of `calc_taxon_thresholds()` and `calc_subtaxon_thresholds()`
 to accept optional arguments "conf_level" and "metric", which are used to filter
