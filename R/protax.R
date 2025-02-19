@@ -167,8 +167,8 @@ run_protax_animal <- function(aln_seqs, modeldir, min_p = 0.1, rep_p = 0.01,
       ),
       col_types = paste0(
         if (id_is_int) "i" else "c",
-        "icn",
-        if (info) "-in-in-" else ""
+        "icd",
+        if (info) "-id-id-" else ""
       )
     )
   }

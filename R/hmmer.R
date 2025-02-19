@@ -190,7 +190,7 @@ read_dna_tblout <- function(file) {
       "hmm_from", "hmm_to", "seq_from", "seq_to", "env_from", "env_to",
       "seq_len", "strand", "Evalue", "bit_score", "bias", "description"
     ),
-    col_types = "cccciiiiiiicnnnc"
+    col_types = "cccciiiiiiicdddc"
   )
 
 }
