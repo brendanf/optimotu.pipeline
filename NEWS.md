@@ -1,4 +1,4 @@
-# optimotu.pipeline (development version)
+# optimotu.pipeline 0.5.1
 * `ensure_directory()` now returns the name of the input file invisibly,
 so that it can be used as a wrapper around the name of an output file in a
 function call.
