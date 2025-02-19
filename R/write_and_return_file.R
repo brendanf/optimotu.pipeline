@@ -2,10 +2,12 @@
 
 #' Create the parent directory of a file if it does not exist
 #' @param file (`character` string) file path to create the parent directory for
+#' @return the input file path (invisibly)
 #' @export
 ensure_directory <- function(file) {
   d <- dirname(file)
   if (!dir.exists(d)) dir.create(d, recursive = TRUE)
+  invisible(file)
 }
 
 #' Write an object to a file and return the file path

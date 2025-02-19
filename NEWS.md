@@ -1,3 +1,8 @@
+# optimotu.pipeline (development version)
+* `ensure_directory()` now returns the name of the input file invisibly,
+so that it can be used as a wrapper around the name of an output file in a
+function call.
+
 # optimotu.pipeline 0.5.0
 * `calc_taxon_thresholds()` and `calc_subtaxon_thresholds()` have been moved to
 the `optimotu` package (version >= 0.9)

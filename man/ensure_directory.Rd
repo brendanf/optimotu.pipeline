@@ -9,6 +9,9 @@ ensure_directory(file)
 \arguments{
 \item{file}{(\code{character} string) file path to create the parent directory for}
 }
+\value{
+the input file path (invisibly)
+}
 \description{
 Create the parent directory of a file if it does not exist
 }
