@@ -33,7 +33,8 @@ std::string fasta_deline(
     }
     out_stream << header << '\n';
     while (std::getline(in_stream, seq) && seq[0] != '>') {
-      out_stream << seq;
+      const auto end = seq.find_last_not_of("\r");
+      out_stream << seq.substr(0, end + 1);
     }
     out_stream << '\n';
   }
