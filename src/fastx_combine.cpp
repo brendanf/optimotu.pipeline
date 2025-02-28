@@ -16,10 +16,16 @@ std::string fastq_combine(
   std::vector<filter_stream_in> in_streams(infiles.size());
   for (size_t i = 0; i < infiles.size(); ++i) {
     open_fastx_in(in_streams[i], infiles[i]);
+    if (!in_streams[i]) {
+      Rcpp::stop("Error opening FASTQ file %s for reading", infiles[i]);
+    }
   }
 
   filter_stream_out out_stream;
   open_fastx_out(out_stream, outfile, compress);
+  if (!out_stream) {
+    Rcpp::stop("Error opening FASTQ file %s for writing", outfile);
+  }
 
   std::string header, seq, header2, qual;
   int i = 0;
@@ -30,10 +36,13 @@ std::string fastq_combine(
       if (in_streams[j].eof()) {
         continue;
       }
-      in_streams[j] >> header;
+      std::getline(in_streams[j], header);
       if (in_streams[j]) {
         all_eof = false;
-        if (in_streams[j] >> seq >> header2 >> qual) {
+        std::getline(in_streams[j], seq);
+        std::getline(in_streams[j], header2);
+        std::getline(in_streams[j], qual);
+        if (in_streams[j]) {
           out_stream << header << '\n'
                      << seq << '\n'
                      << header2 << '\n'
@@ -63,14 +72,20 @@ std::string fasta_combine(
   std::vector<filter_stream_in> in_streams(infiles.size());
   for (size_t i = 0; i < infiles.size(); ++i) {
     open_fastx_in(in_streams[i], infiles[i]);
+    if (!in_streams[i]) {
+      Rcpp::stop("Error opening FASTA file %s for reading", infiles[i]);
+    }
   }
 
   filter_stream_out out_stream;
   open_fastx_out(out_stream, outfile, compress);
+  if (!out_stream) {
+    Rcpp::stop("Error opening FASTA file %s for writing", outfile);
+  }
 
   std::vector<std::string> line(in_streams.size());
   for (size_t i = 0; i < in_streams.size(); ++i) {
-    if (!(in_streams[i] >> line[i])) {
+    if (!(std::getline(in_streams[i], line[i]))) {
       Rcpp::stop("Error reading FASTA file %s", infiles[i]);
     }
     if (line[i][0] != '>') {
@@ -86,13 +101,13 @@ std::string fasta_combine(
       }
       all_eof = false;
       out_stream << line[j] << '\n';
-      in_streams[j] >> line[j];
+      std::getline(in_streams[j], line[j]);
       if (line[j][0] == '>') {
         Rcpp::stop("Expected sequence in FASTA file %s", infiles[j]);
       }
       do {
         out_stream << line[j] << '\n';
-      } while (in_streams[j] >> line[j] && line[j][0] != '>');
+      } while (std::getline(in_streams[j], line[j]) && line[j][0] != '>');
     }
   }
   return outfile;

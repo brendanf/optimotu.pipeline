@@ -31,7 +31,7 @@ test_ind <- sample.int(1000, 100)
 test_names1 <- format(as.hexmode(test_ind))
 
 # alternately, just number them
-test_names2 <- sprintf("read%03d", seq_len(100))
+test_names2 <- sprintf("read%03d and some more metadata", seq_len(100))
 
 test_dss1 <- Biostrings::DNAStringSet(
   `names<-`(test_seq, test_names1)

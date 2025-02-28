@@ -15,16 +15,25 @@ Rcpp::CharacterVector fastq_split(
 
   filter_stream_in instream;
   open_fastx_in(instream, infile);
+  if (!instream.good()) {
+    Rcpp::stop("Empty file");
+  }
 
   std::vector<filter_stream_out> outstreams(outfiles.size());
   for (size_t i = 0; i < outfiles.size(); ++i) {
     open_fastx_out(outstreams[i], outfiles[i], compress);
+    if (!outstreams[i].good()) {
+      Rcpp::stop("Failed to open output file");
+    }
   }
 
   size_t i = 0;
   std::string header, seq, header2, qual;
-  while (instream >> header) {
-    if (!(instream >> seq >> header2 >> qual)) {
+  while (std::getline(instream, header)) {
+    std::getline(instream, seq);
+    std::getline(instream, header2);
+    std::getline(instream, qual);
+    if (!instream.good()) {
       Rcpp::stop("Unexpected end of file");
     }
     outstreams[i] << header << "\n"
@@ -55,6 +64,9 @@ Rcpp::CharacterVector fasta_split(
   std::vector<filter_stream_out> outstreams(outfiles.size());
   for (size_t i = 0; i < outfiles.size(); ++i) {
     open_fastx_out(outstreams[i], outfiles[i], compress);
+    if (!outstreams[i].good()) {
+      Rcpp::stop("Failed to open output file");
+    }
   }
 
   size_t i = 0;
@@ -62,13 +74,13 @@ Rcpp::CharacterVector fasta_split(
     Rcpp::stop("Empty file");
   }
   std::string line;
-  instream >> line;
+  std::getline(instream, line);
   while (instream.good()) {
     if (!boost::starts_with(line, ">")) {
       Rcpp::stop("Expected header line");
     }
     outstreams[i] << line << "\n";
-    if (!(instream >> line)) {
+    if (!(std::getline(instream, line))) {
       Rcpp::stop("Unexpected end of file");
     }
     if (boost::starts_with(line, ">")) {
@@ -76,7 +88,7 @@ Rcpp::CharacterVector fasta_split(
     }
     do {
       outstreams[i] << line << "\n";
-    } while (instream >> line && !boost::starts_with(line, ">"));
+    } while (std::getline(instream, line) && !boost::starts_with(line, ">"));
     i = (i + 1) % outfiles.size();
   }
   return Rcpp::wrap(outfiles);
