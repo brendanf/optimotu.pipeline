@@ -1,4 +1,8 @@
 # optimotu.pipeline (development version)
+* Fixed implementation of `fastx_split()` and `fastx_combine()` to work with
+  files which contain whitespace in the header.
+* Added `fasta_deline()` which converts a fasta file with sequences split into
+  multiple lines into a fasta file with each sequence on a single line.
 
 # optimotu.pipeline 0.5.1
 * `ensure_directory()` now returns the name of the input file invisibly,

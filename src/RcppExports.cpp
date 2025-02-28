@@ -20,6 +20,19 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// fasta_deline
+std::string fasta_deline(const std::string infile, const std::string outfile, const bool compress);
+RcppExport SEXP _optimotu_pipeline_fasta_deline(SEXP infileSEXP, SEXP outfileSEXP, SEXP compressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string >::type infile(infileSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type outfile(outfileSEXP);
+    Rcpp::traits::input_parameter< const bool >::type compress(compressSEXP);
+    rcpp_result_gen = Rcpp::wrap(fasta_deline(infile, outfile, compress));
+    return rcpp_result_gen;
+END_RCPP
+}
 // fastq_stage_flags
 Rcpp::DataFrame fastq_stage_flags(std::string raw, std::vector<std::string> stages);
 RcppExport SEXP _optimotu_pipeline_fastq_stage_flags(SEXP rawSEXP, SEXP stagesSEXP) {
@@ -175,6 +188,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_derep_map_only", (DL_FUNC) &_optimotu_pipeline_derep_map_only, 1},
+    {"_optimotu_pipeline_fasta_deline", (DL_FUNC) &_optimotu_pipeline_fasta_deline, 3},
     {"_optimotu_pipeline_fastq_stage_flags", (DL_FUNC) &_optimotu_pipeline_fastq_stage_flags, 2},
     {"_optimotu_pipeline_fastq_stage_flag2", (DL_FUNC) &_optimotu_pipeline_fastq_stage_flag2, 3},
     {"_optimotu_pipeline_fastq_stage_map", (DL_FUNC) &_optimotu_pipeline_fastq_stage_map, 2},

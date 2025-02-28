@@ -11,6 +11,17 @@ derep_map_only <- function(derep) {
     invisible(.Call(`_optimotu_pipeline_derep_map_only`, derep))
 }
 
+#' Convert a multiline FASTA file into a single-line FASTA file
+#'
+#' @param infile (`character(1)`) FASTA file, can be compressed
+#' @param outfile (`character(1)`) name of output FASTA file
+#' @param compress (`logical(1)`) compress output file
+#' @return `character(1)` output file name
+#' @export
+fasta_deline <- function(infile, outfile, compress = FALSE) {
+    .Call(`_optimotu_pipeline_fasta_deline`, infile, outfile, compress)
+}
+
 #' Flag the fate of reads from a FASTQ file through processing stages
 #' @param raw (`character`) FASTQ file path, optionally gzipped. The raw reads.
 #' @param stages (`character`) FASTQ file paths, optionally gzipped. The
