@@ -11,6 +11,7 @@ an integer indicating the number of CPUs available to the R process
 }
 \description{
 If running inside a Snakemake or SLURM job, this function will return the
-number of CPUs allocated to the job. Otherwise, it will return the number of
-CPUs available to the R process, minus one.
+number of CPUs allocated to the job. Otherwise, it will return the value of
+the option \code{"optimotu_num_threads"} if it is set, otherwise the number of
+CPUs available to the R process minus one.
 }

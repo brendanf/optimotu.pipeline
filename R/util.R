@@ -20,8 +20,9 @@ is_snakemake <- function() !interactive() && exists("snakemake")
 #' Get the number of CPUs available to the R process
 #'
 #' If running inside a Snakemake or SLURM job, this function will return the
-#' number of CPUs allocated to the job. Otherwise, it will return the number of
-#' CPUs available to the R process, minus one.
+#' number of CPUs allocated to the job. Otherwise, it will return the value of
+#' the option `"optimotu_num_threads"` if it is set, otherwise the number of
+#' CPUs available to the R process minus one.
 #'
 #' @return an integer indicating the number of CPUs available to the R process
 #' @export
@@ -35,7 +36,7 @@ local_cpus <- function() {
     if (!checkmate::test_count(out, positive = TRUE)) out <- 1L
     out
   } else {
-    max(parallel::detectCores() - 1L, 1L)
+    getOption("optimotu_num_threads", max(parallel::detectCores() - 1L, 1L))
   }
 }
 
