@@ -1,3 +1,13 @@
+# optimotu.pipeline (development version)
+* Incorporated bug fixes from `optimotu_targets`.
+* Added more convenience functions for accessing taxonomy:
+  - `unknown_ranks()` returns the complement of `known_ranks()`
+  - `tax_rank_vars()`, `known_rank_vars()`, `unknown_rank_vars()`,
+    `subrank_vars()`, and `superrank_vars()` return the same ranks as their
+    equivalent `*_ranks()` functions, but as a list of symbols instead of a
+    character vector.
+  - `define_taxonomy()` sets up the taxonomy options for use in a pipeline.
+
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with
   files which contain whitespace in the header.
