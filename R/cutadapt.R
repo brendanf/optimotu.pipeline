@@ -245,16 +245,17 @@ cutadapt_options <- function(
 
 #' Replace existing cutadapt options with new values
 #'
-#' @param options ([`cutadapt_paired_options`](`cutadapt_paired_options()`) or
+#' @param object ([`cutadapt_paired_options`](`cutadapt_paired_options()`) or
 #' [`cutadapt_options`](`cutadapt_options()`)) existing cutadapt options to
 #' update
 #' @param new_options (`data.frame`, named `list`, or named `character` vector)
 #' new values for the options. If a `data.frame`, then the values in the
 #' `data.frame` should be all the same.
+#' @param ... additional arguments; currently ignored
 #' @return updated options
-#' @export
+#' @exportS3Method stats::update
 #' @rdname update_cutadapt_options
-update.cutadapt_paired_options <- function(options, new_options) {
+update.cutadapt_paired_options <- function(object, new_options, ...) {
   checkmate::assert(
     checkmate::check_list(new_options, null.ok = TRUE),
     checkmate::check_data_frame(new_options, null.ok = TRUE),
@@ -273,16 +274,16 @@ update.cutadapt_paired_options <- function(options, new_options) {
   }
   new_options <- lapply(unclass(new_options), unlist)
   if (length(new_options) > 0) {
-    options[names(new_options)] <- new_options
-    do.call(cutadapt_paired_options, options)
+    object[names(new_options)] <- new_options
+    do.call(cutadapt_paired_options, object)
   } else {
-    options
+    object
   }
 }
 
 #' @rdname update_cutadapt_options
-#' @export
-update.cutadapt_options <- function(options, new_options) {
+#' @exportS3Method stats::update
+update.cutadapt_options <- function(object, new_options, ...) {
   checkmate::assert(
     checkmate::check_list(new_options, null.ok = TRUE),
     checkmate::check_data_frame(new_options, null.ok = TRUE),
@@ -301,10 +302,10 @@ update.cutadapt_options <- function(options, new_options) {
   }
   new_options <- lapply(unclass(new_options), unlist)
   if (length(new_options) > 0) {
-    options[names(new_options)] <- new_options
-    do.call(cutadapt_options, options)
+    object[names(new_options)] <- new_options
+    do.call(cutadapt_options, object)
   } else {
-    options
+    object
   }
 }
 

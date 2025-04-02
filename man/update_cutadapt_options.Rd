@@ -5,18 +5,20 @@
 \alias{update.cutadapt_options}
 \title{Replace existing cutadapt options with new values}
 \usage{
-\method{update}{cutadapt_paired_options}(options, new_options)
+\method{update}{cutadapt_paired_options}(object, new_options, ...)
 
-\method{update}{cutadapt_options}(options, new_options)
+\method{update}{cutadapt_options}(object, new_options, ...)
 }
 \arguments{
-\item{options}{(\href{`cutadapt_paired_options()`}{\code{cutadapt_paired_options}} or
+\item{object}{(\href{`cutadapt_paired_options()`}{\code{cutadapt_paired_options}} or
 \href{`cutadapt_options()`}{\code{cutadapt_options}}) existing cutadapt options to
 update}
 
 \item{new_options}{(\code{data.frame}, named \code{list}, or named \code{character} vector)
 new values for the options. If a \code{data.frame}, then the values in the
 \code{data.frame} should be all the same.}
+
+\item{...}{additional arguments; currently ignored}
 }
 \value{
 updated options
