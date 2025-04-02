@@ -2,10 +2,13 @@
 % Please edit documentation in R/taxonomy.R
 \name{tax_ranks}
 \alias{tax_ranks}
+\alias{tax_rank_vars}
 \alias{set_tax_ranks}
 \title{Get or set the taxonomic ranks to use in the pipeline}
 \usage{
 tax_ranks()
+
+tax_rank_vars()
 
 set_tax_ranks(value)
 }
@@ -15,6 +18,8 @@ in order from most inclusive (e.g., kingdom) to least inclusive (e.g., species)}
 }
 \value{
 a \code{character} vector of taxonomic ranks
+
+a \code{list} of \code{symbol}s representing the taxonomic ranks
 
 the previously set taxonomic ranks
 }

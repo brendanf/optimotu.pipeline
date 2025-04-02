@@ -2,12 +2,18 @@
 % Please edit documentation in R/taxonomy.R
 \name{superranks}
 \alias{superranks}
+\alias{superrank_vars}
 \alias{subranks}
+\alias{subrank_vars}
 \title{Get superordinate or subordinate taxonomic ranks}
 \usage{
-superranks(x, ranks = tax_ranks())
+superranks(x = tip_rank(), ranks = tax_ranks())
 
-subranks(x, ranks = tax_ranks())
+superrank_vars(x = tip_rank(), ranks = tax_ranks())
+
+subranks(x = ingroup_rank(), ranks = tax_ranks())
+
+subrank_vars(x = ingroup_rank(), ranks = tax_ranks())
 }
 \arguments{
 \item{x}{(\code{character} string) the taxonomic rank to find superordinate or
@@ -18,6 +24,10 @@ from most inclusive to least inclusive}
 }
 \value{
 a \code{character} vector of superordinate or subordinate taxonomic ranks
+
+a \code{list} of \code{symbol}s representing the superordinate ranks
+
+a \code{list} of \code{symbol}s representing the subordinate ranks
 }
 \description{
 Get superordinate or subordinate taxonomic ranks

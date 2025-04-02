@@ -9,6 +9,13 @@ tax_ranks <- function() {
 }
 
 #' @rdname tax_ranks
+#' @return a `list` of `symbol`s representing the taxonomic ranks
+#' @export
+tax_rank_vars <- function() {
+  rlang::syms(tax_ranks())
+}
+
+#' @rdname tax_ranks
 #' @param value (`character` vector) the taxonomic ranks to use in the pipeline,
 #' in order from most inclusive (e.g., kingdom) to least inclusive (e.g., species)
 #' @return the previously set taxonomic ranks
@@ -42,6 +49,13 @@ known_ranks <- function() {
 }
 
 #' @rdname known_ranks
+#' @return a `list` of `symbol`s representing the known
+#' @export
+known_rank_vars <- function() {
+  rlang::syms(known_ranks())
+}
+
+#' @rdname known_ranks
 #' @param value (`character` vector) the taxonomic ranks to assume are "known"
 #' @return the previously set known ranks
 #' @export
@@ -62,6 +76,20 @@ known_taxa <- function() {
 #' @export
 set_known_taxa <- function(value) {
   options("optimotu.pipeline.known_taxa" = value)[["optimotu.pipeline.known_taxa"]]
+}
+
+#' @rdname known_ranks
+#' @return a `character` vector of taxonomic ranks
+#' @export
+unknown_ranks <- function() {
+  setdiff(tax_ranks(), known_ranks())
+}
+
+#' @rdname known_ranks
+#' @return a `list` of `symbol`s representing the unknown ranks
+#' @export
+unknown_rank_vars <- function() {
+  rlang::syms(unknown_ranks())
 }
 
 #' Shortcuts for accessing taxonomy options
@@ -122,6 +150,47 @@ tip_rank_var <- function() {
   rlang::sym(tip_rank())
 }
 
+#' Define the taxonomic ranks to use in the pipeline
+#'
+#' @param ranks (`list` or `character` vector) the taxonomic ranks to use in the
+#' pipeline, in order from most inclusive (e.g., kingdom) to least inclusive
+#' (e.g., species). Values may be either named or unnamed. When named, the name is
+#' taken to be the rank, and the value is the "in-group" taxon at that rank, i.e.
+#' the taxon for which results are desired. When unnamed, the value is taken to
+#' be the rank. Example: `list(kingdom = "Fungi", "phylum", "class", "order", "family", "genus", "species")`
+#' @return `NULL`.  This function is called for its side effect, which is to
+#' configure global options.
+#' @export
+define_taxonomy <- function(ranks) {
+  checkmate::assert(
+    checkmate::check_list(
+      ranks,
+      types = c("character", "list"),
+      min.len = 1
+    ),
+    checkmate::check_character(
+      ranks,
+      unique = TRUE,
+      min.len = 1
+    )
+  )
+  KNOWN_TAXA <- purrr::keep(ranks, ~ dplyr::cumall(checkmate::test_list(.x))) |>
+    unlist()
+  UNKNOWN_RANKS <- purrr::discard(ranks, ~ dplyr::cumall(checkmate::test_list(.x))) |>
+    unlist()
+  if (length(UNKNOWN_RANKS) == 0 || !is.null(names(UNKNOWN_RANKS))) {
+    stop(
+      "Option 'ranks' should start from the most inclusive rank (e.g. kingdom)\n",
+      "  and continue to the least inclusive rank (e.g. species).  Optionally the first\n",
+      "  rank(s) may be defined (e.g. '- kingdom: Fungi') but subsequent ranks must be \n",
+      "  undefined (e.g. '- class')."
+    )
+  }
+  set_known_ranks(names(KNOWN_TAXA))
+  set_known_taxa(unname(KNOWN_TAXA))
+  set_tax_ranks(c(known_ranks(), UNKNOWN_RANKS))
+}
+
 #' Convert taxonomic ranks from character vectors and integers to ordered factors
 #'
 #' The least inclusive rank is given the smallest value in the ordering,
@@ -148,14 +217,28 @@ int2rankfactor <- function(x) {
 #' from most inclusive to least inclusive
 #' @return a `character` vector of superordinate or subordinate taxonomic ranks
 #' @export
-superranks <- function(x, ranks = tax_ranks()) {
+superranks <- function(x = tip_rank(), ranks = tax_ranks()) {
   ranks[rank2factor(ranks) > x]
 }
 
 #' @rdname superranks
+#' @return a `list` of `symbol`s representing the superordinate ranks
 #' @export
-subranks <- function(x, ranks = tax_ranks()) {
+superrank_vars <- function(x = tip_rank(), ranks = tax_ranks()) {
+  rlang::syms(superranks(x, ranks))
+}
+
+#' @rdname superranks
+#' @export
+subranks <- function(x = ingroup_rank(), ranks = tax_ranks()) {
   ranks[rank2factor(ranks) < x]
+}
+
+#' @rdname superranks
+#' @return a `list` of `symbol`s representing the subordinate ranks
+#' @export
+subrank_vars <- function(x = ingroup_rank(), ranks = tax_ranks()) {
+  rlang::syms(subranks(x, ranks))
 }
 
 #' Combine tip classifications to build a full PROTAX taxonomy
@@ -248,14 +331,14 @@ build_taxonomy_new <- function(...) {
       names = tax_ranks(),
       too_few = "align_start"
     ) |>
-    dplyr::mutate({{root_rank()}} := ifelse({{root_rank()}}=="root", NA_character_, {{root_rank()}}))
+    dplyr::mutate(!!root_rank() := ifelse(!!root_rank() == "root", NA_character_, !!root_rank()))
 
   # remove all taxa with children
   for (rank in 6:1) {
-    rankname <- rlang::sym(tax_ranks()[rank + 1])
+    rankname <- tax_rank_vars()[rank + 1]
     tax <- dplyr::filter(
       tax,
-      if (any(!is.na({{rankname}} ))) !is.na({{rankname}}) else TRUE,
+      if (any(!is.na(!!rankname))) !is.na(!!rankname) else TRUE,
       .by = all_of(tax_ranks()[1:rank])
     )
   }
@@ -269,7 +352,7 @@ build_taxonomy_new <- function(...) {
     prior = 1.0
   )
   for (i in seq_along(tax_ranks())) {
-    rankname <- rlang::sym(tax_ranks()[i])
+    rankname <- tax_rank_vars()[i]
     tax_i <- dplyr::select(tax, one_of(tax_ranks()[1:i]), n)
     tax_i <- tax_i[!is.na(tax_i[[tax_ranks()[i]]]),]
     tax_i <- dplyr::summarize(tax_i, n = sum(n), .by = one_of(tax_ranks()[1:i]))

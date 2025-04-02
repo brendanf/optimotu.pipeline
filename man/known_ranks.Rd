@@ -2,12 +2,21 @@
 % Please edit documentation in R/taxonomy.R
 \name{known_ranks}
 \alias{known_ranks}
+\alias{known_rank_vars}
 \alias{set_known_ranks}
+\alias{unknown_ranks}
+\alias{unknown_rank_vars}
 \title{Get or set the taxonomic ranks which are assumed to be "known"}
 \usage{
 known_ranks()
 
+known_rank_vars()
+
 set_known_ranks(value)
+
+unknown_ranks()
+
+unknown_rank_vars()
 }
 \arguments{
 \item{value}{(\code{character} vector) the taxonomic ranks to assume are "known"}
@@ -15,7 +24,13 @@ set_known_ranks(value)
 \value{
 a \code{character} vector of taxonomic ranks
 
+a \code{list} of \code{symbol}s representing the known
+
 the previously set known ranks
+
+a \code{character} vector of taxonomic ranks
+
+a \code{list} of \code{symbol}s representing the unknown ranks
 }
 \description{
 Get or set the taxonomic ranks which are assumed to be "known"
