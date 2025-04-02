@@ -33,6 +33,9 @@ write_and_return_file(x, file, ...)
 \item{type}{(\code{character} string) the type of file to write to; currently
 supported are \code{"rds"} (default) and \code{"tsv"}}
 }
+\value{
+the file path
+}
 \description{
 Write an object to a file and return the file path
 }

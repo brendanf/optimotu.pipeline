@@ -8,6 +8,7 @@
 #'
 #' @return file name of the created index
 #' @describeIn fastx_gz Generate a gzip index file
+#' @export
 fastx_gz_index <- function(file) {
   fastqindex <- find_executable("fastqindex")
   checkmate::assert_file_exists(fastqindex, access = "x")
@@ -35,6 +36,7 @@ fastx_gz_index <- function(file) {
 #'
 #' @return filename of the output file
 #' @describeIn fastx_gz Extract sequences from a gzipped FASTA or FASTQ file
+#' @export
 fastx_gz_extract <- function(infile, index, i, outfile, renumber = FALSE, append = FALSE, hash = NULL) {
   checkmate::assert_file_exists(infile, "r")
   checkmate::assert_file_exists(index, "r")
@@ -95,6 +97,7 @@ fastx_gz_extract <- function(infile, index, i, outfile, renumber = FALSE, append
 #'
 #' @return filename of the output file
 #' @describeIn fastx_gz Extract sequences from a gzipped FASTA or FASTQ file
+#' @export
 fastx_gz_random_access_extract <- function(
     infile,
     index,

@@ -95,6 +95,7 @@ vsearch_usearch_global <- function(query, ref, threshold, global = TRUE,
 #' sequence itself.  Alternatively, if `id_only` is TRUE, a `character` vector
 #' (or `integer` vector if `id_is_int` is TRUE) of the sequence IDs which are
 #' chimeras.
+#' @export
 vsearch_uchime_ref <- function(query, ref, ncpu = local_cpus(), id_only = FALSE,
                                id_is_int = FALSE) {
   # avoid R CMD check NOTE for undeclared global variables due to NSE
@@ -227,6 +228,7 @@ vsearch_cluster_smallmem <- function(seq, threshold = 1, ncpu = local_cpus()) {
 #' @param ... additional arguments to pass to `vsearch_cluster_smallmem()`
 #' @param ncpu (`integer` count) number of threads to use
 #' @return `integer` matrix with identical sequences collapsed
+#' @export
 collapseNoMismatch_vsearch <- function(seqtab, ..., ncpu = local_cpus()) {
   seqs <- colnames(seqtab)
   names(seqs) <- seq_along(seqs)

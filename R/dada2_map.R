@@ -71,6 +71,7 @@ dada_merge_map <- function(dadaF, derepF, dadaR, derepR, merged) {
 #'    0x01 = trimmed
 #'    0x02 = filtered
 #'    0x04 = denoised & merged
+#' @export
 seq_map <- function(sample, fq_raw, fq_trim, fq_filt, dadaF, derepF, dadaR,
                     derepR, merged, seq_all, rc = FALSE) {
   # avoid R CMD check NOTE: no visible binding for global variable
@@ -101,6 +102,7 @@ seq_map <- function(sample, fq_raw, fq_trim, fq_filt, dadaF, derepF, dadaR,
 #'
 #' @param seqmap_fwd (`data.frame`) forward sequence map, as returned by `seq_map()`
 #' @param seqmap_rev (`data.frame`) reverse sequence map, as returned by `seq_map()`
+#' @export
 merge_seq_maps <- function(seqmap_fwd, seqmap_rev) {
   # avoid R CMD check NOTE: no visible binding for global variable
   raw_idx <- seq_idx_fwd <- seq_idx_rev <- flags_fwd <- flags_rev <- NULL

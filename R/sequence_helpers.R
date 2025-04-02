@@ -247,7 +247,10 @@ hash_sequences.data.frame <- function(
 
 #### sequence naming ####
 
-# Internal function; force a string to be ASCII
+#' Force a string to be ASCII
+#' @param s (`character`) string(s) to clean
+#' @return (`character`) cleaned string(s)
+#' @export
 ascii_clean <- function(s) {
   gsub(
     s,

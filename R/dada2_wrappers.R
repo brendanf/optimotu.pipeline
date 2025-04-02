@@ -225,6 +225,7 @@ learnErrors <- function(fls, nbases = 1e+09, nreads = NULL,
 #' `errorEstimationFunction` is given and `selfConsist` is `FALSE`.  If only 0
 #' or 1 [`derep`][dada2::derep-class] objects are given, the output will still
 #' be a `list`.
+#' @export
 dada <- function(
     derep,
     err,
@@ -269,6 +270,7 @@ dada <- function(
 #' such `data.frame`s.  In partticular, if the inputs `dadaF`, `derepF`, `dadaR`,
 #' and `derepR` are all lists, even of length 0 or 1, the output will also be a
 #' list of the same length.
+#' @export
 mergePairs <- function(dadaF, derepF, dadaR, derepR,
                        minOverlap = 12,
                        maxMismatch = 0,

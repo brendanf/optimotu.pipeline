@@ -24,6 +24,7 @@ drop_from_seqtable <- function(seqtable, which) {
 #' @param rc (logical flag) if TRUE, sequences in `x` will be reverse complemented.
 #'
 #' @return a `data.frame` with columns `sample`, `seq`, and `nread`
+#' @export
 
 make_long_sequence_table <- function(x, rc = FALSE) {
   UseMethod("make_long_sequence_table", x)

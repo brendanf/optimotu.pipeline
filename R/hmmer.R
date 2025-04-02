@@ -14,6 +14,7 @@ find_hmmsearch <- function() {
 
 #' Try to find the nhmmer executable
 #' @return a `character` string giving the path to the nhmmer executable
+#' @export
 find_nhmmer <- function() {
   find_executable("nhmmer")
 }
@@ -201,6 +202,7 @@ read_dna_tblout <- function(file) {
 #' file name of a FASTA file, `character` vector, or `data.frame`) sequences to search
 #' @param hmm (`character` file name) path to HMM(s) to search for
 #' @return a [`tibble`][tibble::tibble()] listing the HMM hits
+#' @export
 hmmsearch <- function(seqs, hmm) {
   checkmate::assert_string(hmm)
   checkmate::assert_file_exists(hmm, access = "r")

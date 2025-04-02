@@ -8,6 +8,7 @@
 #' sequence
 #' @return `data.frame` with columns `sample`, `nread`, `total`, `uncross`, and
 #' `is_tag_jump`
+#' @export
 #   core by Vladimir Mikryukov,
 #   edited for 'targets' by Sten Anslan
 #   modified to match OptimOTU style by Brendan Furneaux
@@ -70,7 +71,7 @@ remove_tag_jumps <- function(seqtable, f, p, id_col = "seq") {
 #' `remove_tag_jumps()`.
 #' @return `data.frame` with the same columns as `seqmap`, but with the `flags`
 #' column updated to include the `is_tag_jump` information from `uncross`.
-#'
+#' @export
 add_uncross_to_seq_map <- function(seqmap, seqtable_raw, uncross) {
   # avoid R CMD check NOTE for undeclared globals
   raw_idx <- seq_idx <- flags <- is_tag_jump <- NULL
@@ -97,6 +98,7 @@ add_uncross_to_seq_map <- function(seqmap, seqtable_raw, uncross) {
 #' `remove_tag_jumps()`.
 #' @return `data.frame` with columns `sample`, `Total_reads`,
 #' `Number_of_TagJump_Events`, `TagJump_reads`, and `ReadPercent_removed`.
+#' @export
 summarize_uncross <- function(uncross) {
   # avoid R CMD check NOTE for undeclared globals
   nread <- is_tag_jump <- TagJump_reads <- Total_reads <- NULL

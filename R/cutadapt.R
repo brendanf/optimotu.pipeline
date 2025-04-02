@@ -5,6 +5,9 @@ find_cutadapt <- function() {
   find_executable("cutadapt")
 }
 
+#' Options for cutadapt filtering and trimming
+#' @rdname cutadapt_paired_options
+#' @export
 cutadapt_paired_option_names <- c(
   "max_err",
   "min_overlap",
@@ -170,6 +173,8 @@ cutadapt_paired_filter_trim <- function(
   c(trim_R1, trim_R2)
 }
 
+#' @rdname cutadapt_options
+#' @export
 cutadapt_option_names <- c(
   "max_err",
   "min_overlap",

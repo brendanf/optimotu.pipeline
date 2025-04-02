@@ -14,6 +14,8 @@ ensure_directory <- function(file) {
 #' @param x (any object) object to write
 #' @param file (`character` string) file path to write to
 #' @param ... additional arguments to pass to the writing function
+#' @return the file path
+#' @export
 write_and_return_file <- function(x, file, ...) {
   UseMethod("write_and_return_file")
 }
@@ -28,7 +30,7 @@ write_and_return_file.XStringSet <- function(x, file, width = 20001L, ...) {
 }
 
 #' @rdname write_and_return_file
-#' @exportS3Method
+#' @exportS3Method write_and_return_file data.frame
 #' @param type (`character` string) the type of file to write to; currently
 #'   supported are `"rds"` (default) and `"tsv"`
 write_and_return_file.data.frame <- function(x, file, type = c("rds", "tsv"), ...) {
