@@ -18,7 +18,8 @@ find_executable <- function(executable) {
     out <- Sys.which(executable)
   }
   if (nchar(out) == 0 || !file.exists(out)) {
-    out <- list.files(path = "bin", pattern = executable, recursive = TRUE, full.names = TRUE)
+    bindir <- Sys.getenv("OPTIMOTU_BIN_DIR", unset = "bin")
+    out <- list.files(path = bindir, pattern = executable, recursive = TRUE, full.names = TRUE)
   }
   checkmate::assert_file_exists(out, access = "x", .var.name = executable)
   out

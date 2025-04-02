@@ -11,7 +11,7 @@ fastx_split <- function(infile, n, outroot = tempfile(), compress = FALSE) {
   checkmate::assert_string(infile)
   checkmate::assert_file(infile, access = "r")
   checkmate::assert_int(n, lower = 1, upper = 64)
-  if (!dir.exists(outroot)) dir.create(outroot, showWarnings = FALSE)
+  if (!dir.exists(outroot)) dir.create(outroot, showWarnings = FALSE, recursive = TRUE)
   checkmate::assert_flag(compress)
 
   is_fastq <- grepl(fastq_regex, infile)

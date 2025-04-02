@@ -48,15 +48,15 @@ bimera_denovo_table <- function(
 #' @rdname bimera_denovo_table
 #' @exportS3Method bimera_denovo_table matrix
 bimera_denovo_table.matrix <- function(
-    seqtab,
-    seqs = colnames(seqtab),
-    minFoldParentOverAbundance = 1.5,
-    minParentAbundance = 2,
-    allowOneOff = FALSE,
-    minOneOffParentDistance = 4,
-    maxShift = 16,
-    multithread = FALSE,
-    ...
+  seqtab,
+  seqs = colnames(seqtab),
+  minFoldParentOverAbundance = 1.5,
+  minParentAbundance = 2,
+  allowOneOff = FALSE,
+  minOneOffParentDistance = 4,
+  maxShift = 16,
+  multithread = FALSE,
+  ...
 ) {
   if (!requireNamespace("dada2", quietly = TRUE)) {
     stop("dada2 package must be installed to run bimera_denovo_table()")
@@ -127,6 +127,18 @@ bimera_denovo_table.data.frame <- function(
   }
   n_asv <- dplyr::n_distinct(seqtab[[seq_col]])
   n_sample <- dplyr::n_distinct(seqtab$sample)
+  if (n_asv == 0) {
+    out <- tibble::tibble(nflag = integer(), nsam = integer())
+    for (s in seq_col) {
+      if (s == "seq_idx") {
+        out[[s]] <- integer()
+      } else {
+        out[[s]] <- character()
+      }
+    }
+    return(out)
+  }
+
   # max seqtable size for one partition is 1 Gb (== 2^30 bytes)
   # (not including sequences)
   # R integers are 32 bit (== 4 bytes)
@@ -147,8 +159,8 @@ bimera_denovo_table.data.frame <- function(
       as.matrix()
 
     switch(seq_col,
-           seq_id = colnames(m) <- seqs[colnames(m)],
-           seq_idx = colnames(m) <- seqs[as.integer(colnames(m))]
+      seq_id = colnames(m) <- seqs[colnames(m)],
+      seq_idx = colnames(m) <- seqs[as.integer(colnames(m))]
     )
 
     out_m <- bimera_denovo_table.matrix(
@@ -192,10 +204,10 @@ bimera_denovo_table.data.frame <- function(
 #' the bimeras.
 #' @export
 combine_bimera_denovo_tables <- function(
-    bimdf,
-    minSampleFraction = 0.9,
-    ignoreNNegatives = 1L,
-    verbose = FALSE
+  bimdf,
+  minSampleFraction = 0.9,
+  ignoreNNegatives = 1L,
+  verbose = FALSE
 ) {
   seq_col <- intersect(c("seq", "seq_id", "seq_idx"), names(bimdf))
   if (length(seq_col) == 0) {

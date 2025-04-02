@@ -104,14 +104,14 @@ cutadapt_paired_options <- function(
 #' @return a character vector of the trimmed output files
 #' @export
 cutadapt_paired_filter_trim <- function(
-    file_R1, file_R2,
-    primer_R1, primer_R2,
-    trim_R1, trim_R2,
-    options = cutadapt_paired_options(),
-    ncpu = local_cpus(),
-    cutadapt = find_cutadapt(),
-    logfile = NULL,
-    ...
+  file_R1, file_R2,
+  primer_R1, primer_R2,
+  trim_R1, trim_R2,
+  options = cutadapt_paired_options(),
+  ncpu = local_cpus(),
+  cutadapt = find_cutadapt(),
+  logfile = NULL,
+  ...
 ) {
   checkmate::assert_class(options, "cutadapt_paired_options")
   args <- c(
@@ -322,14 +322,14 @@ update.cutadapt_options <- function(options, new_options) {
 #' @return a `character` string giving the trimmed output file
 #' @export
 cutadapt_filter_trim <- function(
-    file,
-    primer,
-    trim,
-    options = cutadapt_options(),
-    ncpu = local_cpus(),
-    cutadapt = find_cutadapt(),
-    logfile = NULL,
-    ...
+  file,
+  primer,
+  trim,
+  options = cutadapt_options(),
+  ncpu = local_cpus(),
+  cutadapt = find_cutadapt(),
+  logfile = NULL,
+  ...
 ) {
   args <- c(
     "-g", primer,

@@ -23,11 +23,11 @@ find_target_taxa <- function(target_taxa, asv_all_tax_prob, asv_taxonomy, otu_ta
 
   asv_otu_key <-
     dplyr::inner_join(
-      dplyr::select(asv_taxonomy, asv_seq_id = seq_id, {{tip_rank_var()}}),
-      dplyr::select(otu_taxonomy, seq_id, {{tip_rank_var()}}),
+      dplyr::select(asv_taxonomy, asv_seq_id = seq_id, !!tip_rank_var()),
+      dplyr::select(otu_taxonomy, seq_id, !!tip_rank_var()),
       by = tip_rank()
     ) |>
-    dplyr::select(-{{tip_rank_var()}})
+    dplyr::select(-(!!tip_rank_var()))
 
   otu_long_taxonomy <- tidyr::pivot_longer(
     otu_taxonomy,
