@@ -28,7 +28,6 @@ std::string fastq_combine(
   }
 
   std::string header, seq, header2, qual;
-  int i = 0;
   bool all_eof = false;
   while (!all_eof) {
     all_eof = true;
