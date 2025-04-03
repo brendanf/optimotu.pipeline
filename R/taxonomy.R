@@ -45,7 +45,7 @@ set_rank_offset <- function(value) {
 #' @return a `character` vector of taxonomic ranks
 #' @export
 known_ranks <- function() {
-  getOption("optimotu.pipeline.tax_ranks", tax_ranks()[1])
+  getOption("optimotu.pipeline.known_ranks", tax_ranks()[1])
 }
 
 #' @rdname known_ranks
