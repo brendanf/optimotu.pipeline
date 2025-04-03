@@ -406,3 +406,50 @@ trim_primer <- function(seqs, primer, ...) {
     as.character() |>
     tibble::enframe(name = "seq_id", value = "seq")
 }
+
+
+#' Top-level function to trim a batch of raw paired-end reads
+#' @param pairs_meta (`data.frame`) metadata for the paired-end reads
+#' @param seqrun (`character`) seqrun identifier for the batch
+#' @param orient (`character`) orientation of the reads for the batch; either
+#' "fwd" or "rev"
+#' @param raw_path (`character`) path to the raw reads
+#' @param ncpu (`integer`) number of CPU threads to use
+#' @return a `character` vector with the path to the trimmed output files
+#' @export
+trim_raw_pairs <- function(
+    pairs_meta,
+    seqrun,
+    orient,
+    trim_options,
+    raw_path = "sequences/01_raw",
+    ncpu = local_cpus()
+) {
+  logfile_name <- sprintf("logs/trim_%s_%s.log", seqrun, orient)
+  logfile <- withr::local_connection(file(logfile_name, "w"))
+
+  dplyr::group_by(
+    pairs_meta,
+    dplyr::pick(any_of(c("seqrun", cutadapt_paired_option_names)))
+  ) |>
+    dplyr::group_map(
+      ~ purrr::pmap(
+        dplyr::transmute(
+          .x,
+          file_R1 = file.path(raw_path, fastq_R1),
+          file_R2 = file.path(raw_path, fastq_R2),
+          trim_R1 = trim_R1,
+          trim_R2 = trim_R2
+        ),
+        cutadapt_paired_filter_trim,
+        primer_R1 = ifelse(orient == "fwd", trim_primer_R1, trim_primer_R2),
+        primer_R2 = ifelse(orient == "fwd", trim_primer_R2, trim_primer_R1),
+        options = update(trim_options, .y),
+        ncpu = ncpu,
+        logfile = logfile
+      ) |>
+        unlist(),
+      .keep = TRUE
+    ) |>
+    unlist()
+}
