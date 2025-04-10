@@ -39,32 +39,3 @@ local_cpus <- function() {
     getOption("optimotu_num_threads", max(parallel::detectCores() - 1L, 1L))
   }
 }
-
-#### yaml ####
-
-#' Flatten a nested list of length-1 lists into a single list
-#'
-#' This function is useful for unnesting lists originally imported from YAML files
-#' formatted like:
-#' ```
-#' list:
-#'   - key1: value1
-#'   - key2: value2
-#' ```
-#' which are imported as `list(list(key1 = value1), list(key2 = value2))`.
-#'
-#' @param x (`list`) the list to flatten
-#' @return a `list` with all nested lists unnested
-#' @export
-unnest_yaml_list <- function(x) {
-  checkmate::assert_list(x)
-  if (
-    is.null(names(x)) &&
-    checkmate::check_list(x, types = "list") &&
-    all(vapply(x, length, 1L) == 1)
-  ) {
-    do.call(c, x)
-  } else {
-    x
-  }
-}

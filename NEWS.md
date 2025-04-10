@@ -7,7 +7,8 @@
     equivalent `*_ranks()` functions, but as a list of symbols instead of a
     character vector.
   - `define_taxonomy()` sets up the taxonomy options for use in a pipeline.
-
+* Moved parsing of `pipeline_options.yaml` into package, using top-level
+  function `parse_pipeline_options()`.
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with
   files which contain whitespace in the header.

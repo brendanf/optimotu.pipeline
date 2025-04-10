@@ -413,6 +413,10 @@ trim_primer <- function(seqs, primer, ...) {
 #' @param seqrun (`character`) seqrun identifier for the batch
 #' @param orient (`character`) orientation of the reads for the batch; either
 #' "fwd" or "rev"
+#' @param trim_options ([`cutadapt_paired_options`](`cutadapt_paired_options()`)
+#' options for cutadapt
+#' @param primer_R1 (`character`) primer specification for R1
+#' @param primer_R2 (`character`) primer specification for R2
 #' @param raw_path (`character`) path to the raw reads
 #' @param ncpu (`integer`) number of CPU threads to use
 #' @return a `character` vector with the path to the trimmed output files
@@ -422,6 +426,8 @@ trim_raw_pairs <- function(
     seqrun,
     orient,
     trim_options,
+    primer_R1,
+    primer_R2,
     raw_path = "sequences/01_raw",
     ncpu = local_cpus()
 ) {
@@ -442,8 +448,8 @@ trim_raw_pairs <- function(
           trim_R2 = trim_R2
         ),
         cutadapt_paired_filter_trim,
-        primer_R1 = ifelse(orient == "fwd", trim_primer_R1, trim_primer_R2),
-        primer_R2 = ifelse(orient == "fwd", trim_primer_R2, trim_primer_R1),
+        primer_R1 = ifelse(orient == "fwd", primer_R1, primer_R2),
+        primer_R2 = ifelse(orient == "fwd", primer_R2, primer_R1),
         options = update(trim_options, .y),
         ncpu = ncpu,
         logfile = logfile

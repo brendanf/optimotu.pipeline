@@ -9,6 +9,8 @@ trim_raw_pairs(
   seqrun,
   orient,
   trim_options,
+  primer_R1,
+  primer_R2,
   raw_path = "sequences/01_raw",
   ncpu = local_cpus()
 )
@@ -20,6 +22,13 @@ trim_raw_pairs(
 
 \item{orient}{(\code{character}) orientation of the reads for the batch; either
 "fwd" or "rev"}
+
+\item{trim_options}{(\href{`cutadapt_paired_options()`}{\code{cutadapt_paired_options}}
+options for cutadapt}
+
+\item{primer_R1}{(\code{character}) primer specification for R1}
+
+\item{primer_R2}{(\code{character}) primer specification for R2}
 
 \item{raw_path}{(\code{character}) path to the raw reads}
 

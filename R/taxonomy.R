@@ -150,47 +150,6 @@ tip_rank_var <- function() {
   rlang::sym(tip_rank())
 }
 
-#' Define the taxonomic ranks to use in the pipeline
-#'
-#' @param ranks (`list` or `character` vector) the taxonomic ranks to use in the
-#' pipeline, in order from most inclusive (e.g., kingdom) to least inclusive
-#' (e.g., species). Values may be either named or unnamed. When named, the name is
-#' taken to be the rank, and the value is the "in-group" taxon at that rank, i.e.
-#' the taxon for which results are desired. When unnamed, the value is taken to
-#' be the rank. Example: `list(kingdom = "Fungi", "phylum", "class", "order", "family", "genus", "species")`
-#' @return `NULL`.  This function is called for its side effect, which is to
-#' configure global options.
-#' @export
-define_taxonomy <- function(ranks) {
-  checkmate::assert(
-    checkmate::check_list(
-      ranks,
-      types = c("character", "list"),
-      min.len = 1
-    ),
-    checkmate::check_character(
-      ranks,
-      unique = TRUE,
-      min.len = 1
-    )
-  )
-  KNOWN_TAXA <- purrr::keep(ranks, ~ dplyr::cumall(checkmate::test_list(.x))) |>
-    unlist()
-  UNKNOWN_RANKS <- purrr::discard(ranks, ~ dplyr::cumall(checkmate::test_list(.x))) |>
-    unlist()
-  if (length(UNKNOWN_RANKS) == 0 || !is.null(names(UNKNOWN_RANKS))) {
-    stop(
-      "Option 'ranks' should start from the most inclusive rank (e.g. kingdom)\n",
-      "  and continue to the least inclusive rank (e.g. species).  Optionally the first\n",
-      "  rank(s) may be defined (e.g. '- kingdom: Fungi') but subsequent ranks must be \n",
-      "  undefined (e.g. '- class')."
-    )
-  }
-  set_known_ranks(names(KNOWN_TAXA))
-  set_known_taxa(unname(KNOWN_TAXA))
-  set_tax_ranks(c(known_ranks(), UNKNOWN_RANKS))
-}
-
 #' Convert taxonomic ranks from character vectors and integers to ordered factors
 #'
 #' The least inclusive rank is given the smallest value in the ordering,
