@@ -11,6 +11,66 @@ derep_map_only <- function(derep) {
     invisible(.Call(`_optimotu_pipeline_derep_map_only`, derep))
 }
 
+#' Calculate empirical transition matrix from known true sequences
+#'
+#' @param true_seq (`character`) Vector of true sequences
+#' @param obs_seq (`character`) Vector of observed reads
+#' @param obs_qual (`character`) Vector of quality scores for observed reads
+#' @param match_idx (`integer`) Indices of the true sequences that match each
+#' observed read
+#' @param cigar (`character`) CIGAR strings for alignment between each
+#' observed read and its corresponding true sequence
+#' @param scores (`integer`) set of unique quality scores found in the
+#' observed reads
+#' @param indel (`logical`) Whether to include indels in the transition
+#' matrix
+#'
+#' Calculates an empirical translation matrix based on pairwise alignments
+#' between true sequences (e.g., from a positive control or mock community)
+#' and observed reads. In the case of substitutions (i.e., matches and
+#' mismatches), there are 16 possible transitions (4 bases each for the true
+#' base and the observed base), each of which is represented as one row in the
+#' resulting matrix. The rownames are of the form "X2Y", representing
+#' "observed cases where X in the true sequence was observed as Y in a read",
+#' where both X and Y are "A", "C", "G", or "T". The columns represent the
+#' quality scores of the base in the reads.
+#'
+#' If `indel = TRUE`, the matrix will also include transitions for insertions
+#' and deletions. Because each of these represents a lack of correspondence
+#' between the true sequence and the observed read, there is some ambiguity
+#' in exactly how they should be mapped.
+#'
+#' For insertions, the inserted base(s) have no corresponding element in the
+#' true sequence, but may in theory be mapped to either the previous base or
+#' the next base in the true sequence. The matrix includes two rows for
+#' these, with names of the form "X_2NY", and "_X2YN", meaning "The position
+#' after X in the true sequence had an observed insertion of Y" and "The
+#' position before X in the true sequence had an observed insertion of Y",
+#' respectively. "N" in this case symbolizes "any base in the position of X",
+#' because it is possible that the insertion is directly preceded or followed
+#' by a substitution. The column for the insertion is the quality score of the
+#' inserted base (i.e., "Y").
+#'
+#' For deletions, it is clear which base in the true sequence was deleted, but
+#' the quality score of the deleted base is not available; however it is
+#' expected that the quality score of the preceding or following base might be
+#' indicative of the possible presence of a deletion. Thus each deletion
+#' occurs twice in the matrix, once for each of the two possible quality
+#' scores. The row names for these are "XN2_N" and "NX2N_", meaning in both
+#' cases "X in the true sequence was deleted in the observed sequence"; the
+#' "N" is a placeholder for the base in the observed sequence that supplies
+#' the quality score for the deletion.
+#'
+#' @return An integer matrix with rows representing transitions from one base
+#' to another (or to an insertion or deletion when `indel = TRUE`), columns
+#' representing quality scores, and values representing the count of each
+#' transition.
+#'
+#' @export
+empirical_transition_matrix <- function(true_seq, obs_seq, obs_qual, match_idx, cigar, scores, indel = FALSE) {
+    .Call(`_optimotu_pipeline_empirical_transition_matrix`, true_seq, obs_seq, obs_qual, match_idx, cigar, scores, indel)
+}
+
 #' Convert a multiline FASTA file into a single-line FASTA file
 #'
 #' @param infile (`character(1)`) FASTA file, can be compressed

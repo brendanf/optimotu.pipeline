@@ -14,6 +14,10 @@
   and EPA-ng/Gappa (`epa_ng()` and `gappa_assign()` functions; uses external
   epa-ng and Gappa executables); as well as to parse pipeline options to
   configure these.
+* Add `empirical_transition_matrix()` function to calculate the empirical
+  transition matrix for a set of reads which have been mapped to known
+  true sequences (e.g. from a mock community). This can be used to calibrate
+  the DADA2 error model.
   
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with

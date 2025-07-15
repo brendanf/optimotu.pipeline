@@ -20,6 +20,23 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// empirical_transition_matrix
+Rcpp::IntegerMatrix empirical_transition_matrix(Rcpp::CharacterVector true_seq, Rcpp::CharacterVector obs_seq, Rcpp::CharacterVector obs_qual, Rcpp::IntegerVector match_idx, Rcpp::CharacterVector cigar, Rcpp::IntegerVector scores, bool indel);
+RcppExport SEXP _optimotu_pipeline_empirical_transition_matrix(SEXP true_seqSEXP, SEXP obs_seqSEXP, SEXP obs_qualSEXP, SEXP match_idxSEXP, SEXP cigarSEXP, SEXP scoresSEXP, SEXP indelSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type true_seq(true_seqSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type obs_seq(obs_seqSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type obs_qual(obs_qualSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type match_idx(match_idxSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type cigar(cigarSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type scores(scoresSEXP);
+    Rcpp::traits::input_parameter< bool >::type indel(indelSEXP);
+    rcpp_result_gen = Rcpp::wrap(empirical_transition_matrix(true_seq, obs_seq, obs_qual, match_idx, cigar, scores, indel));
+    return rcpp_result_gen;
+END_RCPP
+}
 // fasta_deline
 std::string fasta_deline(const std::string infile, const std::string outfile, const bool compress);
 RcppExport SEXP _optimotu_pipeline_fasta_deline(SEXP infileSEXP, SEXP outfileSEXP, SEXP compressSEXP) {
@@ -188,6 +205,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_derep_map_only", (DL_FUNC) &_optimotu_pipeline_derep_map_only, 1},
+    {"_optimotu_pipeline_empirical_transition_matrix", (DL_FUNC) &_optimotu_pipeline_empirical_transition_matrix, 7},
     {"_optimotu_pipeline_fasta_deline", (DL_FUNC) &_optimotu_pipeline_fasta_deline, 3},
     {"_optimotu_pipeline_fastq_stage_flags", (DL_FUNC) &_optimotu_pipeline_fastq_stage_flags, 2},
     {"_optimotu_pipeline_fastq_stage_flag2", (DL_FUNC) &_optimotu_pipeline_fastq_stage_flag2, 3},
