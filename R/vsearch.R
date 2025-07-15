@@ -309,3 +309,89 @@ nomismatch_hits_vsearch <- function(seqtab, seqs = NULL,
   vsearch_cluster_smallmem(seqs, ncpu = ncpu) |>
     dplyr::mutate(dplyr::across(everything(), as.integer))
 }
+
+#' Perform taxonomic classification using SINTAX in VSEARCH
+#' @param query (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
+#' `character` vector, or file name) query sequences
+#' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
+#' `character` vector, or file name) reference sequences
+#' @param ncpu (`integer` count) number of threads to use
+#' @param id_is_int (`logical` flag) if `TRUE`, return the sequence IDs as
+#' integers
+#' @param hash (`character` string) hash value for the queries; ignored (but
+#' used by `targets` for dependency tracking)
+#' @return `tibble::tibble` with columns `seq_id` (or `seq_idx` if `id_is_int`
+#' is TRUE), `rank`, `parent_taxonomy`, `taxon`, and `prob`, where `seq_id`
+#' (`seq_idx`) is the ID of a sequence from `query`, `rank` is the taxonomic
+#' rank of the taxon, `parent_taxonomy` is the parent taxonomic unit of the
+#' taxon, `taxon` is the taxon name, and `prob` is the probability of the
+#' taxon being the correct classification of the sequence
+#' @export
+sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
+  checkmate::assert_file_exists(ref, access = "r")
+  checkmate::assert_count(ncpu, null.ok = TRUE)
+  if (is.character(query) && length(query) == 1 && file.exists(query)) {
+    tout <- query
+  } else {
+    tout <- withr::local_tempfile(pattern = "data", fileext = ".fasta")
+    write_sequence(query, tout)
+  }
+  tin <- tempfile("data", fileext = ".tab")
+  version <- processx::run(find_vsearch(), "--version")$stderr |>
+    sub("vsearch v([0-9.]+).+", "\\1", x = _) |>
+    strsplit(split = ".", fixed = TRUE) |>
+    unlist() |>
+    as.integer()
+  has_random <- version[1] > 2L || (version[1] == 2L && version[2] >= 28L)
+  result <-processx::run(
+      find_vsearch(),
+      c(
+        "--sintax", tout,
+        if (has_random) "--sintax_random",
+        "--db", ref,
+        "--tabbedout", "-",
+        if (!is.null(ncpu)) c("--threads", ncpu)
+      )
+  )
+  stopifnot(result$status == 0)
+  out <- (if (length(result$stdout) > 0) {
+    suppressWarnings(
+      readr::read_delim(
+        I(result$stdout),
+        col_names = c("seq_id", "taxonomy"),
+        delim = "\t",
+        col_types = "cc-"
+      ),
+      "vroom_parse_issue"
+    )
+  } else {
+    tibble::tibble(seq_id = character(), taxonomy = character())
+  })  |>
+    tidyr::separate_longer_delim(taxonomy, delim = ",") |>
+    tidyr::separate_wider_regex(
+      taxonomy,
+      patterns = c(
+        "[dkpcofgst]:",
+        taxon = ".+",
+        "\\(",
+        prob = "[0-9.]+",
+        "\\)"
+      )
+    ) |>
+    dplyr::mutate(
+      rank = rank2factor(tax_ranks()[seq_len(dplyr::n())]),
+      parent_taxonomy = purrr::accumulate(taxon, \(...) paste(..., sep = ",") ) |>
+        dplyr::lag(default = ""),
+      .by = seq_id,
+      .before = taxon
+    )
+  if (id_is_int) {
+    out <- dplyr::mutate(
+      out,
+      seq_idx = as.integer(seq_id),
+      .keep = "unused",
+      .before = 1
+    )
+  }
+  out
+}

@@ -9,6 +9,12 @@
   - `define_taxonomy()` sets up the taxonomy options for use in a pipeline.
 * Moved parsing of `pipeline_options.yaml` into package, using top-level
   function `parse_pipeline_options()`.
+* Added functionality to run taxonomic classifiers SINTAX (`sintax()` function;
+  uses external VSEARCH); BayesANT(`bayesant()` function; uses package BayesANT);
+  and EPA-ng/Gappa (`epa_ng()` and `gappa_assign()` functions; uses external
+  epa-ng and Gappa executables); as well as to parse pipeline options to
+  configure these.
+  
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with
   files which contain whitespace in the header.
