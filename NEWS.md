@@ -21,6 +21,8 @@
 * Add `fastq_sample()` and `fastq_sample_multiple()` functions to repeatably
   sample a fraction of reads (or multiple fractions with the same denominator)
   from a fastq file.
+* Add `tar_substitute()` function to aid in editing `targets` pipelines
+  programmatically.
   
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with

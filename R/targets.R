@@ -63,3 +63,62 @@ tar_map_list <- function(plan, target_name = NULL) {
     )
   )
 }
+
+#' Substitute values into a target object or plan
+#' @param target ([target][targets::tar_target()] object) the target(s) to substitute
+#' @param values (`list`) a named list of values to substitute into the target
+#' @return ([target][targets::tar_target()] object) the target with substituted values
+#' @export
+tar_substitute <- function(target, values) {
+  UseMethod("tar_substitute", target)
+}
+
+#' @exportS3Method
+tar_substitute.tar_target <- function(target, values) {
+  checkmate::assert(
+    checkmate::check_list(values, names = "unique"),
+    checkmate::check_data_frame(values)
+  )
+  command <- do.call(substitute, list(expr = target$command$expr[[1]], env = values))
+  pattern <- if (is.null(target$settings$pattern)) {
+    NULL
+  } else {
+    tarchetypes::tar_sub_raw(
+      expr = target$settings$pattern[[1]],
+      values = values
+    )[[1]]
+  }
+  targets::tar_target_raw(
+    name = target$settings$name,
+    command = command,
+    pattern = pattern,
+    packages = target$command$packages,
+    library = target$command$library,
+    format = target$settings$format,
+    repository = target$settings$repository,
+    iteration = target$settings$iteration,
+    error = target$settings$error,
+    memory = target$settings$memory,
+    garbage_collection = target$settings$garbage_collection,
+    deployment = target$settings$deployment,
+    priority = target$settings$priority,
+    resources = target$settings$resources,
+    storage = target$settings$storage,
+    retrieval = target$settings$retrieval,
+    cue = targets::tar_cue(
+      mode = target$cue$mode,
+      command = target$cue$command,
+      depend = target$cue$depend,
+      format = target$cue$format,
+      repository = target$cue$repository,
+      iteration = target$cue$iteration,
+      file = target$cue$file
+    ),
+    description = target$settings$description
+  )
+}
+
+#' @exportS3Method
+tar_substitute.list <- function(target, values) {
+  lapply(target, tar_substitute, values = values)
+}
