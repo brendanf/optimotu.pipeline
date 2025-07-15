@@ -18,6 +18,9 @@
   transition matrix for a set of reads which have been mapped to known
   true sequences (e.g. from a mock community). This can be used to calibrate
   the DADA2 error model.
+* Add `fastq_sample()` and `fastq_sample_multiple()` functions to repeatably
+  sample a fraction of reads (or multiple fractions with the same denominator)
+  from a fastq file.
   
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with

@@ -6,10 +6,10 @@
 //' @export
 // [[Rcpp::export]]
 Rcpp::CharacterVector fastq_names(std::string x) {
-  std::deque<string> names;
+  std::deque<std::string> names;
   filter_stream_in instream;
   open_fastx_in(instream, x);
-  string line;
+  std::string line;
   while (instream >> line) {
     if (line.size() == 0) break;
     line = line.substr(1);

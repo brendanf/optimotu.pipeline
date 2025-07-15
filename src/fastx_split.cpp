@@ -1,4 +1,6 @@
 #include "fastq.h"
+#include <boost/algorithm/string/predicate.hpp>
+
 
 //' Split a FASTQ file into multiple files
 //' @param infile Input FASTQ file
