@@ -23,6 +23,9 @@
   from a fastq file.
 * Add `tar_substitute()` function to aid in editing `targets` pipelines
   programmatically.
+* Add `read_sample_table()` and `infer_sample_table()` functions to read in a
+  custom sample table from a file, or infer it from the names of input read
+  files.
   
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with

@@ -1186,4 +1186,12 @@ parse_pipeline_options <- function() {
   parse_taxonomy_options(pipeline_options)
   parse_outgroup_options(pipeline_options)
   parse_cluster_options(pipeline_options)
+  parse_guilds_options(pipeline_options)
+  options(optimotu.pipeline.did_options = TRUE)
+}
+
+#' @rdname pipeline_options
+#' @export
+did_pipeline_options <- function() {
+  getOption("optimotu.pipeline.did_options", FALSE)
 }

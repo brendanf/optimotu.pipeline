@@ -58,6 +58,7 @@
 \alias{cluster_dist_config}
 \alias{do_guilds}
 \alias{do_wide_otu_table}
+\alias{did_pipeline_options}
 \title{Functions to access pipeline-wide options}
 \usage{
 read_file_extension()
@@ -173,6 +174,8 @@ cluster_dist_config()
 do_guilds()
 
 do_wide_otu_table()
+
+did_pipeline_options()
 }
 \value{
 (\code{character} string) the forward primer
