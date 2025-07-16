@@ -2,10 +2,16 @@
 % Please edit documentation in R/pipeline_options.R
 \name{parse_project_name}
 \alias{parse_project_name}
+\alias{parse_file_extension}
+\alias{parse_orient}
 \alias{parse_custom_sample_table}
+\alias{parse_added_reference}
 \alias{parse_parallel_options}
 \alias{parse_forward_primer}
 \alias{parse_reverse_primer}
+\alias{parse_trim_options}
+\alias{parse_filter_options}
+\alias{parse_uncross_options}
 \alias{parse_amplicon_model_options}
 \alias{parse_control_options}
 \alias{parse_taxonomy_options}
@@ -15,11 +21,21 @@
 \alias{parse_bayesant_options}
 \alias{parse_epa_options}
 \alias{parse_outgroup_options}
+\alias{parse_cluster_options}
+\alias{parse_guilds_options}
+\alias{parse_otu_table_options}
+\alias{parse_pipeline_options}
 \title{Parse pipeline options from a YAML file}
 \usage{
 parse_project_name(pipeline_options)
 
+parse_file_extension(pipeline_options)
+
+parse_orient(pipeline_options)
+
 parse_custom_sample_table(pipeline_options)
+
+parse_added_reference(pipeline_options)
 
 parse_parallel_options(pipeline_options)
 
@@ -27,11 +43,17 @@ parse_forward_primer(pipeline_options)
 
 parse_reverse_primer(pipeline_options)
 
-parse_amplicon_model_options(amplicon_model_options)
+parse_trim_options(pipeline_options)
+
+parse_filter_options(pipeline_options)
+
+parse_uncross_options(pipeline_options)
+
+parse_amplicon_model_options(pipeline_options)
 
 parse_control_options(pipeline_options)
 
-parse_taxonomy_options(taxonomy_options)
+parse_taxonomy_options(pipeline_options)
 
 parse_taxonomy_ranks(rank_options)
 
@@ -44,13 +66,17 @@ parse_bayesant_options(bayesant_options)
 parse_epa_options(epa_options)
 
 parse_outgroup_options(pipeline_options)
+
+parse_cluster_options(pipeline_options)
+
+parse_guilds_options(pipeline_options)
+
+parse_otu_table_options(pipeline_options)
+
+parse_pipeline_options()
 }
 \arguments{
 \item{pipeline_options}{(\code{list}) the pipeline options to parse}
-
-\item{amplicon_model_options}{(\code{list}) the amplicon model options to parse}
-
-\item{taxonomy_options}{(\code{list}) the taxonomy options to parse}
 
 \item{rank_options}{(\code{list} or \code{character} vector) the taxonomic ranks to use in the
 pipeline, in order from most inclusive (e.g., kingdom) to least inclusive
@@ -66,6 +92,8 @@ be the rank. Example: \code{list(kingdom = "Fungi", "phylum", "class", "order", 
 \item{bayesant_options}{(\code{list}) the bayesant options to parse}
 
 \item{epa_options}{(\code{list}) the epa options to parse}
+
+\item{amplicon_model_options}{(\code{list}) the amplicon model options to parse}
 }
 \value{
 \code{NULL}.  This function is called for its side effect, which is to

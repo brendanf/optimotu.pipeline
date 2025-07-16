@@ -64,6 +64,51 @@ project_name <- function() {
   getOption("optimotu.pipeline.project_name", "metabarcoding_project")
 }
 
+#### file_extension ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_file_extension <- function(pipeline_options) {
+  checkmate::assert_string(
+    pipeline_options$file_extension,
+    null.ok = TRUE
+  )
+  if (!is.null(pipeline_options$file_extension)) {
+    options(optimotu.pipeline.read_file_extension = pipeline_options$file_extension)
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+read_file_extension <- function() {
+  getOption("optimotu.pipeline.read_file_extension", "f(?:ast)?q(?:[.]gz)?")
+}
+
+#### read orientation ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_orient <- function(pipeline_options) {
+  checkmate::assert_string(
+    pipeline_options$orient,
+    null.ok = TRUE,
+    pattern = "^(fwd|rev|mixed|custom)$"
+  )
+  if (is.null(pipeline_options$orient)) {
+    message("No read orientation specified in 'pipeline_options.yaml'.\n",
+            "Using default: 'forward'")
+    options(optimotu.pipeline.read_orientation = "fwd")
+  } else {
+    options(optimotu.pipeline.read_orientation = pipeline_options$orient)
+  }
+}
+
+#' Get the read orientation setting
+#' @return (`character` string) the read orientation setting, one of
+#' `"fwd"`, `"rev"`, `"mixed"`, or `"custom"`
+#' @export
+read_orientation <- function() {
+  getOption("optimotu.pipeline.read_orientation", "fwd")
+}
+
 #### custom sample table ####
 #' @rdname parse_pipeline_options
 #' @keywords internal
@@ -89,6 +134,54 @@ custom_sample_table <- function() {
 #' @rdname pipeline_options
 do_custom_sample_table <- function() {
   is.character(custom_sample_table())
+}
+
+#### added_reference ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_added_reference <- function(pipeline_options) {
+  if (!is.null(pipeline_options$added_reference)) {
+    checkmate::assert_list(pipeline_options$added_reference)
+    added_reference <-
+      unnest_yaml_list(pipeline_options$added_reference)
+    checkmate::assert_string(added_reference$fasta, null.ok = TRUE)
+    checkmate::assert_string(added_reference$table, null.ok = TRUE)
+
+    if (xor(is.null(added_reference$fasta),
+            is.null(added_reference$table))) {
+      stop(
+        "If one of 'added_reference_fasta' and 'added_reference_table' is given ",
+        "in 'pipeline_options.yaml', then both must be given."
+      )
+    }
+    if (!is.null(added_reference$fasta)) {
+      checkmate::assert_file_exists(added_reference$fasta, access = "r")
+      checkmate::assert_file_exists(added_reference$table, access = "r")
+      options(
+        optimotu.pipeline.do_added_reference = TRUE,
+        optimotu.pipeline.added_reference_fasta = added_reference$fasta,
+        optimotu.pipeline.added_reference_table = added_reference$table
+      )
+    }
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+do_added_reference <- function() {
+  getOption("optimotu.pipeline.do_added_reference", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @export
+added_reference_fasta <- function() {
+  getOption("optimotu.pipeline.added_reference_fasta", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
+added_reference_table <- function() {
+  getOption("optimotu.pipeline.added_reference_table", NULL)
 }
 
 #### parallelism ####
@@ -263,12 +356,133 @@ trim_primer_merged <- function() {
   sprintf("%s...%s", forward_primer(), dada2::rc(reverse_primer()))
 }
 
+#### trimming settings ####
+#' @rdname parse_pipeline_options
+#' @export
+#' @param pipeline_options (`list`) the pipeline options to parse
+parse_trim_options <- function(pipeline_options) {
+  checkmate::assert_list(pipeline_options$trimming, null.ok = TRUE)
+  if (is.null(pipeline_options$trimming)) {
+    message("No 'trimming' options given in 'pipeline_options.yaml'\n",
+            "Using defaults.")
+  } else {
+    options(
+      optimotu.pipeline.trim_options = do.call(
+        cutadapt_paired_options,
+        unnest_yaml_list(pipeline_options$trimming)
+      )
+    )
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+trim_options <- function() {
+  getOption("optimotu.pipeline.trim_options", cutadapt_paired_options())
+}
+
+#### filtering settings ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_filter_options <- function(pipeline_options) {
+  checkmate::assert_list(pipeline_options$filtering, null.ok = TRUE)
+  if (is.null(pipeline_options$filtering)) {
+    message("No 'filtering' options given in 'pipeline_options.yaml'\n",
+            "Using defaults.")
+  } else {
+    filtering <- unnest_yaml_list(pipeline_options$filtering)
+    checkmate::assert_names(
+      names(filtering),
+      subset.of = c("maxEE_R1", "maxEE_R2")
+    )
+    checkmate::assert_number(
+      filtering$maxEE_R1,
+      lower = 0,
+      finite = TRUE,
+      null.ok = TRUE
+    )
+    checkmate::assert_number(
+      filtering$maxEE_R2,
+      lower = 0,
+      finite = TRUE,
+      null.ok = TRUE
+    )
+    options(
+      optimotu.pipeline.dada2_maxEE = update(dada2_maxEE(), filtering)
+    )
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+dada2_maxEE <- function() {
+  getOption("optimotu.pipeline.dada2_maxEE", dada2_filter_options(2, 2))
+}
+
+#### tag_jump settings ####
+
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_uncross_options <- function(pipeline_options) {
+  tag_jump <- pipeline_options$tag_jump
+  checkmate::assert(
+    checkmate::check_null(tag_jump),
+    checkmate::check_list(tag_jump),
+    checkmate::check_false(tag_jump)
+  )
+  if (!is.null(tag_jump) && is.list(tag_jump)) {
+    tag_jump <- unnest_yaml_list(tag_jump)
+    checkmate::assert_names(names(tag_jump), subset.of = c("f", "p"))
+    checkmate::assert_number(
+      tag_jump$f,
+      lower = 0,
+      upper = 1,
+      finite = TRUE,
+      null.ok = TRUE
+    )
+    checkmate::assert_number(
+      tag_jump$p,
+      lower = 0,
+      finite = TRUE,
+      null.ok = TRUE
+    )
+    options(
+      optimotu.pipeline.do_tag_jump = TRUE,
+      optimotu.pipeline.tag_jump_f = tag_jump$f,
+      optimotu.pipeline.tag_jump_p = tag_jump$p
+    )
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+do_tag_jump <- function() {
+  getOption("optimotu.pipeline.do_tag_jump", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @export
+tag_jump_f <- function() {
+  getOption("optimotu.pipeline.tag_jump_f", 0.05)
+}
+
+
+#' @rdname pipeline_options
+#' @export
+tag_jump_p <- function() {
+  getOption("optimotu.pipeline.tag_jump_p", 0.05)
+}
+
+
 #### amplicon model settings ####
 
 #' @rdname parse_pipeline_options
 #' @export
 #' @param amplicon_model_options (`list`) the amplicon model options to parse
-parse_amplicon_model_options <- function(amplicon_model_options) {
+parse_amplicon_model_options <- function(pipeline_options) {
+  amplicon_model_options <- pipeline_options$amplicon_model
+  if (is.null(amplicon_model_options) || isFALSE(amplicon_model_options)) return()
+
   checkmate::assert_list(amplicon_model_options)
   amplicon_model_options <- unnest_yaml_list(amplicon_model_options)
   checkmate::assert_names(
@@ -429,7 +643,7 @@ do_numt_filter <- function() {
 parse_control_options <- function(pipeline_options) {
   if (!is.null(pipeline_options$control)) {
     checkmate::assert_list(pipeline_options$control)
-    control_options <- optimotu.pipeline::unnest_yaml_list(pipeline_options$control)
+    control_options <- unnest_yaml_list(pipeline_options$control)
     checkmate::assert_names(
       names(control_options),
       subset.of = c("spike", "positive")
@@ -446,7 +660,6 @@ parse_control_options <- function(pipeline_options) {
       }
       if (is.character(control_options$spike)) {
         options(optimotu.pipeline.spike_file = control_options$spike)
-        remove(spike_read_counts, nospike_read_counts, envir = parent.frame())
       }
     }
     if ("positive" %in% names(control_options)) {
@@ -460,7 +673,6 @@ parse_control_options <- function(pipeline_options) {
       }
       if (is.character(control_options$positive)) {
         options(optimotu.pipeline.pos_control_file = control_options$positive)
-        remove(control_read_counts, nocontrol_read_counts, envir = parent.frame())
       }
     }
   }
@@ -492,14 +704,13 @@ do_pos_control <- function() {
 
 #### taxonomic assignment settings ####
 
-
-
-
-
 #' @rdname parse_pipeline_options
-#' @param taxonomy_options (`list`) the taxonomy options to parse
 #' @export
-parse_taxonomy_options <- function(taxonomy_options) {
+parse_taxonomy_options <- function(pipeline_options) {
+  taxonomy_options <- pipeline_options$taxonomy
+  if (is.null(taxonomy_options) || isFALSE(taxonomy_options)) {
+    return()
+  }
   checkmate::assert_list(taxonomy_options)
   taxonomy_options <- unnest_yaml_list(taxonomy_options)
   classifier_names <- c("protax", "sintax", "bayesant", "epa")
@@ -754,6 +965,8 @@ epa_outgroup <- function() {
   getOption("optimotu.pipeline.epa_outgroup")
 }
 
+#### Outgroup reference settings ####
+
 #' @rdname parse_pipeline_options
 #' @export
 parse_outgroup_options <- function(pipeline_options) {
@@ -812,8 +1025,135 @@ outgroup_taxonomy <- function() {
   getOption("optimotu.pipeline.outgroup_taxonomy")
 }
 
-#### main options function ####
+#### clustering settings ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_cluster_options <- function(pipeline_options) {
+  checkmate::assert_list(pipeline_options$clustering, null.ok = TRUE)
+  if (is.null(pipeline_options$clustering)) {
+    checkmate::assert_string(
+      pipeline_options$cluster_thresholds,
+      null.ok = TRUE
+    )
+    if (!is.null(pipeline_options$cluster_thresholds)) {
+      checkmate::assert_file_exists(
+        pipeline_options$cluster_thresholds,
+        access = "r"
+      )
+      options(
+        optimotu.pipeline.clustering_thresholds = pipeline_options$cluster_thresholds
+      )
+    } else {
+      message("No clustering options given in 'pipeline_options.yaml'\n",
+              "Using defaults.")
+    }
+  } else {
+    clustering <- unnest_yaml_list(pipeline_options$clustering)
+    checkmate::assert_names(
+      names(clustering),
+      subset.of = c("thresholds", "measure", "dist_config")
+    )
+    checkmate::assert_file_exists(clustering$thresholds, "r")
+    checkmate::assert_string(clustering$measure, null.ok = TRUE)
+    if (!is.null(clustering$measure)) {
+      checkmate::assert_subset(
+        clustering$measure,
+        c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
+      )
+    }
+    dist_config <- clustering$dist_config
+    checkmate::assert(
+      checkmate::check_string(dist_config, null.ok = TRUE),
+      checkmate::check_list(dist_config, null.ok = TRUE)
+    )
+    if (is.character(dist_config)) {
+      dist_config <- list(method = dist_config)
+    }
+    if (dist_config$method == "usearch" && !"usearch" %in% names(dist_config)) {
+      dist_config$usearch <- find_usearch()
+    }
+    if (dist_config$method == "hamming" && !do_model_align()) {
+      stop(
+        "Hamming distance requires model alignment to be enabled ",
+        "(amplicon_model: model_align: true).\n",
+        "(file: pipeline_options.yaml)"
+      )
+    }
+    dist_config <- do.call(optimotu::dist_config, dist_config)
+    options(
+      optimotu.pipeline.clustering_thresholds = clustering$thresholds,
+      optimotu.pipeline.clustering_measure = clustering$measure,
+      optimotu.pipeline.clustering_dist_config = dist_config
+    )
+  }
+}
+
 #' @rdname pipeline_options
+#' @export
+cluster_thresholds <- function() {
+  getOption("optimotu.pipeline.clustering_thresholds",
+            "metadata/GSSP_thresholds.tsv")
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_measure <- function() {
+  getOption("optimotu.pipeline.clustering_measure", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_dist_config <- function() {
+  getOption("optimotu.pipeline.clustering_dist_config", optimotu::dist_usearch())
+}
+
+#### guilds settings ####
+# TODO: this needs additional customization options
+
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_guilds_options <- function(pipeline_options) {
+  if (!is.null(pipeline_options$guilds)) {
+    checkmate::assert_flag(pipeline_options$guilds)
+    options(
+      optimotu.pipeline.do_guilds = pipeline_options$guilds
+    )
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+do_guilds <- function() {
+  getOption("optimotu.pipeline.do_guilds", FALSE)
+}
+
+#### OTU table settings ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_otu_table_options <- function(pipeline_options) {
+  if (!is.null(pipeline_options$wide_table) && !is.null(pipeline_options$dense_table)) {
+    stop(
+      "Only one of 'wide_table' and 'dense_table' may be set in 'pipeline_options.yaml'.\n",
+      "Please remove one of them."
+    )
+  }
+  checkmate::assert_flag(pipeline_options$wide_table, null.ok = TRUE)
+  checkmate::assert_flag(pipeline_options$dense_table, null.ok = TRUE)
+  if (all(pipeline_options$wide_table, pipeline_options$dense_table)) {
+    options(
+      optimotu.pipeline.wide_table = TRUE
+    )
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+do_wide_otu_table <- function() {
+  getOption("optimotu.pipeline.wide_table", FALSE)
+}
+
+#### main options function ####
+#' @rdname parse_pipeline_options
 #' @export
 parse_pipeline_options <- function() {
   if (file.exists("pipeline_options.yaml")) {
@@ -827,6 +1167,23 @@ parse_pipeline_options <- function() {
   }
 
   parse_project_name(pipeline_options)
+  parse_file_extension(pipeline_options)
+  parse_orient(pipeline_options)
   parse_custom_sample_table(pipeline_options)
-
+  parse_added_reference(pipeline_options) #TODO: this should go to taxonomy?
+  parse_parallel_options(pipeline_options)
+  parse_forward_primer(pipeline_options)
+  parse_reverse_primer(pipeline_options)
+  parse_trim_options(pipeline_options)
+  parse_filter_options(pipeline_options)
+  parse_uncross_options(pipeline_options)
+  parse_amplicon_model_options(pipeline_options)
+  parse_otu_table_options(pipeline_options)
+  parse_control_options(pipeline_options)
+  if (!is.null(pipeline_options$protax)) {
+    parse_protax_options(pipeline_options$protax)
+  }
+  parse_taxonomy_options(pipeline_options)
+  parse_outgroup_options(pipeline_options)
+  parse_cluster_options(pipeline_options)
 }
