@@ -32,6 +32,8 @@
   the sample table.
 * Add `*_path()` functions which return the paths used to read/store
   various input, intermediate, and output files.
+* Add `tar_merge()` to merge plans (typically products of `tar_map()`)
+  element-wise by name.
   
   
 # optimotu.pipeline 0.5.2

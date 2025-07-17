@@ -122,3 +122,39 @@ tar_substitute.tar_target <- function(target, values) {
 tar_substitute.list <- function(target, values) {
   lapply(target, tar_substitute, values = values)
 }
+
+#' Merge named lists within two targets (sub)plans
+#'
+#' This is most meaningful when the plans were both produced by `targets::tar_map()`
+#' and the targets in the plans have the same names.
+#'
+#' @param plan1 (`targets::tar_target()` object or (possibly nested) list of such
+#' objects) the first plan to merge
+#' @param plan2 (`targets::tar_target()` object or (possibly nested) list of such
+#' objects) the second plan to merge
+#' @return a nested `list` of `targets::tar_target()` objects
+#' @export
+tar_merge <- function(plan1, plan2) {
+  if (methods::is(plan1, "tar_target") && methods::is(plan2, "tar_target")) {
+    return(list(plan1, plan2))
+  }
+  if (methods::is(plan1, "tar_target")) {
+    return(c(list(plan1), plan2))
+  }
+  if (methods::is(plan2, "tar_target")) {
+    return(c(plan1, list(plan2)))
+  }
+  if (is.null(names(plan1)) || is.null(names(plan2))) {
+    return(c(plan1, plan2))
+  }
+  all_names <- unique(c(names(plan1), names(plan2)))
+  all_names <- all_names[all_names != ""]
+  names(all_names) <- all_names
+  c(
+    plan1[names(plan1) == ""],
+    plan2[names(plan2) == ""],
+    lapply(all_names, function(name) {
+      tar_merge(plan1[[name]], plan2[[name]])
+    })
+  )
+}
