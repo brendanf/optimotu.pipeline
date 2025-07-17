@@ -54,3 +54,4 @@ assumed to be negative controls, and those including "MOCK", "AMPTK",
 controls.
 }
 }
+\keyword{internal}

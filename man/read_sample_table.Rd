@@ -27,3 +27,4 @@ orientation of the reads in each sample. Additionally trimming and filtering
 parameters may be specified in additional columns, with names matching the
 parameter names in \code{pipeline_options.yaml}.
 }
+\keyword{internal}

@@ -1,3 +1,79 @@
+#' Finalize a sample table after it has been read or inferred
+#'
+#' This includes adding the `orient` column if it is not already present,
+#' generating file names for the trimmed and filtered reads, and validation.
+#'
+#' @param sample_table (`tibble`) the sample table to finalize.
+#' @return A finalized sample table
+#' @keywords internal
+finalize_sample_table <- function(
+    sample_table
+) {
+  checkmate::assert_tibble(sample_table)
+  checkmate::check_names(
+    names(sample_table),
+    must.include = c("sample", "seqrun", "fastq_R1", "fastq_R2",
+                     "neg_control", "pos_control")
+  )
+
+  switch(
+    read_orientation(),
+    fwd = sample_table$orient <- "fwd",
+    rev = sample_table$orient <- "rev",
+    mixed = sample_table <- tidyr::crossing(sample_table, orient = c("fwd", "rev")),
+    custom = if (isFALSE(do_custom_sample_table())) {
+      stop("option 'orient: custom' requires a custom sample table is given.")
+    } else if (!"orient" %in% names(sample_table)) {
+      stop("option 'orient: custom' required a column named 'orient' in the",
+           " custom sample table, with values consisting of 'fwd', 'rev', and 'mixed'")
+    },
+    stop("unknown value for option 'orient'; should be 'fwd', 'rev', 'mixed', or 'custom'")
+  )
+
+  sample_table <- sample_table |>
+    # generate filenames for trimmed and filtered reads
+    dplyr::mutate(
+      sample_key = paste(seqrun, sample, sep = "_"),
+      trim_R1 = file.path(
+        trim_path(),
+        paste(sample_key, orient, "R1_trim.fastq.gz", sep = "_")
+      ),
+      trim_R2 = file.path(
+        trim_path(),
+        paste(sample_key, orient, "R2_trim.fastq.gz", sep = "_")
+      ),
+      filt_R1 = file.path(
+        filt_path(),
+        paste(sample_key, orient, "R1_filt.fastq.gz", sep = "_")
+      ),
+      filt_R2 = file.path(
+        filt_path(),
+        paste(sample_key, orient, "R2_filt.fastq.gz", sep = "_")
+      ),
+      sample_key = file_to_sample_key(filt_R1) # to be sure
+    )
+
+  # spike_strength is used along with the nonspike/spike ratio to convert from
+  # read number to "weight"
+  if (!("spike_weight") %in% names(sample_table))
+    sample_table$spike_weight <- 1
+
+  assertthat::assert_that(
+    !any(is.na(sample_table$seqrun)),
+    !any(is.na(sample_table$sample)),
+    is.numeric(sample_table$spike_weight),
+    !any(duplicated(sample_table[c("fastq_R1", "orient")])),
+    !any(duplicated(sample_table[c("fastq_R2", "orient")])),
+    !any(duplicated(sample_table$trim_R1)),
+    !any(duplicated(sample_table$trim_R2)),
+    !any(duplicated(sample_table$filt_R1)),
+    !any(duplicated(sample_table$filt_R2))
+  )
+
+  options(optimotu.pipeline.sample_table_hash = targets:::hash_object(sample_table))
+  .optimotu_sample_table <<- sample_table
+}
+
 #' Read sample table from file
 #'
 #' This function reads a custom sample table from CSV, TSV, or Excel files.
@@ -16,7 +92,7 @@
 #' @param sample_table_file (`character`) the path to the sample table file.
 #'
 #' @return A `tibble` containing the sample table.
-
+#' @keywords internal
 read_sample_table <- function(sample_table_file = custom_sample_table()) {
   if (endsWith(sample_table_file, ".csv")) {
     sample_table <-
@@ -78,8 +154,8 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
   )
   checkmate::assert_character(sample_table$sample, any.missing = FALSE)
   checkmate::assert_character(sample_table$seqrun, any.missing = FALSE)
-  checkmate::assert_file_exists(file.path(raw_path, sample_table$fastq_R1), access = "r")
-  checkmate::assert_file_exists(file.path(raw_path, sample_table$fastq_R2), access = "r")
+  checkmate::assert_file_exists(file.path(raw_path(), sample_table$fastq_R1), access = "r")
+  checkmate::assert_file_exists(file.path(raw_path(), sample_table$fastq_R2), access = "r")
   if ("pos_control" %in% names(sample_table)) {
     checkmate::assert_subset(sample_table$pos_control, c(true_vals, false_vals))
     sample_table$pos_control <- sample_table$pos_control %in% true_vals
@@ -168,7 +244,7 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
 #' name extracted from the file names. The `neg_control` and `pos_control`
 #' columns are logical vectors indicating whether the sample is a negative or
 #' positive control, respectively.
-#' @export
+#' @keywords internal
 infer_sample_table <- function(
     raw_path = "sequences/01_raw",
     file_extension = read_file_extension()
@@ -190,3 +266,118 @@ infer_sample_table <- function(
     )
 }
 
+.optimotu_cache <- new.env()
+
+#' Return the sample table
+#'
+#' This function reads the custom sample table from disk or infers it from the
+#' raw sequence files, depending on the configuration in `pipeline_options.yaml`.
+#' It caches the result to avoid reading the sample table multiple times in the
+#' same R session. It is best to avoid calling this function on remote workers.
+#'
+#' @param ... arguments to be used for `targets` dependency tracking. Ignored
+#' by this function.
+#' @return A `tibble` with the sample table, as described in
+#' `read_sample_table()`
+#' @export
+sample_table <- function(...) {
+  if (is.null(.optimotu_cache$sample_table)) {
+    if (do_custom_sample_table()) {
+      .optimotu_cache$sample_table <- read_sample_table(
+        custom_sample_table()
+      )
+    } else {
+      .optimotu_cache$sample_table <- infer_sample_table(
+        raw_path = raw_path(),
+        file_extension = read_file_extension()
+      )
+    }
+    .optimotu_cache$sample_table <-
+      finalize_sample_table(.optimotu_cache$sample_table)
+  }
+  .optimotu_cache$sample_table
+}
+
+#' @rdname sample_table
+#' @export
+sample_table_hash <- function() {
+  targets:::hash_object(sample_table())
+}
+
+#' @rdname paths
+#' @export
+path <- function() {
+  "."
+}
+
+#' @rdname paths
+#' @export
+meta_path <- function() {
+  fp <- file.path(path(), "meta")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+seq_path <- function() {
+  fp <- file.path(path(), "sequences")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+raw_path <- function() {
+  fp <- file.path(seq_path(), "01_raw")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+trim_path <- function() {
+  fp <- file.path(seq_path(), "02_trimmed")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+filt_path <- function() {
+  fp <- file.path(seq_path(), "03_filtered")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+asv_path <- function() {
+  fp <- file.path(seq_path(), "04_denoised")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+protax_path <- function() {
+  fp <- file.path(seq_path(), "05_protax")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+output_path <- function() {
+    fp <- file.path(path(), "output")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+log_path <- function() {
+  fp <- file.path(path(), "logs")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}

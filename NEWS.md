@@ -26,6 +26,13 @@
 * Add `read_sample_table()` and `infer_sample_table()` functions to read in a
   custom sample table from a file, or infer it from the names of input read
   files.
+* Add top-level functions `sample_table()`, which reads/infers the sample table
+  the first time it is called in a session, and returns a cached version
+  thereafter; and `sample_table_hash()`, which can be used to track changes in
+  the sample table.
+* Add `*_path()` functions which return the paths used to read/store
+  various input, intermediate, and output files.
+  
   
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with
