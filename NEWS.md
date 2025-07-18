@@ -36,7 +36,8 @@
   element-wise by name.
 * `tar_map_bind_rows()`, `tar_map_c()` and `tar_map_list()` now work when
   `tar_map()` was applied to `values` with 0 rows.
-  
+* `fastq_seq_map()` now correctly detects when read names are not _entirely_
+  hexadecimal numbers.
   
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with

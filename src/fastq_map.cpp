@@ -101,7 +101,6 @@ Rcpp::DataFrame fastq_stage_flags(std::string raw, std::vector<std::string> stag
 Rcpp::DataFrame fastq_stage_map(std::string raw, Rcpp::CharacterVector stages) {
   std::vector<std::string> stages_v = Rcpp::as<std::vector<std::string>>(stages);
 
-  int i = 0;
   filter_stream_in raw_stream;
   open_fastx_in(raw_stream, raw);
 
@@ -122,6 +121,7 @@ Rcpp::DataFrame fastq_stage_map(std::string raw, Rcpp::CharacterVector stages) {
   std::deque<int> count_index;
   std::vector<std::deque<int>> stage_index(stages.size());
   bool use_name = true;
+  int i = 0;
 
   while (read_fastq_record(raw_stream, raw_name)) {
     for (int si = 0; si < stages.size(); ++si) {
@@ -136,17 +136,21 @@ Rcpp::DataFrame fastq_stage_map(std::string raw, Rcpp::CharacterVector stages) {
     count_index.push_back(++i);
 
     if (use_name) {
-      std::stringstream ss(raw_name);
-      int j;
-      if (ss >> std::hex >> j) {
-        name_index.push_back(j);
-      } else {
+      char* p;
+      int j = strtol(raw_name.data(), &p, 16);
+      if (*p != 0) {
         name_index.clear();
         use_name = false;
+      } else {
+        name_index.push_back(j);
       }
     }
   }
-
+  // if (use_name) {
+  //   Rcpp::Rcerr << "using raw_idx from names" << std::endl;
+  // } else {
+  //   Rcpp::Rcerr << "using raw_idx from counts" << std::endl;
+  // }
   Rcpp::IntegerVector index = Rcpp::wrap(use_name ? name_index : count_index);
   Rcpp::DataFrame output = Rcpp::DataFrame::create(
     Rcpp::Named("raw_idx") = index
