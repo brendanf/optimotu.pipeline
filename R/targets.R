@@ -24,6 +24,7 @@ get_target_names <- function(plan) {
 #' @return a `list` of `symbol` giving the names of the target variants
 tar_map_symbols <- function(plan, target_name = NULL) {
   if (!is.null(target_name)) plan <- plan[[target_name]]
+  if (length(plan) == 0) return(list())
   rlang::syms(tarchetypes::tar_select_names(plan, everything()))
 }
 

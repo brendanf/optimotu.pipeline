@@ -34,6 +34,8 @@
   various input, intermediate, and output files.
 * Add `tar_merge()` to merge plans (typically products of `tar_map()`)
   element-wise by name.
+* `tar_map_bind_rows()`, `tar_map_c()` and `tar_map_list()` now work when
+  `tar_map()` was applied to `values` with 0 rows.
   
   
 # optimotu.pipeline 0.5.2
