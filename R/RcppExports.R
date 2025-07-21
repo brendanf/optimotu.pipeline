@@ -178,8 +178,8 @@ fastq_qual_bins <- function(fastq, max_n = 1e9L, offset = 33L) {
 #'
 #' @return the output file name
 #' @export
-fastq_sample <- function(file, numerator, denominator, output, rename = FALSE) {
-    .Call(`_optimotu_pipeline_fastq_sample`, file, numerator, denominator, output, rename)
+fastq_sample_fraction <- function(file, numerator, denominator, output, rename = FALSE) {
+    .Call(`_optimotu_pipeline_fastq_sample_fraction`, file, numerator, denominator, output, rename)
 }
 
 #' Take multiple samples from a FASTQ file
@@ -197,8 +197,43 @@ fastq_sample <- function(file, numerator, denominator, output, rename = FALSE) {
 #'
 #' @return a character vector of output file names
 #' @export
-fastq_sample_multiple <- function(file, numerators, denominator, output, rename = FALSE) {
-    .Call(`_optimotu_pipeline_fastq_sample_multiple`, file, numerators, denominator, output, rename)
+fastq_sample_fraction_multiple <- function(file, numerators, denominator, output, rename = FALSE) {
+    .Call(`_optimotu_pipeline_fastq_sample_fraction_multiple`, file, numerators, denominator, output, rename)
+}
+
+#' Subsample a FASTQ file to a fixed number of reads
+#'
+#' This function subsamples a FASTQ file to a fixed number of reads.
+#'
+#' @param file (`character` string) the path to the input FASTQ file. May be gzipped.
+#' @param number (`integer` scalar) the number of reads to sample.
+#' @param output (`character` string) the path to the output file. If it ends in ".gz", the output will be gzipped.
+#' @param rename (`logical` scalar) whether to rename the reads in the output;
+#' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+#' number
+#'
+#' @return the output file name
+#' @export
+fastq_sample_number <- function(file, number, output, rename = FALSE) {
+    .Call(`_optimotu_pipeline_fastq_sample_number`, file, number, output, rename)
+}
+
+#' Subsample a FASTQ file to multiple numbers of reads
+#'
+#' This function subsamples a FASTQ file to multiple numbers of reads.
+#'
+#' @param file (`character` string) the path to the input FASTQ file. May be gzipped.
+#' @param numbers (`integer` vector) the numbers of reads to sample.
+#' @param output (`character` vector) a vector of output file names. If an
+#' element ends in ".gz", the output will be gzipped.
+#' @param rename (`logical` scalar) whether to rename the reads in the output;
+#' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+#' number.
+#'
+#' @return a character vector of output file names
+#' @export
+fastq_sample_number_multiple <- function(file, numbers, output, rename = FALSE) {
+    .Call(`_optimotu_pipeline_fastq_sample_number_multiple`, file, numbers, output, rename)
 }
 
 #' Interleave multiple FASTQ files

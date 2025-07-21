@@ -18,9 +18,10 @@
   transition matrix for a set of reads which have been mapped to known
   true sequences (e.g. from a mock community). This can be used to calibrate
   the DADA2 error model.
-* Add `fastq_sample()` and `fastq_sample_multiple()` functions to repeatably
+* Add `fastq_sample_fraction()` and `fastq_sample_fraction_multiple()` functions to repeatably
   sample a fraction of reads (or multiple fractions with the same denominator)
-  from a fastq file.
+  from a FASTQ file; and `fastq_sample_number()` and `fastq_sample_number_multiple()`
+  to sample a specific number of reads (or multiple numbers).
 * Add `tar_substitute()` function to aid in editing `targets` pipelines
   programmatically.
 * Add `read_sample_table()` and `infer_sample_table()` functions to read in a

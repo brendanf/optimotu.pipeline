@@ -34,7 +34,7 @@
 //' @return the output file name
 //' @export
 // [[Rcpp::export]]
-Rcpp::CharacterVector fastq_sample(
+Rcpp::CharacterVector fastq_sample_fraction(
     const std::string& file,
     const int numerator,
     const int denominator,
@@ -141,7 +141,7 @@ Rcpp::CharacterVector fastq_sample(
 //' @return a character vector of output file names
 //' @export
 // [[Rcpp::export]]
-Rcpp::CharacterVector fastq_sample_multiple(
+Rcpp::CharacterVector fastq_sample_fraction_multiple(
     const std::string& file,
     const Rcpp::IntegerVector& numerators,
     const int denominator,
@@ -246,5 +246,159 @@ Rcpp::CharacterVector fastq_sample_multiple(
     }
   }
 
+  return output;
+}
+
+//' Subsample a FASTQ file to a fixed number of reads
+//'
+//' This function subsamples a FASTQ file to a fixed number of reads.
+//'
+//' @param file (`character` string) the path to the input FASTQ file. May be gzipped.
+//' @param number (`integer` scalar) the number of reads to sample.
+//' @param output (`character` string) the path to the output file. If it ends in ".gz", the output will be gzipped.
+//' @param rename (`logical` scalar) whether to rename the reads in the output;
+//' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+//' number
+//'
+//' @return the output file name
+//' @export
+// [[Rcpp::export]]
+Rcpp::CharacterVector fastq_sample_number(
+    const std::string& file,
+    const int number,
+    const std::string& output,
+    bool rename = false
+) {
+
+  int n_lines = 0;
+  {
+    filter_stream_in instream;
+    open_fastx_in(instream, file);
+    if (!instream) {
+      Rcpp::stop("Error opening input file %s for reading", file);
+    }
+    std::string record;
+    while (std::getline(instream, record) && !record.empty()) {
+      n_lines++;
+    }
+  }
+  if (n_lines % 4 != 0) {
+    Rcpp::stop("Malformed FASTQ file: input file must have a multiple of 4 lines.");
+  }
+
+  int n_reads = n_lines / 4;
+  filter_stream_in instream;
+  open_fastx_in(instream, file);
+  filter_stream_out outstream;
+  open_fastx_out(outstream, output);
+  Rcpp::IntegerVector sample_idx = Rcpp::sample(n_reads, n_reads);
+  int i = 0;
+  std::string header, sequence, header2, quality;
+  while (std::getline(instream, header) && !header.empty()) {
+    std::getline(instream, sequence);
+    std::getline(instream, header2);
+    std::getline(instream, quality);
+    if (n_reads <= number || sample_idx[i++] <= number) {
+      if (rename) {
+        std::stringstream ss;
+        ss << "@" << std::hex << i;
+        header = ss.str();
+      }
+      outstream << header << "\n"
+                << sequence << "\n"
+                << header2 << "\n"
+                << quality << "\n";
+    }
+  }
+
+  return output;
+}
+
+//' Subsample a FASTQ file to multiple numbers of reads
+//'
+//' This function subsamples a FASTQ file to multiple numbers of reads.
+//'
+//' @param file (`character` string) the path to the input FASTQ file. May be gzipped.
+//' @param numbers (`integer` vector) the numbers of reads to sample.
+//' @param output (`character` vector) a vector of output file names. If an
+//' element ends in ".gz", the output will be gzipped.
+//' @param rename (`logical` scalar) whether to rename the reads in the output;
+//' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+//' number.
+//'
+//' @return a character vector of output file names
+//' @export
+// [[Rcpp::export]]
+Rcpp::CharacterVector fastq_sample_number_multiple(
+    const std::string& file,
+    const Rcpp::IntegerVector& numbers,
+    const Rcpp::CharacterVector& output,
+    bool rename = false
+) {
+  if (numbers.size() != output.size()) {
+    Rcpp::stop("The length of numbers and output must be the same.");
+  }
+  if (file.empty()) {
+    Rcpp::stop("Input file name cannot be empty.");
+  }
+  for (const auto& num : numbers) {
+    if (num <= 0) {
+      Rcpp::stop("Each number must be a positive integer.");
+    }
+  }
+
+  int n_lines = 0;
+  {
+    filter_stream_in instream;
+    open_fastx_in(instream, file);
+    if (!instream) {
+      Rcpp::stop("Error opening input file %s for reading", file);
+    }
+    std::string record;
+    while (std::getline(instream, record) && !record.empty()) {
+      n_lines++;
+    }
+  }
+  if (n_lines % 4 != 0) {
+    Rcpp::stop("Malformed FASTQ file: input file must have a multiple of 4 lines.");
+  }
+
+  int n_reads = n_lines / 4;
+  Rcpp::IntegerVector sample_idx = Rcpp::sample(n_reads, n_reads);
+  filter_stream_in instream;
+  open_fastx_in(instream, file);
+  std::vector<filter_stream_out> out_streams(output.size());
+  for (int i = 0; i < output.size(); ++i) {
+    if (output[i].empty()) {
+      Rcpp::stop("Output file name cannot be empty.");
+    }
+    std::string output_str(output[i]);
+    open_fastx_out(out_streams[i], output_str);
+    if (!out_streams[i]) {
+      Rcpp::stop("Error opening output file %s for writing", output_str);
+    }
+  }
+  int i = 0;
+  std::string header;
+  while (std::getline(instream, header) && !header.empty()) {
+    if (rename) {
+      std::stringstream ss;
+      ss << "@" << std::hex << (i + 1);
+      header = ss.str();
+    }
+    std::string sequence, header2, quality;
+    std::getline(instream, sequence);
+    std::getline(instream, header2);
+    std::getline(instream, quality);
+    for (int j = 0; j < numbers.size(); ++j) {
+      if (n_reads <= numbers[j] || sample_idx[i] <= numbers[j]) {
+        out_streams[j] << header << "\n"
+          << sequence << "\n"
+          << header2 << "\n"
+          << quality << "\n";
+      }
+    }
+    i++;
+  }
   return output;
 }
