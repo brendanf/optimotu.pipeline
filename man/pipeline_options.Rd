@@ -58,6 +58,10 @@
 \alias{cluster_dist_config}
 \alias{do_guilds}
 \alias{do_wide_otu_table}
+\alias{rarefy_number}
+\alias{rarefy_numerator}
+\alias{rarefy_denominator}
+\alias{do_rarefy}
 \alias{did_pipeline_options}
 \title{Functions to access pipeline-wide options}
 \usage{
@@ -174,6 +178,14 @@ cluster_dist_config()
 do_guilds()
 
 do_wide_otu_table()
+
+rarefy_number()
+
+rarefy_numerator()
+
+rarefy_denominator()
+
+do_rarefy()
 
 did_pipeline_options()
 }

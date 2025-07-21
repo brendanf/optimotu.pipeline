@@ -24,6 +24,7 @@
 \alias{parse_cluster_options}
 \alias{parse_guilds_options}
 \alias{parse_otu_table_options}
+\alias{parse_rarefy_options}
 \alias{parse_pipeline_options}
 \title{Parse pipeline options from a YAML file}
 \usage{
@@ -72,6 +73,8 @@ parse_cluster_options(pipeline_options)
 parse_guilds_options(pipeline_options)
 
 parse_otu_table_options(pipeline_options)
+
+parse_rarefy_options(pipeline_options)
 
 parse_pipeline_options()
 }

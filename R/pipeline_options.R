@@ -1152,6 +1152,78 @@ do_wide_otu_table <- function() {
   getOption("optimotu.pipeline.wide_table", FALSE)
 }
 
+#### rarefaction settings ####
+#' @rdname parse_pipeline_options
+#' @export
+parse_rarefy_options <- function(pipeline_options) {
+  rarefy_options <- pipeline_options$rarefy
+  if (!is.null(rarefy_options)) {
+    rarefy_options <- unnest_yaml_list(rarefy_options)
+    checkmate::assert_names(
+      names(rarefy_options),
+      subset.of = c("numerator", "denominator", "number")
+    )
+    if ("number" %in% names(rarefy_options)) {
+      if (any(c("numerator", "denominator") %in% names(rarefy_options))) {
+        stop(
+          "Option 'rarefy:number' cannot be used in conjunction with ",
+          "option 'rarefy:numerator' or 'rarefy:denominator'.\n",
+          "(file: pipeline_options.yaml)"
+        )
+      }
+      checkmate::assert_integerish(rarefy_options$number, lower = 1)
+      options(
+        optimotu.pipeline.rarefy_number = rarefy_options$number
+      )
+    } else if ("numerator" %in% names(rarefy_options)) {
+      if (!"denominator" %in% names(rarefy_options)) {
+        stop(
+          "Option 'rarefy:numerator' requires option 'rarefy:denominator'.\n",
+          "(file: pipeline_options.yaml)"
+        )
+      }
+      checkmate::assert_integerish(rarefy_options$numerator, lower = 1)
+      checkmate::assert_integerish(rarefy_options$denominator, lower = 1)
+      options(
+        optimotu.pipeline.rarefy_numerator = rarefy_options$numerator,
+        optimotu.pipeline.rarefy_denominator = rarefy_options$denominator
+      )
+    } else if ("denominator" %in% names(rarefy_options)) {
+      stop(
+        "Option 'rarefy:denominator' requires option 'rarefy:numerator'.\n",
+        "(file: pipeline_options.yaml)"
+      )
+    } else {
+      warning("Empty rarefy options given in 'pipeline_options.yaml'\n",
+              "No rarefaction will be performed.")
+    }
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+rarefy_number <- function() {
+  getOption("optimotu.pipeline.rarefy_number", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
+rarefy_numerator <- function() {
+  getOption("optimotu.pipeline.rarefy_numerator", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
+rarefy_denominator <- function() {
+  getOption("optimotu.pipeline.rarefy_denominator", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
+do_rarefy <- function() {
+  !is.null(rarefy_number()) || !is.null(rarefy_numerator())
+}
+
 #### main options function ####
 #' @rdname parse_pipeline_options
 #' @export
@@ -1187,6 +1259,7 @@ parse_pipeline_options <- function() {
   parse_outgroup_options(pipeline_options)
   parse_cluster_options(pipeline_options)
   parse_guilds_options(pipeline_options)
+  parse_rarefy_options(pipeline_options)
   options(optimotu.pipeline.did_options = TRUE)
 }
 
