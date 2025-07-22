@@ -2,6 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{fastq_sample_fraction_multiple}
 \alias{fastq_sample_fraction_multiple}
+\alias{fastq_pair_sample_fraction_multiple}
 \title{Take multiple samples from a FASTQ file}
 \usage{
 fastq_sample_fraction_multiple(
@@ -9,6 +10,16 @@ fastq_sample_fraction_multiple(
   numerators,
   denominator,
   output,
+  rename = FALSE
+)
+
+fastq_pair_sample_fraction_multiple(
+  file_R1,
+  file_R2,
+  numerators,
+  denominator,
+  output_R1,
+  output_R2,
   rename = FALSE
 )
 }
@@ -23,9 +34,23 @@ reads to sample.}
 
 \item{output}{(\code{character} vector) a vector of output file names. If an
 element ends in ".gz", the output will be gzipped.}
+
+\item{file_R1}{(\code{character} string) the path to the R1 FASTQ file. May be gzipped.}
+
+\item{file_R2}{(\code{character} string) the path to the R2 FASTQ file. May be gzipped..}
+
+\item{output_R1}{(\code{character} vector) a vector of output file names. If an
+element ends in ".gz", the output will be gzipped.}
+
+\item{output_R2}{(\code{character} vector) a vector of output file names. If an
+element ends in ".gz", the output will be gzipped.
+if \code{TRUE}, the read names will be replaced with a hexadecimal sequential
+number.}
 }
 \value{
 a character vector of output file names
+
+a list of two character vectors of output file names
 }
 \description{
 This function takes multiple samples from a FASTQ file using the same

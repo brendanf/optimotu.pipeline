@@ -182,6 +182,72 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// fastq_pair_sample_fraction
+Rcpp::CharacterVector fastq_pair_sample_fraction(const std::string& file_R1, const std::string& file_R2, const int numerator, const int denominator, const std::string& output_R1, const std::string& output_R2, bool rename);
+RcppExport SEXP _optimotu_pipeline_fastq_pair_sample_fraction(SEXP file_R1SEXP, SEXP file_R2SEXP, SEXP numeratorSEXP, SEXP denominatorSEXP, SEXP output_R1SEXP, SEXP output_R2SEXP, SEXP renameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type file_R1(file_R1SEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type file_R2(file_R2SEXP);
+    Rcpp::traits::input_parameter< const int >::type numerator(numeratorSEXP);
+    Rcpp::traits::input_parameter< const int >::type denominator(denominatorSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type output_R1(output_R1SEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type output_R2(output_R2SEXP);
+    Rcpp::traits::input_parameter< bool >::type rename(renameSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_pair_sample_fraction(file_R1, file_R2, numerator, denominator, output_R1, output_R2, rename));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fastq_pair_sample_fraction_multiple
+Rcpp::List fastq_pair_sample_fraction_multiple(const std::string& file_R1, const std::string& file_R2, const Rcpp::IntegerVector& numerators, const int denominator, const Rcpp::CharacterVector& output_R1, const Rcpp::CharacterVector& output_R2, bool rename);
+RcppExport SEXP _optimotu_pipeline_fastq_pair_sample_fraction_multiple(SEXP file_R1SEXP, SEXP file_R2SEXP, SEXP numeratorsSEXP, SEXP denominatorSEXP, SEXP output_R1SEXP, SEXP output_R2SEXP, SEXP renameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type file_R1(file_R1SEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type file_R2(file_R2SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type numerators(numeratorsSEXP);
+    Rcpp::traits::input_parameter< const int >::type denominator(denominatorSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type output_R1(output_R1SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type output_R2(output_R2SEXP);
+    Rcpp::traits::input_parameter< bool >::type rename(renameSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_pair_sample_fraction_multiple(file_R1, file_R2, numerators, denominator, output_R1, output_R2, rename));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fastq_pair_sample_number
+Rcpp::CharacterVector fastq_pair_sample_number(const std::string& file_R1, const std::string& file_R2, const int number, const std::string& output_R1, const std::string& output_R2, bool rename);
+RcppExport SEXP _optimotu_pipeline_fastq_pair_sample_number(SEXP file_R1SEXP, SEXP file_R2SEXP, SEXP numberSEXP, SEXP output_R1SEXP, SEXP output_R2SEXP, SEXP renameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type file_R1(file_R1SEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type file_R2(file_R2SEXP);
+    Rcpp::traits::input_parameter< const int >::type number(numberSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type output_R1(output_R1SEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type output_R2(output_R2SEXP);
+    Rcpp::traits::input_parameter< bool >::type rename(renameSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_pair_sample_number(file_R1, file_R2, number, output_R1, output_R2, rename));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fastq_pair_sample_number_multiple
+Rcpp::List fastq_pair_sample_number_multiple(const std::string& file_R1, const std::string& file_R2, const Rcpp::IntegerVector& numbers, const Rcpp::CharacterVector& output_R1, const Rcpp::CharacterVector& output_R2, bool rename);
+RcppExport SEXP _optimotu_pipeline_fastq_pair_sample_number_multiple(SEXP file_R1SEXP, SEXP file_R2SEXP, SEXP numbersSEXP, SEXP output_R1SEXP, SEXP output_R2SEXP, SEXP renameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type file_R1(file_R1SEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type file_R2(file_R2SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type numbers(numbersSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type output_R1(output_R1SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::CharacterVector& >::type output_R2(output_R2SEXP);
+    Rcpp::traits::input_parameter< bool >::type rename(renameSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_pair_sample_number_multiple(file_R1, file_R2, numbers, output_R1, output_R2, rename));
+    return rcpp_result_gen;
+END_RCPP
+}
 // fastq_combine
 std::string fastq_combine(const std::vector<std::string>& infiles, const std::string outfile, const bool compress);
 RcppExport SEXP _optimotu_pipeline_fastq_combine(SEXP infilesSEXP, SEXP outfileSEXP, SEXP compressSEXP) {
@@ -275,6 +341,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_fastq_sample_fraction_multiple", (DL_FUNC) &_optimotu_pipeline_fastq_sample_fraction_multiple, 5},
     {"_optimotu_pipeline_fastq_sample_number", (DL_FUNC) &_optimotu_pipeline_fastq_sample_number, 4},
     {"_optimotu_pipeline_fastq_sample_number_multiple", (DL_FUNC) &_optimotu_pipeline_fastq_sample_number_multiple, 4},
+    {"_optimotu_pipeline_fastq_pair_sample_fraction", (DL_FUNC) &_optimotu_pipeline_fastq_pair_sample_fraction, 7},
+    {"_optimotu_pipeline_fastq_pair_sample_fraction_multiple", (DL_FUNC) &_optimotu_pipeline_fastq_pair_sample_fraction_multiple, 7},
+    {"_optimotu_pipeline_fastq_pair_sample_number", (DL_FUNC) &_optimotu_pipeline_fastq_pair_sample_number, 6},
+    {"_optimotu_pipeline_fastq_pair_sample_number_multiple", (DL_FUNC) &_optimotu_pipeline_fastq_pair_sample_number_multiple, 6},
     {"_optimotu_pipeline_fastq_combine", (DL_FUNC) &_optimotu_pipeline_fastq_combine, 3},
     {"_optimotu_pipeline_fasta_combine", (DL_FUNC) &_optimotu_pipeline_fasta_combine, 3},
     {"_optimotu_pipeline_fastq_rename", (DL_FUNC) &_optimotu_pipeline_fastq_rename, 3},

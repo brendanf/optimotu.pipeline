@@ -2,9 +2,19 @@
 % Please edit documentation in R/RcppExports.R
 \name{fastq_sample_number_multiple}
 \alias{fastq_sample_number_multiple}
+\alias{fastq_pair_sample_number_multiple}
 \title{Subsample a FASTQ file to multiple numbers of reads}
 \usage{
 fastq_sample_number_multiple(file, numbers, output, rename = FALSE)
+
+fastq_pair_sample_number_multiple(
+  file_R1,
+  file_R2,
+  numbers,
+  output_R1,
+  output_R2,
+  rename = FALSE
+)
 }
 \arguments{
 \item{file}{(\code{character} string) the path to the input FASTQ file. May be gzipped.}
@@ -17,9 +27,21 @@ element ends in ".gz", the output will be gzipped.}
 \item{rename}{(\code{logical} scalar) whether to rename the reads in the output;
 if \code{TRUE}, the read names will be replaced with a hexadecimal sequential
 number.}
+
+\item{file_R1}{(\code{character} string) the path to the R1 FASTQ file. May be gzipped.}
+
+\item{file_R2}{(\code{character} string) the path to the R2 FASTQ file. May be gzipped..}
+
+\item{output_R1}{(\code{character} vector) a vector of output file names. If an
+element ends in ".gz", the output will be gzipped.}
+
+\item{output_R2}{(\code{character} vector) a vector of output file names. If an
+element ends in ".gz", the output will be gzipped.}
 }
 \value{
 a character vector of output file names
+
+a list of two character vectors of output file names
 }
 \description{
 This function subsamples a FASTQ file to multiple numbers of reads.

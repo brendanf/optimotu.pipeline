@@ -2,9 +2,20 @@
 % Please edit documentation in R/RcppExports.R
 \name{fastq_sample_fraction}
 \alias{fastq_sample_fraction}
+\alias{fastq_pair_sample_fraction}
 \title{Subsample from a FASTQ file}
 \usage{
 fastq_sample_fraction(file, numerator, denominator, output, rename = FALSE)
+
+fastq_pair_sample_fraction(
+  file_R1,
+  file_R2,
+  numerator,
+  denominator,
+  output_R1,
+  output_R2,
+  rename = FALSE
+)
 }
 \arguments{
 \item{file}{(\code{character} string) the path to the FASTQ file.}
@@ -21,9 +32,21 @@ in ".gz", the output will be gzipped.}
 \item{rename}{(\code{logical} scalar) whether to rename the reads in the output;
 if \code{TRUE}, the read names will be replaced with a hexadecimal sequential
 number}
+
+\item{file_R1}{(\code{character} string) the path to the R1 FASTQ file. May be gzipped.}
+
+\item{file_R2}{(\code{character} string) the path to the R2 FASTQ file. May be gzipped..}
+
+\item{output_R1}{(\code{character} string) the path to the R1 output file. If it ends in ".gz", the output will be gzipped.}
+
+\item{output_R2}{(\code{character} string) the path to the R2 output file. If it ends in ".gz", the output will be gzipped.
+if \code{TRUE}, the read names will be replaced with a hexadecimal sequential
+number.}
 }
 \value{
 the output file name
+
+a character vector of output file names
 }
 \description{
 This function subsamples an (optionally gzipped) FASTQ file by randomly

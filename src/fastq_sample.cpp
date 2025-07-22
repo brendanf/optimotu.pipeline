@@ -402,3 +402,522 @@ Rcpp::CharacterVector fastq_sample_number_multiple(
   }
   return output;
 }
+
+//' @rdname fastq_sample_fraction
+//' @param file_R1 (`character` string) the path to the R1 FASTQ file. May be gzipped.
+//' @param file_R2 (`character` string) the path to the R2 FASTQ file. May be gzipped..
+//' @param output_R1 (`character` string) the path to the R1 output file. If it ends in ".gz", the output will be gzipped.
+//' @param output_R2 (`character` string) the path to the R2 output file. If it ends in ".gz", the output will be gzipped.
+//' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+//' number.
+//' @return a character vector of output file names
+//' @export
+// [[Rcpp::export]]
+Rcpp::CharacterVector fastq_pair_sample_fraction(
+    const std::string& file_R1,
+    const std::string& file_R2,
+    const int numerator,
+    const int denominator,
+    const std::string& output_R1,
+    const std::string& output_R2,
+    bool rename = false
+) {
+
+
+  if (numerator <= 0 || denominator <= 0 || numerator > denominator) {
+    Rcpp::stop("Numerator and denominator must be positive integers, and"
+                 " numerator must be less than or equal to denominator.");
+  }
+  if (file_R1.empty() || file_R2.empty()) {
+    Rcpp::stop("Input file name cannot be empty.");
+  }
+  if (output_R1.empty() || output_R2.empty()) {
+    Rcpp::stop("Output file name cannot be empty.");
+  }
+  filter_stream_in instream_R1, instream_R2;
+  open_fastx_in(instream_R1, file_R1);
+  if (!instream_R1) {
+    Rcpp::stop("Error opening input file %s for reading", file_R1);
+  }
+  open_fastx_in(instream_R2, file_R2);
+  if (!instream_R2) {
+    Rcpp::stop("Error opening input file %s for reading", file_R2);
+  }
+
+  filter_stream_out outstream_R1, outstream_R2;
+  open_fastx_out(outstream_R1, output_R1);
+  if (!outstream_R1) {
+    Rcpp::stop("Error opening output file %s for writing", output_R1);
+  }
+  open_fastx_out(outstream_R2, output_R2);
+  if (!outstream_R2) {
+    Rcpp::stop("Error opening output file %s for writing", output_R2);
+  }
+
+  // temporary storage for input records
+  std::vector<std::pair<std::string, std::string>> pool;
+  pool.reserve(denominator);
+
+  std::string record_R1, record_R2;
+  while (std::getline(instream_R1, record_R1) && !record_R1.empty()) {
+    std::getline(instream_R2, record_R2);
+    if (record_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    if (rename) {
+      // Rename the read with a hexadecimal sequential number
+      static std::size_t read_count = 0;
+      std::stringstream ss;
+      ss << "@" << std::hex << ++read_count;
+      record_R1 = ss.str();
+      record_R2 = ss.str();
+    }
+    std::string line;
+    std::getline(instream_R1, line); // Sequence
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    record_R1 += "\n" + line;
+    std::getline(instream_R1, line); // Header2
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    record_R1 += "\n" + line;
+    std::getline(instream_R1, line); // Quality
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    record_R1 += "\n" + line;
+
+    std::getline(instream_R2, line); // Sequence
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    record_R2 += "\n" + line;
+    std::getline(instream_R2, line); // Header2
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    record_R2 += "\n" + line;
+    std::getline(instream_R2, line); // Quality
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    record_R2 += "\n" + line;
+    pool.push_back(std::make_pair(record_R1, record_R2));
+
+    if (pool.size() == denominator) {
+      // Reservoir sampling: randomly select a record to keep
+      Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
+      for (int i = 0; i < numerator; ++i) {
+        int selected = idx[i] - 1; // Convert to zero-based index
+        outstream_R1 << pool[selected].first << "\n";
+        outstream_R2 << pool[selected].second << "\n";
+      }
+      pool.clear();
+    }
+  }
+  if (pool.size() > 0) {
+    // If there are remaining records, sample from them
+    Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
+    for (int i = 0; i < numerator; ++i) {
+      int selected = idx[i] - 1; // Convert to zero-based index
+      if (selected < pool.size()) {
+        outstream_R1 << pool[selected].first << "\n";
+        outstream_R2 << pool[selected].second << "\n";
+      }
+    }
+  }
+
+  return Rcpp::CharacterVector::create(output_R1, output_R2);
+}
+
+//' @rdname fastq_sample_fraction_multiple
+//' @param file_R1 (`character` string) the path to the R1 FASTQ file. May be gzipped.
+//' @param file_R2 (`character` string) the path to the R2 FASTQ file. May be gzipped..
+//' @param output_R1 (`character` vector) a vector of output file names. If an
+//' element ends in ".gz", the output will be gzipped.
+//' @param output_R2 (`character` vector) a vector of output file names. If an
+//' element ends in ".gz", the output will be gzipped.
+//' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+//' number.
+//' @return a list of two character vectors of output file names
+//' @export
+// [[Rcpp::export]]
+Rcpp::List fastq_pair_sample_fraction_multiple(
+    const std::string& file_R1,
+    const std::string& file_R2,
+    const Rcpp::IntegerVector& numerators,
+    const int denominator,
+    const Rcpp::CharacterVector& output_R1,
+    const Rcpp::CharacterVector& output_R2,
+    bool rename = false
+) {
+  if (numerators.size() != output_R1.size() || numerators.size() != output_R2.size()) {
+    Rcpp::stop("The length of numerators and output must be the same.");
+  }
+  if (denominator <= 0) {
+    Rcpp::stop("Denominator must be a positive integer.");
+  }
+  int max_numerator = 0;
+  for (const auto& num : numerators) {
+    if (num <= 0 || num > denominator) {
+      Rcpp::stop("Each numerator must be a positive integer and less than or"
+                   "equal to the denominator.");
+    }
+    if (num > max_numerator) {
+      max_numerator = num;
+    }
+  }
+
+  if (file_R1.empty() || file_R2.empty()) {
+    Rcpp::stop("Input file names cannot be empty.");
+  }
+
+  filter_stream_in instream_R1, instream_R2;
+  open_fastx_in(instream_R1, file_R2);
+  if (!instream_R1) {
+    Rcpp::stop("Error opening input file %s for reading", file_R1);
+  }
+  open_fastx_in(instream_R2, file_R2);
+  if (!instream_R2) {
+    Rcpp::stop("Error opening input file %s for reading", file_R2);
+  }
+
+  std::vector<std::pair<filter_stream_out, filter_stream_out>> out_streams(output_R1.size());
+  for (size_t i = 0; i < output_R1.size(); ++i) {
+    if (output_R1[i].empty() || output_R2[i].empty()) {
+      Rcpp::stop("Output file name cannot be empty.");
+    }
+    std::string output_str(output_R1[i]);
+    open_fastx_out(out_streams[i].first, output_str);
+    if (!out_streams[i].first) {
+      Rcpp::stop("Error opening output file %s for writing", output_str);
+    }
+    output_str = output_R2[i];
+    open_fastx_out(out_streams[i].second, output_str);
+    if (!out_streams[i].second) {
+      Rcpp::stop("Error opening output file %s for writing", output_str);
+    }
+  }
+
+  // temporary storage for input records
+  std::vector<std::pair<std::string, std::string>> pool;
+  pool.reserve(denominator);
+
+  std::string record_R1, record_R2;
+  while (std::getline(instream_R1, record_R1) && !record_R1.empty()) {
+    std::getline(instream_R2, record_R2);
+    if (record_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    if (rename) {
+      // Rename the read with a hexadecimal sequential number
+      static std::size_t read_count = 0;
+      std::stringstream ss;
+      ss << "@" << std::hex << ++read_count;
+      record_R1 = ss.str();
+      record_R2 = ss.str();
+    }
+    std::string line;
+    std::getline(instream_R1, line); // Sequence
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    record_R1 += "\n" + line;
+    std::getline(instream_R1, line); // Header2
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    record_R1 += "\n" + line;
+    std::getline(instream_R1, line); // Quality
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    record_R1 += "\n" + line;
+
+    std::getline(instream_R2, line); // Sequence
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    record_R2 += "\n" + line;
+    std::getline(instream_R2, line); // Header2
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    record_R2 += "\n" + line;
+    std::getline(instream_R2, line); // Quality
+    if (line.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    record_R2 += "\n" + line;
+    pool.push_back(std::make_pair(record_R1, record_R2));
+
+    if (pool.size() == denominator) {
+      // Reservoir sampling: randomly select records to keep
+      Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
+      for (int i = 0; i < max_numerator; ++i) {
+        int selected = idx[i] - 1; // Convert to zero-based index
+        for (int j = 0; j < numerators.size(); ++j) {
+          if (i < numerators[j]) {
+            out_streams[j].first << pool[selected].first << "\n";
+            out_streams[j].second << pool[selected].second << "\n";
+          }
+        }
+      }
+      pool.clear();
+    }
+  }
+  if (pool.size() > 0) {
+    // If there are remaining records, sample from them
+    Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
+    for (int i = 0; i < max_numerator; ++i) {
+      int selected = idx[i] - 1; // Convert to zero-based index
+      if (selected >= pool.size()) {
+        continue; // Skip if selected index is out of bounds
+      }
+      for (int j = 0; j < numerators.size(); ++j) {
+        if (i < numerators[j] && selected < pool.size()) {
+          out_streams[j].first << pool[selected].first << "\n";
+          out_streams[j].second << pool[selected].second << "\n";
+        }
+      }
+    }
+  }
+
+  return Rcpp::List::create(Rcpp::Named("R1") = output_R1, Rcpp::Named("R2") = output_R2);
+}
+
+//' @rdname fastq_sample_number
+//' @param file_R1 (`character` string) the path to the R1 FASTQ file. May be gzipped.
+//' @param file_R2 (`character` string) the path to the R2 FASTQ file. May be gzipped..
+//' @param output_R1 (`character` string) the path to the R1 output file. If it ends in ".gz", the output will be gzipped.
+//' @param output_R2 (`character` string) the path to the R2 output file. If it ends in ".gz", the output will be gzipped.
+//' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+//' number.
+//' @return a character vector of output file names
+//' @export
+// [[Rcpp::export]]
+Rcpp::CharacterVector fastq_pair_sample_number(
+    const std::string& file_R1,
+    const std::string& file_R2,
+    const int number,
+    const std::string& output_R1,
+    const std::string& output_R2,
+    bool rename = false
+) {
+
+  int n_lines = 0;
+  {
+    filter_stream_in instream;
+    open_fastx_in(instream, file_R1);
+    if (!instream) {
+      Rcpp::stop("Error opening input file %s for reading", file_R1);
+    }
+    std::string record;
+    while (std::getline(instream, record) && !record.empty()) {
+      n_lines++;
+    }
+  }
+  if (n_lines % 4 != 0) {
+    Rcpp::stop("Malformed FASTQ file: input file must have a multiple of 4 lines.");
+  }
+
+  int n_reads = n_lines / 4;
+  filter_stream_in instream_R1, instream_R2;
+  open_fastx_in(instream_R1, file_R1);
+  if (!instream_R1) {
+    Rcpp::stop("Error opening input file %s for reading", file_R1);
+  }
+  open_fastx_in(instream_R2, file_R2);
+  if (!instream_R2) {
+    Rcpp::stop("Error opening input file %s for reading", file_R2);
+  }
+  filter_stream_out outstream_R1, outstream_R2;
+  open_fastx_out(outstream_R1, output_R1);
+  if (!outstream_R1) {
+    Rcpp::stop("Error opening output file %s for writing", output_R1);
+  }
+  open_fastx_out(outstream_R2, output_R2);
+  if (!outstream_R2) {
+    Rcpp::stop("Error opening output file %s for writing", output_R2);
+  }
+  Rcpp::IntegerVector sample_idx = Rcpp::sample(n_reads, n_reads);
+  int i = 0;
+  std::string header_R1, header_R2, sequence_R1, sequence_R2, header2_R1, header2_R2, quality_R1, quality_R2;
+  while (std::getline(instream_R1, header_R1) && !header_R1.empty()) {
+    std::getline(instream_R2, header_R2);
+    if (header_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    std::getline(instream_R1, sequence_R1);
+    if (sequence_R1.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    std::getline(instream_R1, header2_R1);
+    if (header2_R1.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    std::getline(instream_R1, quality_R1);
+    if (quality_R1.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    std::getline(instream_R2, sequence_R2);
+    if (sequence_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    std::getline(instream_R2, header2_R2);
+    if (header2_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    std::getline(instream_R2, quality_R2);
+    if (quality_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    if (n_reads <= number || sample_idx[i++] <= number) {
+      if (rename) {
+        std::stringstream ss;
+        ss << "@" << std::hex << i;
+        header_R1 = ss.str();
+        header_R2 = ss.str();
+      }
+      outstream_R1 << header_R1 << "\n"
+                << sequence_R1 << "\n"
+                << header2_R1 << "\n"
+                << quality_R1 << "\n";
+      outstream_R2 << header_R2 << "\n"
+                << sequence_R2 << "\n"
+                << header2_R2 << "\n"
+                << quality_R2 << "\n";
+    }
+  }
+
+  return Rcpp::CharacterVector::create(output_R1, output_R2);
+}
+
+//' @rdname fastq_sample_number_multiple
+//' @param file_R1 (`character` string) the path to the R1 FASTQ file. May be gzipped.
+//' @param file_R2 (`character` string) the path to the R2 FASTQ file. May be gzipped..
+//' @param output_R1 (`character` vector) a vector of output file names. If an
+//' element ends in ".gz", the output will be gzipped.
+//' @param output_R2 (`character` vector) a vector of output file names. If an
+//' element ends in ".gz", the output will be gzipped.
+//' @return a list of two character vectors of output file names
+//' @export
+// [[Rcpp::export]]
+Rcpp::List fastq_pair_sample_number_multiple(
+    const std::string& file_R1,
+    const std::string& file_R2,
+    const Rcpp::IntegerVector& numbers,
+    const Rcpp::CharacterVector& output_R1,
+    const Rcpp::CharacterVector& output_R2,
+    bool rename = false
+) {
+  if (numbers.size() != output_R1.size() || numbers.size() != output_R2.size()) {
+    Rcpp::stop("The length of numbers and output must be the same.");
+  }
+  if (file_R1.empty() || file_R2.empty()) {
+    Rcpp::stop("Input file name cannot be empty.");
+  }
+  for (const auto& num : numbers) {
+    if (num <= 0) {
+      Rcpp::stop("Each number must be a positive integer.");
+    }
+  }
+
+  int n_lines = 0;
+  {
+    filter_stream_in instream;
+    open_fastx_in(instream, file_R1);
+    if (!instream) {
+      Rcpp::stop("Error opening input file %s for reading", file_R1);
+    }
+    std::string record;
+    while (std::getline(instream, record) && !record.empty()) {
+      n_lines++;
+    }
+  }
+  if (n_lines % 4 != 0) {
+    Rcpp::stop("Malformed FASTQ file: input file must have a multiple of 4 lines.");
+  }
+
+  int n_reads = n_lines / 4;
+  Rcpp::IntegerVector sample_idx = Rcpp::sample(n_reads, n_reads);
+  filter_stream_in instream_R1, instream_R2;
+  open_fastx_in(instream_R1, file_R1);
+  if (!instream_R1) {
+    Rcpp::stop("Error opening input file %s for reading", file_R1);
+  }
+  open_fastx_in(instream_R2, file_R2);
+  if (!instream_R2) {
+    Rcpp::stop("Error opening input file %s for reading", file_R2);
+  }
+  std::vector<std::pair<filter_stream_out, filter_stream_out>> out_streams(output_R1.size());
+  for (int i = 0; i < output_R1.size(); ++i) {
+    if (output_R1[i].empty() || output_R2[i].empty()) {
+      Rcpp::stop("Output file name cannot be empty.");
+    }
+    std::string output_str(output_R1[i]);
+    open_fastx_out(out_streams[i].first, output_str);
+    if (!out_streams[i].first) {
+      Rcpp::stop("Output file name cannot be empty.");
+    }
+    output_str = output_R2[i];
+    open_fastx_out(out_streams[i].second, output_str);
+    if (!out_streams[i].second) {
+      Rcpp::stop("Error opening output file %s for writing", output_str);
+    }
+  }
+  int i = 0;
+  std::string header_R1, header_R2, sequence_R1, sequence_R2, header2_R1, header2_R2, quality_R1, quality_R2;
+  while (std::getline(instream_R1, header_R1) && !header_R1.empty()) {
+    std::getline(instream_R2, header_R2);
+    if (header_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    if (rename) {
+      std::stringstream ss;
+      ss << "@" << std::hex << (i + 1);
+      header_R1 = ss.str();
+      header_R2 = ss.str();
+    }
+    std::getline(instream_R1, sequence_R1);
+    if (sequence_R1.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    std::getline(instream_R1, header2_R1);
+    if (header2_R1.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    std::getline(instream_R1, quality_R1);
+    if (quality_R1.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R1 record.");
+    }
+    std::getline(instream_R2, sequence_R2);
+    if (sequence_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    std::getline(instream_R2, header2_R2);
+    if (header2_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    std::getline(instream_R2, quality_R2);
+    if (quality_R2.empty()) {
+      Rcpp::stop("Unexpected end of file while reading FASTQ R2 record.");
+    }
+    for (int j = 0; j < numbers.size(); ++j) {
+      if (n_reads <= numbers[j] || sample_idx[i] <= numbers[j]) {
+        out_streams[j].first << header_R1 << "\n"
+          << sequence_R1 << "\n"
+          << header2_R1 << "\n"
+          << quality_R1 << "\n";
+        out_streams[j].second << header_R2 << "\n"
+          << sequence_R2 << "\n"
+          << header2_R2 << "\n"
+          << quality_R2 << "\n";
+      }
+    }
+    i++;
+  }
+  return Rcpp::List::create(Rcpp::Named("R1") = output_R1, Rcpp::Named("R2") = output_R2);
+}

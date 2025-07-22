@@ -6,12 +6,26 @@ test_seq <- replicate(
   simplify = FALSE
 ) |>
   vapply(paste, "", collapse = "")
+test_seq_R2 <- replicate(
+  100,
+  sample(c("A", "C", "G", "T"), 100, replace = TRUE),
+  simplify = FALSE
+) |>
+  vapply(paste, "", collapse = "")
 
 test_qual <- replicate(
   100,
   sample.int(40, 100, replace = TRUE),
   simplify = FALSE
 ) |>
+  S4Vectors::List() |>
+  Biostrings::PhredQuality()
+
+test_qual_R2 <- replicate(
+    100,
+    sample.int(40, 100, replace = TRUE),
+    simplify = FALSE
+  ) |>
   S4Vectors::List() |>
   Biostrings::PhredQuality()
 
@@ -24,6 +38,13 @@ test_qual_bin <- replicate(
 ) |>
    S4Vectors::List() |>
    Biostrings::PhredQuality()
+test_qual_bin_R2 <- replicate(
+  100,
+  sample(test_bins, 100, replace = TRUE),
+  simplify = FALSE
+) |>
+  S4Vectors::List() |>
+  Biostrings::PhredQuality()
 
 # pretend that these 100 are an unordered subsample of a total set of 1000,
 # and label them with hex-encoded numbers
@@ -37,13 +58,26 @@ test_dss1 <- Biostrings::DNAStringSet(
   `names<-`(test_seq, test_names1)
 )
 
+test_dss1_R2 <- Biostrings::DNAStringSet(
+  `names<-`(test_seq_R2, test_names1)
+)
+
 test_qsdss1 <- Biostrings::QualityScaledDNAStringSet(
   `names<-`(test_seq, test_names1),
   test_qual
 )
 
+test_qsdss1_R2 <- Biostrings::QualityScaledDNAStringSet(
+  `names<-`(test_seq_R2, test_names1),
+  test_qual_R2
+)
+
 test_dss2 <- Biostrings::DNAStringSet(
   `names<-`(test_seq, test_names2)
+)
+
+test_dss2_R2 <- Biostrings::DNAStringSet(
+  `names<-`(test_seq_R2, test_names2)
 )
 
 test_qsdss2 <- Biostrings::QualityScaledDNAStringSet(
@@ -51,9 +85,19 @@ test_qsdss2 <- Biostrings::QualityScaledDNAStringSet(
   test_qual
 )
 
+test_qsdss2_R2 <- Biostrings::QualityScaledDNAStringSet(
+  `names<-`(test_seq_R2, test_names2),
+  test_qual
+)
+
 test_qsdss3 <- Biostrings::QualityScaledDNAStringSet(
    `names<-`(test_seq, test_names1),
    test_qual_bin
+)
+
+test_qsdss3_R2 <- Biostrings::QualityScaledDNAStringSet(
+  `names<-`(test_seq_R2, test_names1),
+  test_qual_bin_R2
 )
 
 # 8 different random selections of ~80% of the full 100
@@ -63,24 +107,53 @@ selections <- replicate(8, rbinom(100, 1, 0.8), simplify = FALSE)
 # write the initial files as fasta, fasta.gz, fastq and fastq.gz
 raw1_fasta <- tempfile(fileext = ".fasta")
 Biostrings::writeXStringSet(test_dss1, raw1_fasta)
+raw1_fasta_R2 <- tempfile(fileext = ".fasta")
+Biostrings::writeXStringSet(test_dss1_R2, raw1_fasta_R2)
+
 raw1_fasta_gz <- tempfile(fileext = ".fasta.gz")
 Biostrings::writeXStringSet(test_dss1, raw1_fasta_gz, compress = "gzip")
+raw1_fasta_R2_gz <- tempfile(fileext = ".fasta.gz")
+Biostrings::writeXStringSet(test_dss1_R2, raw1_fasta_R2_gz, compress = "gzip")
+
 raw1_fastq <- tempfile(fileext = ".fastq")
 Biostrings::writeQualityScaledXStringSet(test_qsdss1, raw1_fastq)
+raw1_fastq_R2 <- tempfile(fileext = ".fastq")
+Biostrings::writeQualityScaledXStringSet(test_qsdss1_R2, raw1_fastq_R2)
+
 raw1_fastq_gz <- tempfile(fileext = ".fastq.gz")
 Biostrings::writeQualityScaledXStringSet(test_qsdss1, raw1_fastq_gz, compress = "gzip")
+raw1_fastq_R2_gz <- tempfile(fileext = ".fastq.gz")
+Biostrings::writeQualityScaledXStringSet(test_qsdss1_R2, raw1_fastq_R2_gz, compress = "gzip")
+
 raw2_fasta <- tempfile(fileext = ".fasta")
 Biostrings::writeXStringSet(test_dss2, raw2_fasta)
+raw2_fasta_R2 <- tempfile(fileext = ".fasta")
+Biostrings::writeXStringSet(test_dss2_R2, raw2_fasta_R2)
+
 raw2_fasta_gz <- tempfile(fileext = ".fasta.gz")
 Biostrings::writeXStringSet(test_dss2, raw2_fasta_gz, compress = "gzip")
+raw2_fasta_R2_gz <- tempfile(fileext = ".fasta.gz")
+Biostrings::writeXStringSet(test_dss2_R2, raw2_fasta_R2_gz, compress = "gzip")
+
 raw2_fastq <- tempfile(fileext = ".fastq")
 Biostrings::writeQualityScaledXStringSet(test_qsdss2, raw2_fastq)
+raw2_fastq_R2 <- tempfile(fileext = ".fastq")
+Biostrings::writeQualityScaledXStringSet(test_qsdss2_R2, raw2_fastq_R2)
+
 raw2_fastq_gz <- tempfile(fileext = ".fastq.gz")
 Biostrings::writeQualityScaledXStringSet(test_qsdss2, raw2_fastq_gz, compress = "gzip")
+raw2_fastq_R2_gz <- tempfile(fileext = ".fastq.gz")
+Biostrings::writeQualityScaledXStringSet(test_qsdss2_R2, raw2_fastq_R2_gz, compress = "gzip")
+
 raw3_fastq <- tempfile(fileext = ".fastq")
 Biostrings::writeQualityScaledXStringSet(test_qsdss3, raw3_fastq)
+raw3_fastq_R2 <- tempfile(fileext = ".fastq")
+Biostrings::writeQualityScaledXStringSet(test_qsdss3_R2, raw3_fastq_R2)
+
 raw3_fastq_gz <- tempfile(fileext = ".fastq.gz")
 Biostrings::writeQualityScaledXStringSet(test_qsdss3, raw3_fastq_gz, compress = "gzip")
+raw3_fastq_R2_gz <- tempfile(fileext = ".fastq.gz")
+Biostrings::writeQualityScaledXStringSet(test_qsdss3_R2, raw3_fastq_R2_gz, compress = "gzip")
 
 # write the "stage output" files as fastq and fastq.gz
 stage1_fastq <- character()

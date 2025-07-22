@@ -236,6 +236,60 @@ fastq_sample_number_multiple <- function(file, numbers, output, rename = FALSE) 
     .Call(`_optimotu_pipeline_fastq_sample_number_multiple`, file, numbers, output, rename)
 }
 
+#' @rdname fastq_sample_fraction
+#' @param file_R1 (`character` string) the path to the R1 FASTQ file. May be gzipped.
+#' @param file_R2 (`character` string) the path to the R2 FASTQ file. May be gzipped..
+#' @param output_R1 (`character` string) the path to the R1 output file. If it ends in ".gz", the output will be gzipped.
+#' @param output_R2 (`character` string) the path to the R2 output file. If it ends in ".gz", the output will be gzipped.
+#' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+#' number.
+#' @return a character vector of output file names
+#' @export
+fastq_pair_sample_fraction <- function(file_R1, file_R2, numerator, denominator, output_R1, output_R2, rename = FALSE) {
+    .Call(`_optimotu_pipeline_fastq_pair_sample_fraction`, file_R1, file_R2, numerator, denominator, output_R1, output_R2, rename)
+}
+
+#' @rdname fastq_sample_fraction_multiple
+#' @param file_R1 (`character` string) the path to the R1 FASTQ file. May be gzipped.
+#' @param file_R2 (`character` string) the path to the R2 FASTQ file. May be gzipped..
+#' @param output_R1 (`character` vector) a vector of output file names. If an
+#' element ends in ".gz", the output will be gzipped.
+#' @param output_R2 (`character` vector) a vector of output file names. If an
+#' element ends in ".gz", the output will be gzipped.
+#' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+#' number.
+#' @return a list of two character vectors of output file names
+#' @export
+fastq_pair_sample_fraction_multiple <- function(file_R1, file_R2, numerators, denominator, output_R1, output_R2, rename = FALSE) {
+    .Call(`_optimotu_pipeline_fastq_pair_sample_fraction_multiple`, file_R1, file_R2, numerators, denominator, output_R1, output_R2, rename)
+}
+
+#' @rdname fastq_sample_number
+#' @param file_R1 (`character` string) the path to the R1 FASTQ file. May be gzipped.
+#' @param file_R2 (`character` string) the path to the R2 FASTQ file. May be gzipped..
+#' @param output_R1 (`character` string) the path to the R1 output file. If it ends in ".gz", the output will be gzipped.
+#' @param output_R2 (`character` string) the path to the R2 output file. If it ends in ".gz", the output will be gzipped.
+#' if `TRUE`, the read names will be replaced with a hexadecimal sequential
+#' number.
+#' @return a character vector of output file names
+#' @export
+fastq_pair_sample_number <- function(file_R1, file_R2, number, output_R1, output_R2, rename = FALSE) {
+    .Call(`_optimotu_pipeline_fastq_pair_sample_number`, file_R1, file_R2, number, output_R1, output_R2, rename)
+}
+
+#' @rdname fastq_sample_number_multiple
+#' @param file_R1 (`character` string) the path to the R1 FASTQ file. May be gzipped.
+#' @param file_R2 (`character` string) the path to the R2 FASTQ file. May be gzipped..
+#' @param output_R1 (`character` vector) a vector of output file names. If an
+#' element ends in ".gz", the output will be gzipped.
+#' @param output_R2 (`character` vector) a vector of output file names. If an
+#' element ends in ".gz", the output will be gzipped.
+#' @return a list of two character vectors of output file names
+#' @export
+fastq_pair_sample_number_multiple <- function(file_R1, file_R2, numbers, output_R1, output_R2, rename = FALSE) {
+    .Call(`_optimotu_pipeline_fastq_pair_sample_number_multiple`, file_R1, file_R2, numbers, output_R1, output_R2, rename)
+}
+
 #' Interleave multiple FASTQ files
 #' @param infiles (`character()`) input FASTQ files, can be compressed
 #' @param outfile (`character(1)`) output FASTQ file
