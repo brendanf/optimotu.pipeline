@@ -7,7 +7,7 @@
 #' @return A finalized sample table
 #' @keywords internal
 finalize_sample_table <- function(
-    sample_table
+  sample_table
 ) {
   checkmate::assert_tibble(sample_table)
   checkmate::check_names(
@@ -20,20 +20,50 @@ finalize_sample_table <- function(
     read_orientation(),
     fwd = sample_table$orient <- "fwd",
     rev = sample_table$orient <- "rev",
-    mixed = sample_table <- tidyr::crossing(sample_table, orient = c("fwd", "rev")),
+    mixed =
+      sample_table <- tidyr::crossing(sample_table, orient = c("fwd", "rev")),
     custom = if (isFALSE(do_custom_sample_table())) {
       stop("option 'orient: custom' requires a custom sample table is given.")
     } else if (!"orient" %in% names(sample_table)) {
       stop("option 'orient: custom' required a column named 'orient' in the",
-           " custom sample table, with values consisting of 'fwd', 'rev', and 'mixed'")
+           " custom sample table, with values consisting of 'fwd', 'rev', and",
+           " 'mixed'")
     },
-    stop("unknown value for option 'orient'; should be 'fwd', 'rev', 'mixed', or 'custom'")
+    stop("unknown value for option 'orient'; should be 'fwd', 'rev', 'mixed',",
+         " or 'custom'")
   )
+
+  if (do_rarefy()) {
+    sample_table <- tidyr::crossing(sample_table, rarefy_meta(dots = FALSE)) |>
+      dplyr::mutate(
+        source_R1 = fastq_R1,
+        source_R2 = fastq_R2,
+        sample_key = ifelse(
+          rarefy_text == "full",
+          paste(seqrun, sample, sep = "_"),
+          paste(seqrun, sample, rarefy_text, sep = "_")
+        ),
+        fastq_R1 = ifelse(
+          rarefy_text == "full",
+          fastq_R1,
+          sprintf("%s/%s_R1.fastq.gz", rarefy_path(), sample_key)
+        ),
+        fastq_R2 = ifelse(
+          rarefy_text == "full",
+          fastq_R2,
+          sprintf("%s/%s_R2.fastq.gz", rarefy_path(), sample_key)
+        )
+      )
+  } else {
+    sample_table <- dplyr::mutate(
+      sample_table,
+      sample_key = paste(seqrun, sample, sep = "_")
+    )
+  }
 
   sample_table <- sample_table |>
     # generate filenames for trimmed and filtered reads
     dplyr::mutate(
-      sample_key = paste(seqrun, sample, sep = "_"),
       trim_R1 = file.path(
         trim_path(),
         paste(sample_key, orient, "R1_trim.fastq.gz", sep = "_")
@@ -70,8 +100,10 @@ finalize_sample_table <- function(
     !any(duplicated(sample_table$filt_R2))
   )
 
-  options(optimotu.pipeline.sample_table_hash = targets:::hash_object(sample_table))
-  .optimotu_sample_table <<- sample_table
+  options(
+    optimotu.pipeline.sample_table_hash = targets:::hash_object(sample_table)
+  )
+  sample_table
 }
 
 #' Read sample table from file
@@ -128,9 +160,13 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
           )
         )
       )
-  } else if (endsWith(sample_table_file, ".xls") || endsWith(sample_table_file, ".xlsx")) {
+  } else if (
+    endsWith(sample_table_file, ".xls") ||
+    endsWith(sample_table_file, ".xlsx")
+  ) {
     if (!requireNamespace("readxl", quietly = TRUE)) {
-      stop("The 'readxl' package is required to read Excel files. Please install it.")
+      stop("The 'readxl' package is required to read Excel files. Please",
+           " install it.")
     }
     sample_table <-
       suppressWarnings(
@@ -141,8 +177,11 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
         )
       )
   } else {
-    stop("Unsupported sample table format. Please provide a .csv, .tsv, .xls, or .xlsx file.")
+    stop("Unsupported sample table format. Please provide a .csv, .tsv, .xls,",
+         " or .xlsx file.")
   }
+  sample_table$fastq_R1 <- file.path(raw_path(), sample_table$fastq_R1)
+  sample_table$fastq_R2 <- file.path(raw_path(), sample_table$fastq_R2)
 
   checkmate::check_data_frame(
     sample_table,
@@ -154,8 +193,8 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
   )
   checkmate::assert_character(sample_table$sample, any.missing = FALSE)
   checkmate::assert_character(sample_table$seqrun, any.missing = FALSE)
-  checkmate::assert_file_exists(file.path(raw_path(), sample_table$fastq_R1), access = "r")
-  checkmate::assert_file_exists(file.path(raw_path(), sample_table$fastq_R2), access = "r")
+  checkmate::assert_file_exists(sample_table$fastq_R1, access = "r")
+  checkmate::assert_file_exists(sample_table$fastq_R2, access = "r")
   if ("pos_control" %in% names(sample_table)) {
     checkmate::assert_subset(sample_table$pos_control, c(true_vals, false_vals))
     sample_table$pos_control <- sample_table$pos_control %in% true_vals
@@ -222,10 +261,10 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
 #'   by underscores or dots.
 #' 6) After the `R1`/`R2` suffix, there may be an additional `_nnn` suffix,
 #'   which is ignored.
-#' 7) The file extension should match the regular expression in `file_extension`.
-#'   The default value matches `.fastq`, `.fq`, `.fastq.gz`, and `.fq.gz`, which
-#'   should cover the majority of cases.
-#' 8) Sample named including the test "NEGPCR", "NEGEXT", "NEGATIVE",
+#' 7) The file extension should match the regular expression in
+#'   `file_extension`. The default value matches `.fastq`, `.fq`, `.fastq.gz`,
+#'   and `.fq.gz`, which should cover the majority of cases.
+#' 8) Sample names including the text "NEGPCR", "NEGEXT", "NEGATIVE",
 #'   "NEGCONTROL", "NEG_CONTROL", or "BLANK" (matched case-insensitively) are
 #'   assumed to be negative controls, and those including "MOCK", "AMPTK",
 #'   "POSITIVE", "POSCONTROL", or "POS_CONTROL" are assumed to be positive
@@ -246,23 +285,44 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
 #' positive control, respectively.
 #' @keywords internal
 infer_sample_table <- function(
-    raw_path = "sequences/01_raw",
+    raw_path = raw_path(),
     file_extension = read_file_extension()
 ) {
   tibble::tibble(
-    fastq_R1 = sort(list.files(raw_path, paste0(".*R1(_\\d{3})?[.]", file_extension), recursive = TRUE)),
-    fastq_R2 = sort(list.files(raw_path, paste0(".*R2(_\\d{3})?[.]", file_extension), recursive = TRUE))
+    fastq_R1 = sort(list.files(
+      raw_path,
+      paste0(".*R1(_\\d{3})?[.]", file_extension),
+      recursive = TRUE
+    )),
+    fastq_R2 = sort(list.files(
+      raw_path,
+      paste0(".*R2(_\\d{3})?[.]", file_extension),
+      recursive = TRUE
+    ))
   ) |>
     # parse filenames
     tidyr::extract(
       fastq_R1,
       into = c("seqrun", "sample"),
-      regex = paste0("([^/]+)/(?:.*/)?(.+?)[._](?:S\\d+_L00\\d[._])?R1(?:_001)?[.]", file_extension),
+      regex = paste0(
+        "([^/]+)/(?:.*/)?(.+?)[._](?:S\\d+_L00\\d[._])?R1(?:_001)?[.]",
+        file_extension
+      ),
       remove = FALSE
     ) |>
     dplyr::mutate(
-      neg_control = grepl("NEGPCR|NEGEXT|NEGATIVE|NEG_?CONTROL|BLANK", sample, ignore.case = TRUE),
-      pos_control = grepl("MOCK|AMPTK|POSITIVE|POS_?CONTROL", sample, ignore.case = TRUE)
+      fastq_R1 = file.path(raw_path, fastq_R1),
+      fastq_R2 = file.path(raw_path, fastq_R2),
+      neg_control = grepl(
+        "NEGPCR|NEGEXT|NEGATIVE|NEG_?CONTROL|BLANK",
+        sample,
+        ignore.case = TRUE
+      ),
+      pos_control = grepl(
+        "MOCK|AMPTK|POSITIVE|POS_?CONTROL",
+        sample,
+        ignore.case = TRUE
+      )
     )
 }
 
@@ -271,9 +331,10 @@ infer_sample_table <- function(
 #' Return the sample table
 #'
 #' This function reads the custom sample table from disk or infers it from the
-#' raw sequence files, depending on the configuration in `pipeline_options.yaml`.
-#' It caches the result to avoid reading the sample table multiple times in the
-#' same R session. It is best to avoid calling this function on remote workers.
+#' raw sequence files, depending on the configuration in
+#' `pipeline_options.yaml`. It caches the result to avoid reading the sample
+#' table multiple times in the same R session. It is best to avoid calling this
+#' function on remote workers.
 #'
 #' @param ... arguments to be used for `targets` dependency tracking. Ignored
 #' by this function.
@@ -336,8 +397,16 @@ raw_path <- function() {
 
 #' @rdname paths
 #' @export
+rarefy_path <- function() {
+  fp <- file.path(seq_path(), "02_rarefied")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
 trim_path <- function() {
-  fp <- file.path(seq_path(), "02_trimmed")
+  fp <- file.path(seq_path(), "03_trimmed")
   if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
   fp
 }
@@ -345,7 +414,7 @@ trim_path <- function() {
 #' @rdname paths
 #' @export
 filt_path <- function() {
-  fp <- file.path(seq_path(), "03_filtered")
+  fp <- file.path(seq_path(), "04_filtered")
   if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
   fp
 }
@@ -353,7 +422,15 @@ filt_path <- function() {
 #' @rdname paths
 #' @export
 asv_path <- function() {
-  fp <- file.path(seq_path(), "04_denoised")
+  fp <- file.path(seq_path(), "05_denoised")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+aligned_path <- function() {
+  fp <- file.path(seq_path(), "06_aligned")
   if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
   fp
 }
@@ -361,7 +438,7 @@ asv_path <- function() {
 #' @rdname paths
 #' @export
 protax_path <- function() {
-  fp <- file.path(seq_path(), "05_protax")
+  fp <- file.path(seq_path(), "07_protax")
   if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
   fp
 }

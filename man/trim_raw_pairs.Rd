@@ -11,8 +11,8 @@ trim_raw_pairs(
   trim_options,
   primer_R1,
   primer_R2,
-  raw_path = "sequences/01_raw",
-  ncpu = local_cpus()
+  ncpu = local_cpus(),
+  ...
 )
 }
 \arguments{
@@ -30,9 +30,9 @@ options for cutadapt}
 
 \item{primer_R2}{(\code{character}) primer specification for R2}
 
-\item{raw_path}{(\code{character}) path to the raw reads}
-
 \item{ncpu}{(\code{integer}) number of CPU threads to use}
+
+\item{...}{additional arguments for dependency tracking}
 }
 \value{
 a \code{character} vector with the path to the trimmed output files

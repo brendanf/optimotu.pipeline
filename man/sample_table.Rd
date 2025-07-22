@@ -19,7 +19,8 @@ A \code{tibble} with the sample table, as described in
 }
 \description{
 This function reads the custom sample table from disk or infers it from the
-raw sequence files, depending on the configuration in \code{pipeline_options.yaml}.
-It caches the result to avoid reading the sample table multiple times in the
-same R session. It is best to avoid calling this function on remote workers.
+raw sequence files, depending on the configuration in
+\code{pipeline_options.yaml}. It caches the result to avoid reading the sample
+table multiple times in the same R session. It is best to avoid calling this
+function on remote workers.
 }

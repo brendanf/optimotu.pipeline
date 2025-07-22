@@ -1224,6 +1224,37 @@ do_rarefy <- function() {
   !is.null(rarefy_number()) || !is.null(rarefy_numerator())
 }
 
+#' Mapping variables for rarefaction
+#' @return a `data.frame` giving the variables to map over for rarefaction;
+#' when rarefaction is to be performed (as determined by `do_rarefy()`) then
+#' these will always include `.rarefy_text` (`character)`), and will also
+#' include either `.numerator` (`integer`) and `.denominator` (`integer`) or
+#' `.number` (`integer`).  Alternatively, if `do_rarefy()` returns `FALSE`, an
+#' empty data.frame.
+#' @export
+rarefy_meta <- function(dots = TRUE) {
+  if (do_rarefy()) {
+    (if (is.null(rarefy_number())) {
+      tibble::tibble(
+        numerator = rarefy_numerator(),
+        denominator = rarefy_denominator(),
+        rarefy_text = sprintf("%d_per_%d", numerator, denominator)
+      )
+    } else {
+      tibble::tibble(
+        number = rarefy_number(),
+        rarefy_text = sprintf("%d_reads", number)
+      )
+    }) |>
+      dplyr::bind_rows(
+        tibble::tibble(rarefy_text = "full")
+      ) |>
+      dplyr::rename_with(\(x) if (isTRUE(dots)) paste0(".", x) else x)
+  } else {
+    tibble::tibble()
+  }
+}
+
 #### main options function ####
 #' @rdname parse_pipeline_options
 #' @export

@@ -417,8 +417,8 @@ trim_primer <- function(seqs, primer, ...) {
 #' options for cutadapt
 #' @param primer_R1 (`character`) primer specification for R1
 #' @param primer_R2 (`character`) primer specification for R2
-#' @param raw_path (`character`) path to the raw reads
 #' @param ncpu (`integer`) number of CPU threads to use
+#' @param ... additional arguments for dependency tracking
 #' @return a `character` vector with the path to the trimmed output files
 #' @export
 trim_raw_pairs <- function(
@@ -428,8 +428,8 @@ trim_raw_pairs <- function(
     trim_options,
     primer_R1,
     primer_R2,
-    raw_path = "sequences/01_raw",
-    ncpu = local_cpus()
+    ncpu = local_cpus(),
+    ...
 ) {
   logfile_name <- sprintf("logs/trim_%s_%s.log", seqrun, orient)
   logfile <- withr::local_connection(file(logfile_name, "w"))
@@ -442,8 +442,8 @@ trim_raw_pairs <- function(
       ~ purrr::pmap(
         dplyr::transmute(
           .x,
-          file_R1 = file.path(raw_path, fastq_R1),
-          file_R2 = file.path(raw_path, fastq_R2),
+          file_R1 = fastq_R1,
+          file_R2 = fastq_R2,
           trim_R1 = trim_R1,
           trim_R2 = trim_R2
         ),

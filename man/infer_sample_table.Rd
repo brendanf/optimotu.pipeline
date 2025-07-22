@@ -5,7 +5,7 @@
 \title{Infer sample table from raw sequence file names}
 \usage{
 infer_sample_table(
-  raw_path = "sequences/01_raw",
+  raw_path = raw_path(),
   file_extension = read_file_extension()
 )
 }
@@ -44,10 +44,10 @@ lane indices of the form "S{nnn}_L{nnn}".  These are ignored.
 by underscores or dots.
 \item After the \code{R1}/\code{R2} suffix, there may be an additional \verb{_nnn} suffix,
 which is ignored.
-\item The file extension should match the regular expression in \code{file_extension}.
-The default value matches \code{.fastq}, \code{.fq}, \code{.fastq.gz}, and \code{.fq.gz}, which
-should cover the majority of cases.
-\item Sample named including the test "NEGPCR", "NEGEXT", "NEGATIVE",
+\item The file extension should match the regular expression in
+\code{file_extension}. The default value matches \code{.fastq}, \code{.fq}, \code{.fastq.gz},
+and \code{.fq.gz}, which should cover the majority of cases.
+\item Sample names including the text "NEGPCR", "NEGEXT", "NEGATIVE",
 "NEGCONTROL", "NEG_CONTROL", or "BLANK" (matched case-insensitively) are
 assumed to be negative controls, and those including "MOCK", "AMPTK",
 "POSITIVE", "POSCONTROL", or "POS_CONTROL" are assumed to be positive
