@@ -50,6 +50,12 @@
 * `cutadapt_filter_trim()` and `cutadapt_paired_filter_trim()` now correctly
   handle multiple values in the `cut`, `cut_R1`, or `cut_R2` options, to
   unconditionally trim both ends of the read.
+* Add functions `(full/large/small)_preclosed_taxon_table()` to prepare the
+  pre-closed-reference-clustering table, and `do_closed_ref_cluster()` as a
+  wrapper around `optimotu::closed_ref_cluster()`. The large/small variants
+  select only those taxa which will be either a large or small clustering job,
+  so that these can be treated differently with respect to batching and
+  parallelization.
 
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with
