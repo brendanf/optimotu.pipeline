@@ -36,28 +36,18 @@ finalize_sample_table <- function(
   if (do_rarefy()) {
     sample_table <- tidyr::crossing(sample_table, rarefy_meta(dots = FALSE)) |>
       dplyr::mutate(
-        source_R1 = fastq_R1,
-        source_R2 = fastq_R2,
+        readwise_key = paste(seqrun, sample, sep = "_"),
         sample_key = ifelse(
           rarefy_text == "full",
-          paste(seqrun, sample, sep = "_"),
-          paste(seqrun, sample, rarefy_text, sep = "_")
-        ),
-        fastq_R1 = ifelse(
-          rarefy_text == "full",
-          fastq_R1,
-          sprintf("%s/%s_R1.fastq.gz", rarefy_path(), sample_key)
-        ),
-        fastq_R2 = ifelse(
-          rarefy_text == "full",
-          fastq_R2,
-          sprintf("%s/%s_R2.fastq.gz", rarefy_path(), sample_key)
+          readwise_key,
+          paste(readwise_key, rarefy_text, sep = "_")
         )
       )
   } else {
     sample_table <- dplyr::mutate(
       sample_table,
-      sample_key = paste(seqrun, sample, sep = "_")
+      readwise_key = paste(seqrun, sample, sep = "_"),
+      sample_key = readwise_key
     )
   }
 
@@ -66,21 +56,46 @@ finalize_sample_table <- function(
     dplyr::mutate(
       trim_R1 = file.path(
         trim_path(),
-        paste(sample_key, orient, "R1_trim.fastq.gz", sep = "_")
+        paste(readwise_key, orient, "R1_trim.fastq.gz", sep = "_")
       ),
       trim_R2 = file.path(
         trim_path(),
-        paste(sample_key, orient, "R2_trim.fastq.gz", sep = "_")
+        paste(readwise_key, orient, "R2_trim.fastq.gz", sep = "_")
       ),
       filt_R1 = file.path(
         filt_path(),
-        paste(sample_key, orient, "R1_filt.fastq.gz", sep = "_")
+        paste(readwise_key, orient, "R1_filt.fastq.gz", sep = "_")
       ),
       filt_R2 = file.path(
         filt_path(),
-        paste(sample_key, orient, "R2_filt.fastq.gz", sep = "_")
+        paste(readwise_key, orient, "R2_filt.fastq.gz", sep = "_")
       ),
-      sample_key = file_to_sample_key(filt_R1) # to be sure
+      to_denoise_R1 = if (do_rarefy()) {
+        ifelse(
+          rarefy_text == "full",
+          filt_R1,
+          file.path(
+            rarefy_path(),
+            paste(sample_key, orient, "R1.fastq.gz", sep = "_")
+          )
+        )
+      } else {
+        filt_R1
+      },
+      to_denoise_R2 = if(do_rarefy()) {
+        ifelse(
+          rarefy_text == "full",
+          filt_R2,
+          file.path(
+            rarefy_path(),
+            paste(sample_key, orient, "R2.fastq.gz", sep = "_")
+          )
+        )
+      } else {
+        filt_R2
+      },
+      readwise_key = file_to_sample_key(filt_R1), # to be sure
+      tar_seed = targets::tar_seed_create(readwise_key)
     )
 
   # spike_strength is used along with the nonspike/spike ratio to convert from
@@ -91,13 +106,7 @@ finalize_sample_table <- function(
   assertthat::assert_that(
     !any(is.na(sample_table$seqrun)),
     !any(is.na(sample_table$sample)),
-    is.numeric(sample_table$spike_weight),
-    !any(duplicated(sample_table[c("fastq_R1", "orient")])),
-    !any(duplicated(sample_table[c("fastq_R2", "orient")])),
-    !any(duplicated(sample_table$trim_R1)),
-    !any(duplicated(sample_table$trim_R2)),
-    !any(duplicated(sample_table$filt_R1)),
-    !any(duplicated(sample_table$filt_R2))
+    is.numeric(sample_table$spike_weight)
   )
 
   options(
@@ -397,16 +406,8 @@ raw_path <- function() {
 
 #' @rdname paths
 #' @export
-rarefy_path <- function() {
-  fp <- file.path(seq_path(), "02_rarefied")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
-  fp
-}
-
-#' @rdname paths
-#' @export
 trim_path <- function() {
-  fp <- file.path(seq_path(), "03_trimmed")
+  fp <- file.path(seq_path(), "02_trimmed")
   if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
   fp
 }
@@ -414,7 +415,15 @@ trim_path <- function() {
 #' @rdname paths
 #' @export
 filt_path <- function() {
-  fp <- file.path(seq_path(), "04_filtered")
+  fp <- file.path(seq_path(), "03_filtered")
+  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  fp
+}
+
+#' @rdname paths
+#' @export
+rarefy_path <- function() {
+  fp <- file.path(seq_path(), "04_rarefied")
   if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
   fp
 }

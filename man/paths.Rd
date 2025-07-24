@@ -5,9 +5,9 @@
 \alias{meta_path}
 \alias{seq_path}
 \alias{raw_path}
-\alias{rarefy_path}
 \alias{trim_path}
 \alias{filt_path}
+\alias{rarefy_path}
 \alias{asv_path}
 \alias{aligned_path}
 \alias{protax_path}
@@ -24,11 +24,11 @@ seq_path()
 
 raw_path()
 
-rarefy_path()
-
 trim_path()
 
 filt_path()
+
+rarefy_path()
 
 asv_path()
 
