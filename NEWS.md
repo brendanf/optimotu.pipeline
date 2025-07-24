@@ -47,6 +47,9 @@
 * Taxonomic helper functions now have a `tax_ranks` argument for use in
   an environment other than the one where pipeline options were parsed, e.g. on
   crew workers.
+* `cutadapt_filter_trim()` and `cutadapt_paired_filter_trim()` now correctly
+  handle multiple values in the `cut`, `cut_R1`, or `cut_R2` options, to
+  unconditionally trim both ends of the read.
 
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with

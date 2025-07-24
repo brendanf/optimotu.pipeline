@@ -154,10 +154,10 @@ cutadapt_paired_filter_trim <- function(
     args <- c(args, "-Q", paste(round(options$truncQ_R2), collapse = ","))
   }
   if (!is.null(options$cut_R1)) {
-    args <- c(args, "-u", paste(round(options$cut_R1), collapse = ","))
+    args <- c(args, t(data.frame("-u", round(options$cut_R1))))
   }
   if (!is.null(options$cut_R2)) {
-    args <- c(args, "-U", paste(round(options$cut_R2), collapse = ","))
+    args <- c(args, t(data.frame("-U", round(options$cut_R2))))
   }
   if (!is.null(ncpu)) {
     checkmate::assert_count(ncpu, positive = TRUE)
@@ -369,7 +369,7 @@ cutadapt_filter_trim <- function(
     args <- c(args, "-q", paste(round(options$truncQ), collapse = ","))
   }
   if (!is.null(options$cut)) {
-    args <- c(args, "-u", paste(round(options$cut), collapse = ","))
+    args <- c(args, t(data.frame("-u", round(options$cut))))
   }
   if (!is.null(ncpu)) {
     checkmate::assert_count(ncpu, positive = TRUE)
