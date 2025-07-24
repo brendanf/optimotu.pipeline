@@ -383,3 +383,29 @@ testthat::test_that("fastq_pair_sample_number_multiple with rename works", {
   testthat::expect_length(subsamp16_qsdss_R1, 4)
   testthat::expect_length(subsamp16_qsdss_R2, 4)
 })
+
+testthat::test_that("fastq_sample works", {
+  subsamp17_fastq_gz <- withr::local_tempfile(fileext = ".fastq.gz")
+  shuf <- sample(100L)
+  testthat::expect_equal(
+    fastq_sample(
+      infile = raw1_fastq_gz,
+      outfile = subsamp17_fastq_gz,
+      n = 10L,
+      sample = shuf
+    ),
+    subsamp17_fastq_gz
+  )
+  testthat::expect_no_error(
+    subsamp17_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp17_fastq_gz)
+  )
+  testthat::expect_length(subsamp17_qsdss, 10)
+  testthat::expect_equal(
+    as.character(test_qsdss1[names(subsamp17_qsdss)], use.names = FALSE),
+    as.character(subsamp17_qsdss, use.names = FALSE)
+  )
+  testthat::expect_identical(
+    names(subsamp17_qsdss),
+    names(test_qsdss1[which(shuf <= 10L)])
+  )
+})

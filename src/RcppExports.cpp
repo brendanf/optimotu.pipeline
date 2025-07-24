@@ -248,6 +248,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// fastq_sample
+std::string fastq_sample(const std::string& infile, const std::string& outfile, const int n, const Rcpp::IntegerVector sample, const bool rename);
+RcppExport SEXP _optimotu_pipeline_fastq_sample(SEXP infileSEXP, SEXP outfileSEXP, SEXP nSEXP, SEXP sampleSEXP, SEXP renameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type infile(infileSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type outfile(outfileSEXP);
+    Rcpp::traits::input_parameter< const int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type sample(sampleSEXP);
+    Rcpp::traits::input_parameter< const bool >::type rename(renameSEXP);
+    rcpp_result_gen = Rcpp::wrap(fastq_sample(infile, outfile, n, sample, rename));
+    return rcpp_result_gen;
+END_RCPP
+}
 // fastq_combine
 std::string fastq_combine(const std::vector<std::string>& infiles, const std::string outfile, const bool compress);
 RcppExport SEXP _optimotu_pipeline_fastq_combine(SEXP infilesSEXP, SEXP outfileSEXP, SEXP compressSEXP) {
@@ -345,6 +360,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_fastq_pair_sample_fraction_multiple", (DL_FUNC) &_optimotu_pipeline_fastq_pair_sample_fraction_multiple, 7},
     {"_optimotu_pipeline_fastq_pair_sample_number", (DL_FUNC) &_optimotu_pipeline_fastq_pair_sample_number, 6},
     {"_optimotu_pipeline_fastq_pair_sample_number_multiple", (DL_FUNC) &_optimotu_pipeline_fastq_pair_sample_number_multiple, 6},
+    {"_optimotu_pipeline_fastq_sample", (DL_FUNC) &_optimotu_pipeline_fastq_sample, 5},
     {"_optimotu_pipeline_fastq_combine", (DL_FUNC) &_optimotu_pipeline_fastq_combine, 3},
     {"_optimotu_pipeline_fasta_combine", (DL_FUNC) &_optimotu_pipeline_fasta_combine, 3},
     {"_optimotu_pipeline_fastq_rename", (DL_FUNC) &_optimotu_pipeline_fastq_rename, 3},
