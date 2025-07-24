@@ -43,8 +43,11 @@
   `tar_map()` was applied to `values` with 0 rows.
 * `fastq_seq_map()` now correctly detects when read names are not _entirely_
   hexadecimal numbers.
-* Add parsing functionality for basic raw-read rarefaction.
-  
+* Add functionality pipeline rarefaction.
+* Taxonomic helper functions now have a `tax_ranks` argument for use in
+  an environment other than the one where pipeline options were parsed, e.g. on
+  crew workers.
+
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with
   files which contain whitespace in the header.

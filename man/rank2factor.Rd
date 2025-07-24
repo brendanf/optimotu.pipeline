@@ -3,14 +3,17 @@
 \name{rank2factor}
 \alias{rank2factor}
 \alias{int2rankfactor}
-\title{Convert taxonomic ranks from character vectors and integers to ordered factors}
+\title{Convert taxonomic ranks from strings and integers to ordered factors}
 \usage{
-rank2factor(x)
+rank2factor(x, ranks = tax_ranks())
 
-int2rankfactor(x)
+int2rankfactor(x, ranks = tax_ranks())
 }
 \arguments{
 \item{x}{the taxonomic ranks to convert}
+
+\item{ranks}{(\code{character} vector) the full list of taxonomic ranks, in order
+from most inclusive to least inclusive}
 }
 \value{
 an ordered factor of taxonomic ranks

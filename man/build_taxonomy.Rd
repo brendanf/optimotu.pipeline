@@ -16,7 +16,8 @@ inclusive.}
 }
 \value{
 a \code{data.frame} with columns \code{taxon_id}, \code{parent_id}, \code{rank},
-\code{classification}, and \code{prior}, as required to write a Protax "\code{taxonomy}" file
+\code{classification}, and \code{prior}, as required to write a Protax "\code{taxonomy}"
+file
 }
 \description{
 Combine tip classifications to build a full PROTAX taxonomy

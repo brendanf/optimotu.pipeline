@@ -27,9 +27,9 @@ ingroup_rank_var()
 
 ingroup_taxon()
 
-tip_rank()
+tip_rank(ranks = tax_ranks())
 
-tip_rank_var()
+tip_rank_var(ranks = tax_ranks())
 }
 \description{
 Shortcuts for accessing taxonomy options

@@ -140,32 +140,34 @@ ingroup_taxon <- function() {
 
 #' @describeIn tax_opts Get the tip taxonomic rank as a string
 #' @export
-tip_rank <- function() {
-  tax_ranks()[length(tax_ranks())]
+tip_rank <- function(ranks = tax_ranks()) {
+  ranks[length(ranks)]
 }
 
 #' @describeIn tax_opts Get the tip taxonomic rank as a symbol
 #' @export
-tip_rank_var <- function() {
-  rlang::sym(tip_rank())
+tip_rank_var <- function(ranks = tax_ranks()) {
+  rlang::sym(tip_rank(ranks))
 }
 
-#' Convert taxonomic ranks from character vectors and integers to ordered factors
+#' Convert taxonomic ranks from strings and integers to ordered factors
 #'
 #' The least inclusive rank is given the smallest value in the ordering,
 #' so for instance `"species" < "kingdom"`.
 #'
 #' @param x the taxonomic ranks to convert
+#' @param ranks (`character` vector) the full list of taxonomic ranks, in order
+#' from most inclusive to least inclusive
 #' @return an ordered factor of taxonomic ranks
 #' @export
-rank2factor <- function(x) {
-  factor(x, levels = rev(tax_ranks()), ordered = TRUE)
+rank2factor <- function(x, ranks = tax_ranks()) {
+  factor(x, levels = rev(ranks), ordered = TRUE)
 }
 
 #' @rdname rank2factor
 #' @export
-int2rankfactor <- function(x) {
-  rank2factor(tax_ranks()[x + rank_offset()])
+int2rankfactor <- function(x, ranks = tax_ranks()) {
+  rank2factor(ranks[x + rank_offset()], ranks)
 }
 
 #' Get superordinate or subordinate taxonomic ranks
@@ -177,7 +179,7 @@ int2rankfactor <- function(x) {
 #' @return a `character` vector of superordinate or subordinate taxonomic ranks
 #' @export
 superranks <- function(x = tip_rank(), ranks = tax_ranks()) {
-  ranks[rank2factor(ranks) > x]
+  ranks[rank2factor(ranks, ranks) > x]
 }
 
 #' @rdname superranks
@@ -190,7 +192,7 @@ superrank_vars <- function(x = tip_rank(), ranks = tax_ranks()) {
 #' @rdname superranks
 #' @export
 subranks <- function(x = ingroup_rank(), ranks = tax_ranks()) {
-  ranks[rank2factor(ranks) < x]
+  ranks[rank2factor(ranks, ranks) < x]
 }
 
 #' @rdname superranks
@@ -205,7 +207,8 @@ subrank_vars <- function(x = ingroup_rank(), ranks = tax_ranks()) {
 #' be comma-delimited classifications from most inclusive rank to least
 #' inclusive.
 #' @return a `data.frame` with columns `taxon_id`, `parent_id`, `rank`,
-#' `classification`, and `prior`, as required to write a Protax "`taxonomy`" file
+#' `classification`, and `prior`, as required to write a Protax "`taxonomy`"
+#' file
 #' @export
 build_taxonomy <- function(...) {
   # avoid R CMD check NOTE for undeclared global variables
@@ -216,7 +219,8 @@ build_taxonomy <- function(...) {
     rank = ifelse(
       classification == "root",
       0L,
-      stringr::str_count(classification, stringr::fixed(",")) + 1L),
+      stringr::str_count(classification, stringr::fixed(",")) + 1L
+    ),
     parent = ifelse(
       rank <= 1,
       "root",
@@ -224,15 +228,15 @@ build_taxonomy <- function(...) {
     )
   )
   tax <- split(tax, tax$rank)
-  tax[[1]]$taxon_id = 0L
-  tax[[1]]$prior = 1
-  tax[[1]]$parent_id = 0L
-  tax[[2]]$taxon_id = 1L:2L
-  tax[[2]]$prior = c(0.99, 0.01)
+  tax[[1]]$taxon_id <- 0L
+  tax[[1]]$prior <- 1
+  tax[[1]]$parent_id <- 0L
+  tax[[2]]$taxon_id <- 1L:2L
+  tax[[2]]$prior <- c(0.99, 0.01)
 
   for (r in length(tax):3L) {
     if (r == length(tax)) {
-      tax[[r]]$prior = 0.99/nrow(tax[[r]])
+      tax[[r]]$prior <- 0.99/nrow(tax[[r]])
     } else {
       tax[[r]]$prior <- NULL
       tax[[r]] <- dplyr::left_join(
@@ -290,10 +294,16 @@ build_taxonomy_new <- function(...) {
       names = tax_ranks(),
       too_few = "align_start"
     ) |>
-    dplyr::mutate(!!root_rank() := ifelse(!!root_rank() == "root", NA_character_, !!root_rank()))
+    dplyr::mutate(
+      !!root_rank() := ifelse(
+        !!root_rank() == "root",
+        NA_character_,
+        !!root_rank()
+      )
+    )
 
   # remove all taxa with children
-  for (rank in 6:1) {
+  for (rank in rev(seq_along(tax_ranks()))) {
     rankname <- tax_rank_vars()[rank + 1]
     tax <- dplyr::filter(
       tax,
@@ -360,7 +370,7 @@ build_taxonomy_new <- function(...) {
 #' @return a `character` vector of truncated classifications
 #' @export
 truncate_taxonomy <- function(s, rank) {
-  regex <- paste0("(^([^,]+,){", rank-1L, "}[^,]+).*")
+  regex <- paste0("(^([^,]+,){", rank - 1L, "}[^,]+).*")
   out <- gsub(regex, "\\1", s)
   out[!grepl(regex, s)] <- NA_character_
   out
