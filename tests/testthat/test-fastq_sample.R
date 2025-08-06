@@ -397,7 +397,8 @@ testthat::test_that("fastq_sample works", {
     subsamp17_fastq_gz
   )
   testthat::expect_no_error(
-    subsamp17_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp17_fastq_gz)
+    subsamp17_qsdss <-
+      Biostrings::readQualityScaledDNAStringSet(subsamp17_fastq_gz)
   )
   testthat::expect_length(subsamp17_qsdss, 10)
   testthat::expect_equal(
@@ -407,5 +408,35 @@ testthat::test_that("fastq_sample works", {
   testthat::expect_identical(
     names(subsamp17_qsdss),
     names(test_qsdss1[which(shuf <= 10L)])
+  )
+})
+
+testthat::test_that("fastq_sample with multiple files works", {
+  subsamp18_fastq_gz <- withr::local_tempfile(fileext = ".fastq.gz")
+  shuf <- sample(200L)
+  testthat::expect_equal(
+    fastq_sample(
+      infile = c(raw1_fastq_gz, raw2_fastq_R2_gz),
+      outfile = subsamp18_fastq_gz,
+      n = 77L,
+      sample = shuf
+    ),
+    subsamp18_fastq_gz
+  )
+  testthat::expect_no_error(
+    subsamp18_qsdss <-
+      Biostrings::readQualityScaledDNAStringSet(subsamp18_fastq_gz)
+  )
+  testthat::expect_length(subsamp18_qsdss, 77)
+  testthat::expect_equal(
+    c(
+      as.character(test_qsdss1),
+      as.character(test_qsdss2_R2)
+    )[which(shuf <= 77L)] |> unname(),
+    as.character(subsamp18_qsdss, use.names = FALSE)
+  )
+  testthat::expect_identical(
+    names(subsamp18_qsdss),
+    c(names(test_qsdss1), names(test_qsdss2_R2))[which(shuf <= 77L)]
   )
 })

@@ -922,14 +922,18 @@ Rcpp::List fastq_pair_sample_number_multiple(
   return Rcpp::List::create(Rcpp::Named("R1") = output_R1, Rcpp::Named("R2") = output_R2);
 }
 
-//' Sample a given number of reads from a FASTQ file
+//' Sample a given number of reads from one or more FASTQ files
 //'
-//' This function samples the given number of reads from a FASTQ file, based on
-//' a shuffle of the read indices. This guarantees reproducible sampling when the
-//' same shuffle is reused.
-//' @param infile (`character` string) the path to the input FASTQ file. May be gzipped.
-//' @param outfile (`character` string) the path to the output FASTQ file. If it ends in ".gz", the output will be gzipped.
-//' @param n (`integer`) the number of reads to sample.
+//' This function samples the given number of reads from one or more FASTQ
+//' files, based on a shuffle of the read indices. This guarantees reproducible
+//' sampling when the same shuffle is reused. When multiple input files are
+//' provided, the result will be as if the files were concatenated and then
+//' sampled.
+//' @param infile (`character`) the path(s) to the input FASTQ file(s). May be
+//' gzipped.
+//' @param outfile (`character` string) the path to the output FASTQ file. If it
+//' ends in ".gz", the output will be gzipped.
+//' @param n (`integer` scalar) the number of reads to sample.
 //' @param sample (`integer` vector) a shuffle of the read indices.
 //' @param rename (`logical`) if `TRUE`, the read names will be replaced with a hexadecimal sequential
 //' number.
@@ -937,7 +941,7 @@ Rcpp::List fastq_pair_sample_number_multiple(
 //' @export
 // [[Rcpp::export]]
 std::string fastq_sample(
-  const std::string & infile,
+  const std::vector<std::string> & infile,
   const std::string & outfile,
   const int n,
   const Rcpp::IntegerVector sample,
@@ -946,60 +950,88 @@ std::string fastq_sample(
   if (infile.empty() || outfile.empty()) {
     Rcpp::stop("Input and output file names cannot be empty.");
   }
-  if (infile == outfile) {
-    if (n != sample.size()) {
-      Rcpp::warning("Input (%s) and output (%s) file names are the same, but the"
-      " length of sample (%d) is not equal to n (%d).",
-      infile, outfile, sample.size(), n);
+  if (infile.size() == 1) {
+    if (infile[0] == outfile) {
+      if (sample.size() != n) {
+        Rcpp::warning("Input (%s) and output (%s) file names are the same, but"
+        " the length of sample (%d) is not equal to n (%d).",
+        infile[0], outfile, sample.size(), n);
+      }
+      return outfile;
     }
-    return outfile;
+  } else {
+    for (const auto& file : infile) {
+      if (file == outfile) {
+        Rcpp::stop("Input and output file names cannot be the same when"
+        " multiple input files are provided.");
+      }
+    }
   }
   if (n <= 0) {
     Rcpp::stop("n must be a positive integer.");
   }
-  filter_stream_in instream;
-  open_fastx_in(instream, infile);
-  if (!instream) {
-    Rcpp::stop("Error opening input file %s for reading", infile);
-  }
+
   filter_stream_out outstream;
   open_fastx_out(outstream, outfile);
   if (!outstream) {
     Rcpp::stop("Error opening output file %s for writing", outfile);
   }
-  for (int i = 0; i < sample.size(); ++i) {
-    std::string record, line;
-    if (sample[i] <= n) {
-      std::getline(instream, record);
-      if (record.empty()) {
-        Rcpp::stop("Unexpected end of file while reading FASTQ record.");
-      }
-      if (rename) {
-        std::stringstream ss;
-        ss << "@" << std::hex << i;
-        record = ss.str();
-      }
-      std::getline(instream, line); // sequence
-      if (line.empty()) {
-        Rcpp::stop("Unexpected end of file while reading FASTQ record.");
-      }
-      record += "\n" + line;
-      std::getline(instream, line); // header2
-      if (line.empty()) {
-        Rcpp::stop("Unexpected end of file while reading FASTQ record.");
-      }
-      record += "\n" + line;
-      std::getline(instream, line); // quality
-      if (line.empty()) {
-        Rcpp::stop("Unexpected end of file while reading FASTQ record.");
-      }
-      record += "\n" + line;
+
+  filter_stream_in instream;
+  int i = 0;
+  for (const auto& file : infile) {
+    filter_stream_in instream;
+    open_fastx_in(instream, file);
+    if (!instream) {
+      Rcpp::stop("Error opening input file %s for reading", file);
+    }
+    while (i < sample.size()) {
+      std::string record, line;
+      if (sample[i] <= n) {
+        std::getline(instream, record);
+        if (record.empty()) {
+          break;
+        }
+        if (rename) {
+          std::stringstream ss;
+          ss << "@" << std::hex << i;
+          record = ss.str();
+        }
+        std::getline(instream, line); // sequence
+        if (line.empty()) {
+          Rcpp::stop("Unexpected end of file while reading FASTQ record.");
+        }
+        record += "\n" + line;
+        std::getline(instream, line); // header2
+        if (line.empty()) {
+          Rcpp::stop("Unexpected end of file while reading FASTQ record.");
+        }
+        record += "\n" + line;
+        std::getline(instream, line); // quality
+        if (line.empty()) {
+          Rcpp::stop("Unexpected end of file while reading FASTQ record.");
+        }
+        record += "\n" + line;
         outstream << record << "\n";
-    } else {
-      instream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-      instream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-      instream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-      instream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        if (!outstream) {
+          Rcpp::stop("Error writing to output file %s", outfile);
+        }
+      } else {
+        instream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        if (instream.eof()) {
+          break;
+        }
+        instream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        instream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        instream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        if (instream.eof()) {
+          Rcpp::stop("Unexpected end of file while reading FASTQ record.");
+        }
+      }
+      ++i;
+    }
+    if (i >= sample.size()) {
+      break;
     }
   }
   return outfile;

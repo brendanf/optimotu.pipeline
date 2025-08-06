@@ -2,16 +2,18 @@
 % Please edit documentation in R/RcppExports.R
 \name{fastq_sample}
 \alias{fastq_sample}
-\title{Sample a given number of reads from a FASTQ file}
+\title{Sample a given number of reads from one or more FASTQ files}
 \usage{
 fastq_sample(infile, outfile, n, sample, rename = FALSE)
 }
 \arguments{
-\item{infile}{(\code{character} string) the path to the input FASTQ file. May be gzipped.}
+\item{infile}{(\code{character}) the path(s) to the input FASTQ file(s). May be
+gzipped.}
 
-\item{outfile}{(\code{character} string) the path to the output FASTQ file. If it ends in ".gz", the output will be gzipped.}
+\item{outfile}{(\code{character} string) the path to the output FASTQ file. If it
+ends in ".gz", the output will be gzipped.}
 
-\item{n}{(\code{integer}) the number of reads to sample.}
+\item{n}{(\code{integer} scalar) the number of reads to sample.}
 
 \item{sample}{(\code{integer} vector) a shuffle of the read indices.}
 
@@ -22,7 +24,9 @@ number.}
 the output file name
 }
 \description{
-This function samples the given number of reads from a FASTQ file, based on
-a shuffle of the read indices. This guarantees reproducible sampling when the
-same shuffle is reused.
+This function samples the given number of reads from one or more FASTQ
+files, based on a shuffle of the read indices. This guarantees reproducible
+sampling when the same shuffle is reused. When multiple input files are
+provided, the result will be as if the files were concatenated and then
+sampled.
 }

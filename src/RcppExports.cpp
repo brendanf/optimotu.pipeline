@@ -249,12 +249,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // fastq_sample
-std::string fastq_sample(const std::string& infile, const std::string& outfile, const int n, const Rcpp::IntegerVector sample, const bool rename);
+std::string fastq_sample(const std::vector<std::string>& infile, const std::string& outfile, const int n, const Rcpp::IntegerVector sample, const bool rename);
 RcppExport SEXP _optimotu_pipeline_fastq_sample(SEXP infileSEXP, SEXP outfileSEXP, SEXP nSEXP, SEXP sampleSEXP, SEXP renameSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type infile(infileSEXP);
+    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type infile(infileSEXP);
     Rcpp::traits::input_parameter< const std::string& >::type outfile(outfileSEXP);
     Rcpp::traits::input_parameter< const int >::type n(nSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type sample(sampleSEXP);

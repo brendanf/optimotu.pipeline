@@ -290,14 +290,18 @@ fastq_pair_sample_number_multiple <- function(file_R1, file_R2, numbers, output_
     .Call(`_optimotu_pipeline_fastq_pair_sample_number_multiple`, file_R1, file_R2, numbers, output_R1, output_R2, rename)
 }
 
-#' Sample a given number of reads from a FASTQ file
+#' Sample a given number of reads from one or more FASTQ files
 #'
-#' This function samples the given number of reads from a FASTQ file, based on
-#' a shuffle of the read indices. This guarantees reproducible sampling when the
-#' same shuffle is reused.
-#' @param infile (`character` string) the path to the input FASTQ file. May be gzipped.
-#' @param outfile (`character` string) the path to the output FASTQ file. If it ends in ".gz", the output will be gzipped.
-#' @param n (`integer`) the number of reads to sample.
+#' This function samples the given number of reads from one or more FASTQ
+#' files, based on a shuffle of the read indices. This guarantees reproducible
+#' sampling when the same shuffle is reused. When multiple input files are
+#' provided, the result will be as if the files were concatenated and then
+#' sampled.
+#' @param infile (`character`) the path(s) to the input FASTQ file(s). May be
+#' gzipped.
+#' @param outfile (`character` string) the path to the output FASTQ file. If it
+#' ends in ".gz", the output will be gzipped.
+#' @param n (`integer` scalar) the number of reads to sample.
 #' @param sample (`integer` vector) a shuffle of the read indices.
 #' @param rename (`logical`) if `TRUE`, the read names will be replaced with a hexadecimal sequential
 #' number.
