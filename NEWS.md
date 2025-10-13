@@ -1,4 +1,4 @@
-# optimotu.pipeline (development version)
+# optimotu.pipeline 0.6.0
 * Incorporated bug fixes from `optimotu_targets`.
 * Added more convenience functions for accessing taxonomy:
   - `unknown_ranks()` returns the complement of `known_ranks()`
@@ -56,6 +56,11 @@
   select only those taxa which will be either a large or small clustering job,
   so that these can be treated differently with respect to batching and
   parallelization.
+* Add functions `lulu_map()` and `lulu_table()` to run the LULU curation
+  algorithm on a long OTU table.
+* Add functions to parse LULU settings from pipeline options, and
+ `lulu_distmx()` to calculate the distance matrix required by LULU in the
+ context of the pipeline.
 
 # optimotu.pipeline 0.5.2
 * Fixed implementation of `fastx_split()` and `fastx_combine()` to work with

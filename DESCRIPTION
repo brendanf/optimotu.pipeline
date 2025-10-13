@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for environmental DNA metabarcoding
-Version: 0.5.2.9016
+Version: 0.6.0
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -29,7 +29,7 @@ Imports:
     glue,
     IRanges,
     methods,
-    optimotu (>= 0.9.3.9009),
+    optimotu (>= 0.9.4),
     processx,
     purrr,
     readr,
