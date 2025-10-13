@@ -12,6 +12,7 @@
 \alias{parse_trim_options}
 \alias{parse_filter_options}
 \alias{parse_uncross_options}
+\alias{parse_lulu_options}
 \alias{parse_amplicon_model_options}
 \alias{parse_control_options}
 \alias{parse_taxonomy_options}
@@ -49,6 +50,8 @@ parse_trim_options(pipeline_options)
 parse_filter_options(pipeline_options)
 
 parse_uncross_options(pipeline_options)
+
+parse_lulu_options(pipeline_options)
 
 parse_amplicon_model_options(pipeline_options)
 

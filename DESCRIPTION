@@ -29,7 +29,7 @@ Imports:
     glue,
     IRanges,
     methods,
-    optimotu,
+    optimotu (>= 0.9.3.9009),
     processx,
     purrr,
     readr,
@@ -47,6 +47,7 @@ Suggests:
     BayesANT,
     dada2,
     ggplot2,
+    lulu,
     readxl,
     RcppParallel,
     S4Vectors,
@@ -54,6 +55,7 @@ Suggests:
     zlib
 Remotes:
     alessandrozito/BayesANT,
+    tobiasgf/lulu,
     brendanf/optimotu,
     bioc::BiocGenerics,
     bioc::Biostrings,

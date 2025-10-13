@@ -371,3 +371,46 @@ fasta_split <- function(infile, outfiles, compress = FALSE) {
     .Call(`_optimotu_pipeline_fasta_split`, infile, outfiles, compress)
 }
 
+#' LULU secondary denoising
+#'
+#' The "match" inputs are intended to be calculated by pairwise distance
+#' calculations within each sample, the results of which are concatenated
+#' together. This requires some duplicate calculations for pairs that occur in
+#' many samples, but prevents the need to calculate distances for pairs that
+#' never co-occur, which is a large number of pairs.
+#'
+#' @param match_id1 (`integer`) vector of sequence IDs for the first sequence
+#' in each match; sequence IDs should be assigned such that when the sequences
+#' are in ID order, they are sorted by decreasing occurrence, with ties broken
+#' by decreasing abundance.
+#' @param match_id2 (`integer`) vector of sequence IDs for the second sequence
+#' in each match
+#' @param match_nread1 (`integer`) vector of read counts for the first sequence
+#' in each match
+#' @param match_nread2 (`integer`) vector of read counts for the second
+#' sequence in each match
+#' @param match_dist (`numeric`) vector of distances between the two sequences
+#' in each match
+#' @param seq_idx (`integer`) vector of sequence IDs. Each ID should occur
+#' once per sample where the sequence occurs.
+#' @param nread (`integer`) vector of read counts for each sequence in each
+#' sample
+#' @param max_dist (`numeric`) maximum distance for two sequences to be
+#' considered as parent-child
+#' @param min_abundance_ratio (`numeric`) minimum abundance ratio for two
+#' sequences to be considered as parent-child
+#' @param min_cooccurrence_ratio (`numeric`) minimum co-occurrence ratio for
+#' two sequences to be considered
+#' @param use_mean_abundance_ratio (`logical`) if `TRUE`, `min_abundance_ratio`
+#' is interpreted as a minimum value for the mean of the abundance ratios in
+#' all samples where the two sequences co-occur.  Otherwise (default) it is
+#' interpreted as a minimum value for the the abundance ratio of all samples
+#' where the two sequences co-occur.
+#' @returns a two-column `data.frame` with columns `seq_idx` and `lulu_idx`.
+#' `seq_idx` includes all values which occur in the `seq_idx` argument, and
+#' `lulu_idx` gives the index of the denoised sequence.
+#'
+lulu_map_impl <- function(match_id1, match_id2, match_nread1, match_nread2, match_dist, seq_idx, nread, max_dist, min_abundance_ratio = 1.0, min_cooccurrence_ratio = 0.95, use_mean_abundance_ratio = FALSE, verbose = 0L) {
+    .Call(`_optimotu_pipeline_lulu_map_impl`, match_id1, match_id2, match_nread1, match_nread2, match_dist, seq_idx, nread, max_dist, min_abundance_ratio, min_cooccurrence_ratio, use_mean_abundance_ratio, verbose)
+}
+

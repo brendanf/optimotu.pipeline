@@ -21,6 +21,15 @@
 \alias{do_tag_jump}
 \alias{tag_jump_f}
 \alias{tag_jump_p}
+\alias{do_lulu}
+\alias{lulu_dist_type}
+\alias{lulu_max_dist}
+\alias{lulu_max_gap_length}
+\alias{lulu_max_gap_total}
+\alias{lulu_min_abundance_ratio}
+\alias{lulu_min_cooccurrence_ratio}
+\alias{lulu_use_mean_abundance_ratio}
+\alias{lulu_dist_config}
 \alias{amplicon_model_type}
 \alias{amplicon_model_file}
 \alias{max_model_start}
@@ -104,6 +113,24 @@ do_tag_jump()
 tag_jump_f()
 
 tag_jump_p()
+
+do_lulu()
+
+lulu_dist_type()
+
+lulu_max_dist()
+
+lulu_max_gap_length()
+
+lulu_max_gap_total()
+
+lulu_min_abundance_ratio()
+
+lulu_min_cooccurrence_ratio()
+
+lulu_use_mean_abundance_ratio()
+
+lulu_dist_config()
 
 amplicon_model_type()
 

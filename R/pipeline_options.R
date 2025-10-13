@@ -473,6 +473,149 @@ tag_jump_p <- function() {
   getOption("optimotu.pipeline.tag_jump_p", 0.05)
 }
 
+#### LULU settings ####
+
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_lulu_options <- function(pipeline_options) {
+  lulu_options <- pipeline_options$lulu
+  if (is.null(lulu_options) || isFALSE(lulu_options)) return()
+  checkmate::assert_list(lulu_options)
+  lulu_options <- unnest_yaml_list(lulu_options)
+  checkmate::assert_names(
+    names(lulu_options),
+    subset.of = c("dist_type", "max_dist", "max_gap_length", "max_gap_total",
+                  "min_abundance_ratio", "min_cooccurrence_ratio",
+                  "use_mean_abundance_ratio", "dist_config")
+  )
+  options(optimotu.pipeline.lulu_options = lulu_options)
+  options(optimotu.pipeline.do_lulu = TRUE)
+  ##### dist_type #####
+  if ("dist_type" %in% names(lulu_options)) {
+    checkmate::assert_string(lulu_options$dist_type)
+    checkmate::assert_subset(
+      lulu_options$dist_type,
+      c("fraction", "score", "base")
+    )
+    options(optimotu.pipeline.lulu_dist_type = lulu_options$dist_type)
+  }
+  ##### max_dist #####
+  if ("max_dist" %in% names(lulu_options)) {
+    switch(
+      lulu_options$dist_type,
+      fraction = checkmate::assert_number(lulu_options$max_dist,
+                                          lower = 0, upper = 1),
+      score = checkmate::assert_number(lulu_options$max_dist, lower = 0),
+      base = checkmate::assert_integerish(lulu_options$max_dist, lower = 0)
+    )
+    options(optimotu.pipeline.lulu_max_dist = lulu_options$max_dist)
+  }
+  ##### max_gap_length #####
+  if ("max_gap_length" %in% names(lulu_options)) {
+    checkmate::assert_integerish(lulu_options$max_gap_length, lower = 0)
+    options(optimotu.pipeline.lulu_max_gap_length = lulu_options$max_gap_length)
+  }
+  ##### max_gap_total #####
+  if ("max_gap_total" %in% names(lulu_options)) {
+    checkmate::assert(
+      checkmate::check_integerish(lulu_options$max_gap_total, lower = 0),
+      checkmate::check_number(lulu_options$max_gap_total, lower = 0, upper = 1)
+    )
+    options(optimotu.pipeline.lulu_max_gap_total = lulu_options$max_gap_total)
+  }
+  ##### min_abundance_ratio #####
+  if ("min_abundance_ratio" %in% names(lulu_options)) {
+    checkmate::assert_number(
+      lulu_options$min_abundance_ratio,
+      lower = 0,
+      upper = 1
+    )
+    options(
+      optimotu.pipeline.lulu_min_abundance_ratio =
+        lulu_options$min_abundance_ratio
+    )
+  }
+  ##### min_cooccurrence_ratio #####
+  if ("min_cooccurrence_ratio" %in% names(lulu_options)) {
+    checkmate::assert_number(
+      lulu_options$min_cooccurrence_ratio,
+      lower = 0,
+      upper = 1
+    )
+    options(
+      optimotu.pipeline.lulu_min_cooccurrence_ratio =
+        lulu_options$min_cooccurrence_ratio
+    )
+  }
+  ##### use_mean_abundance_ratio #####
+  if ("use_mean_abundance_ratio" %in% names(lulu_options)) {
+    checkmate::assert_flag(lulu_options$use_mean_abundance_ratio)
+    options(
+      optimotu.pipeline.lulu_use_mean_abundance_ratio =
+        lulu_options$use_mean_abundance_ratio
+    )
+  }
+  ##### dist_config #####
+  lulu_dist_config <- parse_dist_config(lulu_options$dist_config)
+  options(optimotu.pipeline.lulu_dist_config = lulu_dist_config)
+}
+
+#' @rdname pipeline_options
+#' @export
+do_lulu <- function() {
+  getOption("optimotu.pipeline.do_lulu", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @export
+lulu_dist_type <- function() {
+  getOption("optimotu.pipeline.lulu_dist_type", "fraction")
+}
+
+#' @rdname pipeline_options
+#' @export
+lulu_max_dist <- function() {
+  getOption("optimotu.pipeline.lulu_max_dist", 0.1)
+}
+
+#' @rdname pipeline_options
+#' @export
+lulu_max_gap_length <- function() {
+  getOption("optimotu.pipeline.lulu_max_gap_length", 1)
+}
+
+#' @rdname pipeline_options
+#' @export
+lulu_max_gap_total <- function() {
+  getOption("optimotu.pipeline.lulu_max_gap_total", 3)
+}
+
+
+#' @rdname pipeline_options
+#' @export
+lulu_min_abundance_ratio <- function() {
+  getOption("optimotu.pipeline.lulu_min_abundance_ratio", 1)
+}
+
+#' @rdname pipeline_options
+#' @export
+lulu_min_cooccurrence_ratio <- function() {
+  getOption("optimotu.pipeline.lulu_min_cooccurrence_ratio", 1)
+}
+
+#' @rdname pipeline_options
+#' @export
+lulu_use_mean_abundance_ratio <- function() {
+  getOption("optimotu.pipeline.lulu_use_mean_abundance_ratio", FALSE)
+}
+
+
+#' @rdname pipeline_options
+#' @export
+lulu_dist_config <- function() {
+  getOption("optimotu.pipeline.lulu_dist_config", dist_config())
+}
+
 
 #### amplicon model settings ####
 
@@ -526,7 +669,9 @@ parse_amplicon_model_options <- function(pipeline_options) {
     #### amplicon alignment settings ###
     if (!is.null(amplicon_model_options$model_align)) {
       checkmate::assert_flag(amplicon_model_options$model_align)
-      options(optimotu.pipeline.do_model_align = amplicon_model_options$model_align)
+      options(
+        optimotu.pipeline.do_model_align = amplicon_model_options$model_align
+      )
     }
 
     #### NuMt detection settings ####
@@ -541,7 +686,7 @@ parse_amplicon_model_options <- function(pipeline_options) {
   }
 }
 
-parse_amplicon_model_filter_options<- function(filter_options) {
+parse_amplicon_model_filter_options <- function(filter_options) {
   options(optimotu.pipeline.do_model_filter = TRUE)
 
   checkmate::assert_list(filter_options, min.len = 1)
@@ -655,8 +800,8 @@ parse_control_options <- function(pipeline_options) {
         checkmate::check_flag(control_options$spike, null.ok = TRUE)
       )
       if (isTRUE(control_options$spike)) {
-        stop("Option 'control':'spike' should be a file path, evaluate to FALSE,",
-             "or be left blank")
+        stop("Option 'control':'spike' should be a file path, evaluate to ",
+             "FALSE, or be left blank")
       }
       if (is.character(control_options$spike)) {
         options(optimotu.pipeline.spike_file = control_options$spike)
@@ -668,8 +813,8 @@ parse_control_options <- function(pipeline_options) {
         checkmate::check_flag(control_options$positive, null.ok = TRUE)
       )
       if (isTRUE(control_options$positive)) {
-        stop("Option 'control':'positive' should be a file path, evaluate to FALSE,",
-             "or be left blank")
+        stop("Option 'control':'positive' should be a file path, evaluate ",
+             "to FALSE, or be left blank")
       }
       if (is.character(control_options$positive)) {
         options(optimotu.pipeline.pos_control_file = control_options$positive)
@@ -769,9 +914,15 @@ parse_taxonomy_ranks <- function(rank_options) {
       min.len = 1
     )
   )
-  KNOWN_TAXA <- purrr::keep(rank_options, ~ dplyr::cumall(checkmate::test_list(.x))) |>
+  KNOWN_TAXA <- purrr::keep(
+    rank_options,
+    ~ dplyr::cumall(checkmate::test_list(.x))
+  ) |>
     unlist()
-  UNKNOWN_RANKS <- purrr::discard(rank_options, ~ dplyr::cumall(checkmate::test_list(.x))) |>
+  UNKNOWN_RANKS <- purrr::discard(
+    rank_options,
+    ~ dplyr::cumall(checkmate::test_list(.x))
+  ) |>
     unlist()
   if (length(UNKNOWN_RANKS) == 0 || !is.null(names(UNKNOWN_RANKS))) {
     stop(
@@ -1061,11 +1212,16 @@ parse_cluster_options <- function(pipeline_options) {
         c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
       )
     }
-    dist_config <- clustering$dist_config
-    checkmate::assert(
-      checkmate::check_string(dist_config, null.ok = TRUE),
-      checkmate::check_list(dist_config, null.ok = TRUE)
+    dist_config <- parse_dist_config(clustering$dist_config)
+    options(
+      optimotu.pipeline.clustering_thresholds = clustering$thresholds,
+      optimotu.pipeline.clustering_measure = clustering$measure,
+      optimotu.pipeline.clustering_dist_config = dist_config
     )
+  }
+}
+
+parse_dist_config <- function(dist_config) {
     if (is.character(dist_config)) {
       dist_config <- list(method = dist_config)
     }
@@ -1079,13 +1235,7 @@ parse_cluster_options <- function(pipeline_options) {
         "(file: pipeline_options.yaml)"
       )
     }
-    dist_config <- do.call(optimotu::dist_config, dist_config)
-    options(
-      optimotu.pipeline.clustering_thresholds = clustering$thresholds,
-      optimotu.pipeline.clustering_measure = clustering$measure,
-      optimotu.pipeline.clustering_dist_config = dist_config
-    )
-  }
+    do.call(optimotu::dist_config, dist_config)
 }
 
 #' @rdname pipeline_options
@@ -1281,6 +1431,7 @@ parse_pipeline_options <- function() {
   parse_filter_options(pipeline_options)
   parse_uncross_options(pipeline_options)
   parse_amplicon_model_options(pipeline_options)
+  parse_lulu_options(pipeline_options)
   parse_otu_table_options(pipeline_options)
   parse_control_options(pipeline_options)
   if (!is.null(pipeline_options$protax)) {
