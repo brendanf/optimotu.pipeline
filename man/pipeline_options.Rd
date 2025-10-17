@@ -2,6 +2,7 @@
 % Please edit documentation in R/pipeline_options.R
 \name{read_file_extension}
 \alias{read_file_extension}
+\alias{duplicate_samples}
 \alias{custom_sample_table}
 \alias{do_custom_sample_table}
 \alias{do_added_reference}
@@ -75,6 +76,8 @@
 \title{Functions to access pipeline-wide options}
 \usage{
 read_file_extension()
+
+duplicate_samples()
 
 custom_sample_table()
 

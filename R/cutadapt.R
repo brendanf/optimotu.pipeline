@@ -163,6 +163,23 @@ cutadapt_paired_filter_trim <- function(
     checkmate::assert_count(ncpu, positive = TRUE)
     args <- c(args, "-j", ncpu)
   }
+
+  checkmate::assert_string(file_R1)
+  checkmate::assert_string(file_R2)
+
+  file_R1 <- strsplit(file_R1, ",")[[1]]
+  file_R2 <- strsplit(file_R2, ",")[[1]]
+  if (length(file_R1) > 1 || length(file_R2) > 1) {
+    seqs_R1 <- Biostrings::readQualityScaledDNAStringSet(file_R1)
+    file_R1 <- withr::local_tempfile(fileext = ".fastq.gz")
+    Biostrings::writeQualityScaledDNAStringSet(seqs_R1, file_R1,
+      format = "fastq", compress = TRUE)
+    seqs_R2 <- Biostrings::readQualityScaledDNAStringSet(file_R2)
+    file_R2 <- withr::local_tempfile(fileext = ".fastq.gz")
+    Biostrings::writeQualityScaledDNAStringSet(seqs_R2, file_R2,
+      format = "fastq", compress = TRUE)
+  }
+
   args <- c(args, file_R1, file_R2)
   out <- processx::run(
     cutadapt,

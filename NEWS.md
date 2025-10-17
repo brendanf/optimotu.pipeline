@@ -1,5 +1,6 @@
 # optimotu.pipeline (development version)
 * Improve handling of small datasets where some objects may end up empty.
+* (Re)implement option for merging multiple samples with the same name.
 
 # optimotu.pipeline 0.6.0
 * Incorporated bug fixes from `optimotu_targets`.

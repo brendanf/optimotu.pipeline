@@ -16,6 +16,21 @@ finalize_sample_table <- function(
                      "neg_control", "pos_control")
   )
 
+  n_samples <- dplyr::n_distinct(sample_table$sample, sample_table$seqrun)
+  if (n_samples != nrow(sample_table)) {
+    if (duplicate_samples() == "merge") {
+      sample_table <- sample_table |>
+        dplyr::summarize(
+          fastq_R1 = paste(fastq_R1, collapse = ","),
+          fastq_R2 = paste(fastq_R2, collapse = ","),
+          .by = c(everything(), -fastq_R1, -fastq_R2)
+        )
+    } else {
+      stop("duplicate samples found in sample table; use option ",
+           "'duplicate_samples: merge' to merge them")
+    }
+  }
+
   switch(
     read_orientation(),
     fwd = sample_table$orient <- "fwd",

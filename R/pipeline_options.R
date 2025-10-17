@@ -109,6 +109,31 @@ read_orientation <- function() {
   getOption("optimotu.pipeline.read_orientation", "fwd")
 }
 
+#### duplicate sample policy ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_duplicate_policy <- function(pipeline_options) {
+  checkmate::assert_string(
+    pipeline_options$duplicate_samples,
+    null.ok = TRUE
+  )
+  if (!is.null(pipeline_options$duplicate_samples)) {
+    checkmate::assert_choice(
+      pipeline_options$duplicate_samples,
+      choices = c("merge", "error")
+    )
+    options(
+      optimotu.pipeline.duplicate_samples = pipeline_options$duplicate_samples
+    )
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+duplicate_samples <- function() {
+  getOption("optimotu.pipeline.duplicate_samples", "error")
+}
+
 #### custom sample table ####
 #' @rdname parse_pipeline_options
 #' @keywords internal
@@ -1422,6 +1447,7 @@ parse_pipeline_options <- function() {
   parse_project_name(pipeline_options)
   parse_file_extension(pipeline_options)
   parse_orient(pipeline_options)
+  parse_duplicate_policy(pipeline_options)
   parse_custom_sample_table(pipeline_options)
   parse_added_reference(pipeline_options) #TODO: this should go to taxonomy?
   parse_parallel_options(pipeline_options)

@@ -4,6 +4,7 @@
 \alias{parse_project_name}
 \alias{parse_file_extension}
 \alias{parse_orient}
+\alias{parse_duplicate_policy}
 \alias{parse_custom_sample_table}
 \alias{parse_added_reference}
 \alias{parse_parallel_options}
@@ -34,6 +35,8 @@ parse_project_name(pipeline_options)
 parse_file_extension(pipeline_options)
 
 parse_orient(pipeline_options)
+
+parse_duplicate_policy(pipeline_options)
 
 parse_custom_sample_table(pipeline_options)
 
