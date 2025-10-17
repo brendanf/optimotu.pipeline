@@ -204,6 +204,11 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
   checkmate::assert_character(sample_table$seqrun, any.missing = FALSE)
   checkmate::assert_file_exists(sample_table$fastq_R1, access = "r")
   checkmate::assert_file_exists(sample_table$fastq_R2, access = "r")
+  true_vals <-
+    c("1", "y", "Y", "yes", "Yes", "YES", "t", "T", "true", "True", "TRUE")
+  false_vals <-
+    c("0", "n", "N", "no", "No", "NO", "f", "F", "false", "False", "FALSE")
+
   if ("pos_control" %in% names(sample_table)) {
     checkmate::assert_subset(sample_table$pos_control, c(true_vals, false_vals))
     sample_table$pos_control <- sample_table$pos_control %in% true_vals
