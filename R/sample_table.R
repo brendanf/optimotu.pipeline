@@ -9,6 +9,9 @@
 finalize_sample_table <- function(
   sample_table
 ) {
+  # avoid R CMD check note for undefined global variables due to NSE
+  sample <- seqrun <- fastq_R1 <- fastq_R2 <- rarefy_text <- NULL
+  readwise_key <- orient <- sample_key <- filt_R1 <- filt_R2 <- NULL
   checkmate::assert_tibble(sample_table)
   checkmate::check_names(
     names(sample_table),
@@ -97,7 +100,7 @@ finalize_sample_table <- function(
       } else {
         filt_R1
       },
-      to_denoise_R2 = if(do_rarefy()) {
+      to_denoise_R2 = if (do_rarefy()) {
         ifelse(
           rarefy_text == "full",
           filt_R2,
@@ -186,7 +189,7 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
       )
   } else if (
     endsWith(sample_table_file, ".xls") ||
-    endsWith(sample_table_file, ".xlsx")
+      endsWith(sample_table_file, ".xlsx")
   ) {
     if (!requireNamespace("readxl", quietly = TRUE)) {
       stop("The 'readxl' package is required to read Excel files. Please",
@@ -197,7 +200,7 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
         readxl::read_excel(
           sample_table_file,
           col_names = TRUE,
-          col_types ="text"
+          col_types = "text"
         )
       )
   } else {
@@ -246,6 +249,8 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
       )
       sample_table$orient <- NULL
     } else {
+      # avoid R CMD check note for undefined global variables due to NSE
+      new_orient <- NULL
       if (any(sample_table$orient == "mixed")) {
         sample_table <-
           dplyr::left_join(
@@ -314,9 +319,11 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
 #' positive control, respectively.
 #' @keywords internal
 infer_sample_table <- function(
-    raw_path = raw_path(),
-    file_extension = read_file_extension()
+  raw_path = raw_path(),
+  file_extension = read_file_extension()
 ) {
+  # avoid R CMD check note for undefined global variables due to NSE
+  fastq_R1 <- fastq_R2 <- NULL
   tibble::tibble(
     fastq_R1 = sort(list.files(
       raw_path,
@@ -475,7 +482,7 @@ protax_path <- function() {
 #' @rdname paths
 #' @export
 output_path <- function() {
-    fp <- file.path(path(), "output")
+  fp <- file.path(path(), "output")
   if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
   fp
 }
