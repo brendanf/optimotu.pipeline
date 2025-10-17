@@ -1,3 +1,6 @@
+# optimotu.pipeline (development version)
+* Improve handling of small datasets where some objects may end up empty.
+
 # optimotu.pipeline 0.6.0
 * Incorporated bug fixes from `optimotu_targets`.
 * Added more convenience functions for accessing taxonomy:

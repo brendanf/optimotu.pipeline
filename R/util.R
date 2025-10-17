@@ -39,3 +39,45 @@ local_cpus <- function() {
     getOption("optimotu_num_threads", max(parallel::detectCores() - 1L, 1L))
   }
 }
+
+
+
+#' Ensure that a table has at least one row
+#'
+#' @param table (`data.frame`) a table to check
+#' @return (`data.frame`) the input table if it has at least one row, otherwise
+#' a single-row table with the same columns and types, but all values `NA`. The
+#' exception is if the table includes a column named "tar_group" (as produced by
+#' [targets::tar_group()]), in which case that column is given the value `1L` in
+#' the output if the input had 0 rows.
+#' @keywords internal
+#' @export
+ensure_table <- function(table) {
+  checkmate::assert_data_frame(table)
+  if (nrow(table) > 0) {
+    return(table)
+  }
+  out <- tibble::tibble(.rows = 1)
+  for (n in names(table)) {
+    if (n == "tar_group") {
+      out[[n]] <- 1L
+    } else if (is.factor(table[[n]])) {
+      out[[n]] <- factor(NA, levels = levels(table[[n]]))
+    } else if (is.integer(table[[n]])) {
+      out[[n]] <- NA_integer_
+    } else if (is.numeric(table[[n]])) {
+      out[[n]] <- NA_real_
+    } else if (is.character(table[[n]])) {
+      out[[n]] <- NA_character_
+    } else if (is.factor(table[[n]])) {
+      out[[n]] <- factor(NA, levels = levels(table[[n]]))
+    } else if (is.logical(table[[n]])) {
+      out[[n]] <- NA
+    } else if (is.list(table[[n]])) {
+      out[[n]] <- list(NA)
+    } else {
+      stop("Unsupported column type: ", class(table[[n]]))
+    }
+  }
+  out
+}

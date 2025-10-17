@@ -43,8 +43,8 @@ full_preclosed_taxon_table <- function(
   )
   checkmate::assert_character(known_taxon_table[[rank]])
   checkmate::assert_character(known_taxon_table[[parent_rank]])
-  checkmate::assert_integerish(known_taxon_table$seq_idx, null.ok = TRUE)
-  checkmate::assert_character(known_taxon_table$seq_id, null.ok = TRUE)
+  checkmate::assert_integerish(known_taxon_table[["seq_idx"]], null.ok = TRUE)
+  checkmate::assert_character(known_taxon_table[["seq_id"]], null.ok = TRUE)
 
   checkmate::assert_data_frame(asv_taxsort)
   checkmate::assert_names(
@@ -56,15 +56,15 @@ full_preclosed_taxon_table <- function(
   super_ranks <- superranks(rank, tax_ranks)
 
   if ("seq_idx" %in% names(known_taxon_table)) {
-    out <- dplyr::rename(known_taxon_table, seq_idx_in = seq_idx)
+    known_taxon_table <- dplyr::rename(known_taxon_table, seq_idx_in = seq_idx)
   } else {
-    out <- dplyr::mutate(
+    known_taxon_table <- dplyr::mutate(
       known_taxon_table,
       seq_idx_in = readr::parse_number(seq_id)
     )
   }
 
-  out <- dplyr::left_join(out, asv_taxsort, by = "seq_idx_in") |>
+  out <- dplyr::left_join(known_taxon_table, asv_taxsort, by = "seq_idx_in") |>
     dplyr::arrange(dplyr::pick(all_of(c(super_ranks, "seq_idx")))) |>
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::filter(
@@ -72,16 +72,10 @@ full_preclosed_taxon_table <- function(
       any(!is.na(!!rank_sym))
     ) |>
     targets::tar_group()
-  if (nrow(out) == 0) {
-    out <- known_taxon_table |>
-      dplyr::slice_head() |>
-      dplyr::left_join(asv_taxsort, by = "seq_idx_in") |>
-      dplyr::mutate(tar_group = 1L)
-  }
   if ("seq_id" %in% names(out)) {
     out <- dplyr::select(out, -seq_idx_in)
   }
-  out
+  ensure_table(out)
 }
 
 #' Calculate a pre-closed-reference table for taxa with many sequences
@@ -128,14 +122,7 @@ large_preclosed_taxon_table <- function(
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::filter(sum(is.na(!!rank_sym)) * sum(!is.na(!!rank_sym)) > min_ops) |>
     targets::tar_group()
-  if (nrow(out) == 0) {
-    return(
-      fptt |>
-        dplyr::slice_head() |>
-        dplyr::mutate(tar_group = 1L)
-    )
-  }
-  out
+  ensure_table(out)
 }
 
 #' Calculate a pre-closed-reference table for taxa with few sequences
@@ -184,21 +171,14 @@ small_preclosed_taxon_table <- function(
     dplyr::filter(ops <= max_ops) |>
     dplyr::select(-all_of("tar_group"))
 
-  if (nrow(out) == 0) {
-    return(
-      fptt |>
-        dplyr::slice_head() |>
-        dplyr::mutate(tar_group = 1L)
-    )
-  }
-
   ops <- dplyr::select(out, all_of(c(parent_rank, "ops"))) |>
     dplyr::distinct() |>
     dplyr::mutate(tar_group = distribute_tasks(ops, max_ops)) |>
     dplyr::select(-ops)
 
   dplyr::left_join(out, ops, by = parent_rank) |>
-    dplyr::select(-ops)
+    dplyr::select(-ops) |>
+    ensure_table()
 }
 
 #' Run closed-reference clustering
@@ -352,13 +332,20 @@ full_predenovo_taxon_table <- function(
   rank_sym <- rlang::sym(rank)
   super_ranks <- superranks(rank, tax_ranks)
 
+  if ("seq_idx" %in% names(closedref_taxon_table)) {
+    closedref_taxon_table <- dplyr::rename(
+      closedref_taxon_table,
+      seq_idx_in = seq_idx
+    )
+  } else {
+    closedref_taxon_table <- dplyr::mutate(
+      closedref_taxon_table,
+      seq_idx_in = readr::parse_number(seq_id)
+    )
+  }
+
   out <- closedref_taxon_table |>
     dplyr::filter(is.na(!!rank_sym))
-  if ("seq_idx" %in% names(out)) {
-    out <- dplyr::rename(out, seq_idx_in = seq_idx)
-  } else {
-    out <- dplyr::mutate(out, seq_idx_in = readr::parse_number(seq_id))
-  }
 
   out <- dplyr::left_join(out, asv_taxsort, by = "seq_idx_in") |>
     dplyr::arrange(dplyr::pick(all_of(c(super_ranks, "seq_idx")))) |>
@@ -366,18 +353,7 @@ full_predenovo_taxon_table <- function(
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::filter(dplyr::n() > 1) |>
     targets::tar_group()
-
-  # we can't dynamically map over an empty data frame
-  # so give a single row.
-  if (nrow(out) == 0) {
-    out <- closedref_taxon_table |>
-      dplyr::slice_head() |>
-      dplyr::mutate(seq_idx_in = readr::parse_number(seq_id)) |>
-      dplyr::left_join(asv_taxsort, by = "seq_idx_in") |>
-      dplyr::select(-seq_idx_in) |>
-      dplyr::mutate(tar_group = 1L)
-  }
-  out
+  ensure_table(out)
 }
 
 #' Calculate a pre-denovo taxon table for taxa with many sequences
@@ -428,14 +404,7 @@ large_predenovo_taxon_table <- function(
     dplyr::filter(dplyr::n() * (dplyr::n() - 1) / 2 > min_ops) |>
     targets::tar_group()
 
-  if (nrow(out) == 0) {
-    return(
-      fptt |>
-        dplyr::slice_head() |>
-        dplyr::mutate(tar_group = 1L)
-    )
-  }
-  out
+  ensure_table(out)
 }
 
 #' Calculate a pre-denovo taxon table for taxa with few sequences
@@ -484,21 +453,14 @@ small_predenovo_taxon_table <- function(
     dplyr::filter(ops <= max_ops) |>
     dplyr::select(-all_of("tar_group"))
 
-  if (nrow(out) == 0) {
-    return(
-      fptt |>
-        dplyr::slice_head() |>
-        dplyr::mutate(tar_group = 1L)
-    )
-  }
-
   ops <- dplyr::select(out, all_of(parent_rank), ops) |>
     dplyr::distinct() |>
     dplyr::mutate(tar_group = distribute_tasks(ops, max_ops)) |>
     dplyr::select(-ops)
 
   dplyr::left_join(out, ops, by = parent_rank) |>
-    dplyr::select(-ops)
+    dplyr::select(-ops) |>
+    ensure_table()
 }
 
 #' Run denovo clustering
