@@ -172,12 +172,10 @@ cutadapt_paired_filter_trim <- function(
   if (length(file_R1) > 1 || length(file_R2) > 1) {
     seqs_R1 <- Biostrings::readQualityScaledDNAStringSet(file_R1)
     file_R1 <- withr::local_tempfile(fileext = ".fastq.gz")
-    Biostrings::writeQualityScaledXStringSet(seqs_R1, file_R1,
-      format = "fastq", compress = TRUE)
+    Biostrings::writeQualityScaledXStringSet(seqs_R1, file_R1, compress = TRUE)
     seqs_R2 <- Biostrings::readQualityScaledDNAStringSet(file_R2)
     file_R2 <- withr::local_tempfile(fileext = ".fastq.gz")
-    Biostrings::writeQualityScaledXStringSet(seqs_R2, file_R2,
-      format = "fastq", compress = TRUE)
+    Biostrings::writeQualityScaledXStringSet(seqs_R2, file_R2, compress = TRUE)
   }
 
   args <- c(args, file_R1, file_R2)
