@@ -1261,7 +1261,7 @@ parse_dist_config <- function(dist_config) {
         "(file: pipeline_options.yaml)"
       )
     }
-    eval(dist_config)
+    eval(as.call(dist_config))
 }
 
 #' @rdname pipeline_options
