@@ -1250,6 +1250,7 @@ parse_dist_config <- function(dist_config) {
     if (is.character(dist_config)) {
       dist_config <- list(method = dist_config)
     }
+    dist_config <- c(list(quote(optimotu::dist_config)), dist_config)
     if (dist_config$method == "usearch" && !"usearch" %in% names(dist_config)) {
       dist_config$usearch <- find_usearch()
     }
@@ -1260,7 +1261,7 @@ parse_dist_config <- function(dist_config) {
         "(file: pipeline_options.yaml)"
       )
     }
-    do.call(optimotu::dist_config, dist_config)
+    eval(dist_config)
 }
 
 #' @rdname pipeline_options
