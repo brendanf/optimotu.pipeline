@@ -326,8 +326,8 @@ full_predenovo_taxon_table <- function(
     ),
     combine = "or"
   )
-  checkmate::assert_integerish(closedref_taxon_table$seq_idx, null.ok = TRUE)
-  checkmate::assert_character(closedref_taxon_table$seq_id, null.ok = TRUE)
+  checkmate::assert_integerish(closedref_taxon_table[["seq_idx"]], null.ok = TRUE)
+  checkmate::assert_character(closedref_taxon_table[["seq_id"]], null.ok = TRUE)
 
   rank_sym <- rlang::sym(rank)
   super_ranks <- superranks(rank, tax_ranks)
