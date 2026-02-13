@@ -1,4 +1,4 @@
-# optimotu.pipeline (development version)
+# optimotu.pipeline 0.6.1
 * Improve handling of small datasets where some objects may end up empty.
 * (Re)implement option for merging multiple samples with the same name.
 * Fix for parsing distance configuration from `pipeline_options.yaml`.
