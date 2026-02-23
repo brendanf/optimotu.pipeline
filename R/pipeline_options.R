@@ -1217,7 +1217,8 @@ parse_cluster_options <- function(pipeline_options) {
         access = "r"
       )
       options(
-        optimotu.pipeline.clustering_thresholds = pipeline_options$cluster_thresholds
+        optimotu.pipeline.clustering_thresholds =
+          pipeline_options$cluster_thresholds
       )
     } else {
       message("No clustering options given in 'pipeline_options.yaml'\n",
@@ -1227,7 +1228,7 @@ parse_cluster_options <- function(pipeline_options) {
     clustering <- unnest_yaml_list(pipeline_options$clustering)
     checkmate::assert_names(
       names(clustering),
-      subset.of = c("thresholds", "measure", "dist_config")
+      subset.of = c("thresholds", "measure", "dist_config", "force_denovo")
     )
     checkmate::assert_file_exists(clustering$thresholds, "r")
     checkmate::assert_string(clustering$measure, null.ok = TRUE)
@@ -1238,10 +1239,17 @@ parse_cluster_options <- function(pipeline_options) {
       )
     }
     dist_config <- parse_dist_config(clustering$dist_config)
+    if (!is.null(clustering$force_denovo) && !isFALSE(clustering$force_denovo)) {
+      checkmate::assert_character(clustering$force_denovo, unique = TRUE)
+      checkmate::assert_subset(clustering$force_denovo, unknown_ranks())
+    } else {
+      clustering$force_denovo <- character(0)
+    }
     options(
       optimotu.pipeline.clustering_thresholds = clustering$thresholds,
       optimotu.pipeline.clustering_measure = clustering$measure,
-      optimotu.pipeline.clustering_dist_config = dist_config
+      optimotu.pipeline.clustering_dist_config = dist_config,
+      optimotu.pipeline.clustering_force_denovo = clustering$force_denovo
     )
   }
 }
@@ -1281,6 +1289,12 @@ cluster_measure <- function() {
 #' @export
 cluster_dist_config <- function() {
   getOption("optimotu.pipeline.clustering_dist_config", optimotu::dist_usearch())
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_force_denovo <- function() {
+  getOption("optimotu.pipeline.clustering_force_denovo", character(0))
 }
 
 #### guilds settings ####

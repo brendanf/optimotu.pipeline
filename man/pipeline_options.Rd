@@ -66,6 +66,7 @@
 \alias{cluster_thresholds}
 \alias{cluster_measure}
 \alias{cluster_dist_config}
+\alias{cluster_force_denovo}
 \alias{do_guilds}
 \alias{do_wide_otu_table}
 \alias{rarefy_number}
@@ -204,6 +205,8 @@ cluster_thresholds()
 cluster_measure()
 
 cluster_dist_config()
+
+cluster_force_denovo()
 
 do_guilds()
 

@@ -1,3 +1,8 @@
+# optimotu.pipeline (development version)
+* Add option `force_denovo` in `pipeline_options.yaml` to force de novo
+  clustering at some or all taxonomic ranks, i.e., to ignore taxonomic
+  constraints at those ranks.
+
 # optimotu.pipeline 0.6.1
 * Improve handling of small datasets where some objects may end up empty.
 * (Re)implement option for merging multiple samples with the same name.
