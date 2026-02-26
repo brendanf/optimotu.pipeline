@@ -46,11 +46,11 @@ considered for merging. Default: \code{1}.}
 the "parent" and "daughter" sequences in all samples where they co-occur. If
 \code{FALSE}, the minimum is enforced for every sample. Default: \code{FALSE}.}
 
-\item{id_is_int}{(\code{logical} flag) if \code{TRUE}, the OTU identifiers are integers; in
-this case they are expected to be in columns \verb{seq_idx*}. If \code{FALSE}, the OTU
-identifiers are character strings, and are expected to be in columns
-\verb{seq_id*}. Default: \code{TRUE} if \code{otu_table} has a column \code{seq_idx}, \code{FALSE}
-otherwise.}
+\item{id_is_int}{(\code{logical} flag) if \code{TRUE}, the OTU identifiers are
+integers; in this case they are expected to be in columns \verb{seq_idx*}. If
+\code{FALSE}, the OTU identifiers are character strings, and are expected to be
+in columns \verb{seq_id*}. Default: \code{TRUE} if \code{otu_table} has a column \code{seq_idx},
+\code{FALSE} otherwise.}
 
 \item{id_is_sorted}{(\code{logical} flag) if \code{TRUE}, the values of \verb{seq_id*} or
 \verb{seq_idx*} are sorted in decreasing order of prevalence (number of samples),
