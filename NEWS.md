@@ -1,9 +1,11 @@
-# optimotu.pipeline (development version)
+# optimotu.pipeline 0.6.2
 * Add option `force_denovo` in `pipeline_options.yaml` to force de novo
   clustering at some or all taxonomic ranks, i.e., to ignore taxonomic
   constraints at those ranks.
 * LULU implementation now works with multiple input files, allowing use in
   OptimOTU pipeline with model-aligned amplicons.
+* LULU implementation now correctly maps its internal OTU indices to
+  provided names/indices when the input is not already sorted.
 
 # optimotu.pipeline 0.6.1
 * Improve handling of small datasets where some objects may end up empty.

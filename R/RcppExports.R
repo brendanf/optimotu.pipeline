@@ -406,6 +406,8 @@ fasta_split <- function(infile, outfiles, compress = FALSE) {
 #' all samples where the two sequences co-occur.  Otherwise (default) it is
 #' interpreted as a minimum value for the the abundance ratio of all samples
 #' where the two sequences co-occur.
+#' @param verbose (`integer`) level of verbosity. At level 0 (default),
+#' no messages are printed.
 #' @returns a two-column `data.frame` with columns `seq_idx` and `lulu_idx`.
 #' `seq_idx` includes all values which occur in the `seq_idx` argument, and
 #' `lulu_idx` gives the index of the denoised sequence.

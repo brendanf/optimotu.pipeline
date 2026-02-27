@@ -129,59 +129,91 @@ lulu_matchlist <- read.table("blast_output.txt", header = FALSE, as.is = TRUE, s
 # run lulu to get reference result
 # lulu is very verbose...
 sink("/dev/null")
-lulu_result <- lulu::lulu(lulu_otutab, lulu_matchlist)
+# use minimum_relative_cooccurrence = 1.0 to avoid LULU bug
+lulu_result <- lulu::lulu(lulu_otutab, lulu_matchlist, minimum_ratio_type = "min", minimum_relative_cooccurence = 1.0)
 sink()
 
-# convert lulu OTU table to long format with seq_id as a factor
+# convert lulu OTU table to long format
 long_otutab <- tibble::as_tibble(lulu_otutab, rownames = "seq_id") |>
   tidyr::pivot_longer(-seq_id, names_to = "sample_key", values_to = "nread") |>
-  dplyr::filter(nread > 0L) |>
-  dplyr::mutate(n_sample = dplyr::n(), nread_tot = sum(nread), .by = seq_id) |>
-  dplyr::arrange(dplyr::desc(n_sample), dplyr::desc(nread_tot)) |>
-  dplyr::mutate(seq_id = ordered(seq_id, levels = unique(seq_id)))
-
-# convert sequence IDs in the match list to factors with the same levels as in
-# the OTU table
-factor_matchlist <- lulu_matchlist |>
-  dplyr::mutate(
-    V1 = ordered(V1, levels = levels(long_otutab$seq_id)),
-    V2 = ordered(V2, levels = levels(long_otutab$seq_id))
-  )
+  dplyr::filter(nread > 0L)
 
 # generate match table as it would have been calculated by running BLAST on
 # each sample separately
 long_matchlist <-
-  dplyr::left_join(long_otutab, factor_matchlist, by = c("seq_id" = "V1"), relationship = "many-to-many") |>
+  # remove self-hits
+  dplyr::filter(lulu_matchlist, V1 != V2) |>
+  # swap hits where the second hit is alphabetically earlier, in order to
+  # deduplicate the hit list.
+  # The optimotu.pipeline implementation does not care which sequence is seq1
+  # and which is seq2, but it does need there to be only one hit per pair per sample
+  dplyr::mutate(
+    V4 = pmin(V1, V2),
+    V2 = pmax(V1, V2),
+    V1 = V4
+  ) |>
+  # The example data give slightly different values for hits when query and
+  # subject are swapped.  Take the larger similarity/smaller distance.
+  dplyr::summarize(V3 = max(V3), .by = c(V1, V2)) |>
+  # join with long OTU table to get read counts for each sample for seq1
+  dplyr::left_join(long_otutab, y = _, by = c("seq_id" = "V1"), relationship = "many-to-many") |>
   dplyr::rename(seq_id1 = seq_id, seq_id2 = V2) |>
+  # join again to get read counts for seq2
   dplyr::inner_join(long_otutab, by = c("sample_key", "seq_id2" = "seq_id")) |>
-  dplyr::filter(seq_id1 > seq_id2) |>
   dplyr::rename(nread1 = nread.x, nread2 = nread.y) |>
-  dplyr::mutate(dist = optimotu::threshold_as_dist(V3))
+  # convert to fractional distance
+  dplyr::mutate(dist = optimotu::threshold_as_dist(V3)) |>
+  dplyr::select(seq_id1, seq_id2, nread1, nread2, dist)
 
-# note: although "long_matchlist" contains the same sequence pairs multiple
+# Note: although "long_matchlist" contains the same sequence pairs multiple
 # times when they co-occur more than once, it does not include pairs that never
 # co-occur.  lulu_matchlist has 320k entries, while long_matchlist has only
-# 60k. (long_matchlist also does not include the 2425 self-self matches and does
-# not double-count pairs, but that would still leave 150k entries in the lulu
-# version)
+# 60k. This illustrates the fact that even though work is being redone,
+# searching for matching pairs within each sample combining results takes less
+# computation than doing a global all-vs-all search.
 
-long_lulu_map <- optimotu.pipeline:::lulu_map_impl(
-  match_id1 = long_matchlist$seq_id1,
-  match_id2 = long_matchlist$seq_id2,
-  match_nread1 = long_matchlist$nread1,
-  match_nread2 = long_matchlist$nread2,
-  match_dist = long_matchlist$dist,
-  seq_idx = long_otutab$seq_id,
-  nread = long_otutab$nread,
-  max_dist = 0.16
-) |>
-  dplyr::mutate(
-    seq_id = ordered(seq_idx, labels = levels(long_otutab$seq_id)),
-    lulu_id = ordered(lulu_idx, levels = seq_idx, labels = levels(seq_id))
+long_lulu_map <- optimotu.pipeline::lulu_map(
+  otu_table = long_otutab,
+  match_table = long_matchlist,
+  max_dist = 0.16,
+  min_abundance_ratio = 1,
+  min_cooccurrence_ratio = 1,
+  use_mean_abundance_ratio = FALSE,
+  verbose = 0
+)
+
+testthat::test_that("lulu_map and lulu give same map result", {
+  testthat::expect_equal(
+    long_lulu_map$lulu_id,
+    lulu_result$otu_map[long_lulu_map$seq_id, "parent_id"]
   )
+})
 
-long_lulu_otutab <- dplyr::left_join(long_otutab, long_lulu_map, by = "seq_id") |>
-  dplyr::summarize(nread = sum(nread), .by = c(seq_id, sample_key)) |>
-  tidyr::pivot_wider(names_from = "sample_key", values_from = "nread", values_fill = 0L)
+long_lulu_otutab <- optimotu.pipeline::lulu_table(long_lulu_map, long_otutab)
 
+# pivot to a wide table to match LULU result
+wide_lulu_otutab <- tidyr::pivot_wider(
+  long_lulu_otutab,
+  names_from = sample_key,
+  values_from = nread,
+  values_fill = 0L
+) |>
+  tibble::column_to_rownames("seq_id")
 
+# LULU keeps empty rows (OTUs). optimotu does not.  Check that this is accurate
+testthat::test_that("lulu_table does not include rows which are empty in lulu", {
+  testthat::expect_length(intersect(rownames(wide_lulu_otutab), rownames(lulu_result$curated_table)[rowSums(lulu_result$curated_table) == 0]), 0)
+})
+
+# Add these rows
+wide_lulu_otutab[rownames(lulu_result$curated_table)[rowSums(lulu_result$curated_table) == 0], ] <- 0L
+
+# reorder the table to match the LULU result
+wide_lulu_otutab <- wide_lulu_otutab[rownames(lulu_result$curated_table), colnames(lulu_result$curated_table)]
+
+testthat::test_that("lulu_table and lulu give same result", {
+  testthat::expect_equal(
+    wide_lulu_otutab,
+    lulu_result$curated_table
+  )
+})

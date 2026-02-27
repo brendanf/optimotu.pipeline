@@ -12,7 +12,8 @@ lulu_map(
   min_cooccurrence_ratio = lulu_min_cooccurrence_ratio(),
   use_mean_abundance_ratio = lulu_use_mean_abundance_ratio(),
   id_is_int = "seq_idx" \%in\% names(otu_table),
-  id_is_sorted = id_is_int
+  id_is_sorted = id_is_int,
+  verbose = 0
 )
 }
 \arguments{
@@ -58,6 +59,8 @@ with ties broken by decreasing total abundance (\code{nread}). This skips the
 computational cost of sorting the OTUs, but will cause an error if they are
 not sorted as described. Default: \code{TRUE} if \code{id_is_int} is \code{TRUE}, otherwise
 \code{FALSE}.}
+
+\item{verbose}{(\code{integer} scalar) level of verbosity for progress messages.}
 }
 \value{
 a two-column \code{data.frame} with columns \code{seq_idx} and \code{lulu_idx}

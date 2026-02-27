@@ -118,6 +118,8 @@ struct match_info_data {
 //' all samples where the two sequences co-occur.  Otherwise (default) it is
 //' interpreted as a minimum value for the the abundance ratio of all samples
 //' where the two sequences co-occur.
+//' @param verbose (`integer`) level of verbosity. At level 0 (default),
+//' no messages are printed.
 //' @returns a two-column `data.frame` with columns `seq_idx` and `lulu_idx`.
 //' `seq_idx` includes all values which occur in the `seq_idx` argument, and
 //' `lulu_idx` gives the index of the denoised sequence.
@@ -234,6 +236,12 @@ Rcpp::DataFrame lulu_map_impl(
                     << "; skipping" << std::endl;
       }
       continue;
+    } else if (verbose > 1) {
+      Rcpp::Rcerr << "co-occurrence ratio " << mi.second.size()
+                  << " / " << total_occurrence[mi.first.first]
+                  << " = " << double(mi.second.size()) / double(total_occurrence[mi.first.first])
+                  << " is greater than or equal to minimum " << min_cooccurrence_ratio
+                  << std::endl;
     }
 
     // check the abundance ratio
@@ -245,14 +253,20 @@ Rcpp::DataFrame lulu_map_impl(
       }
       abundance_ratio /= mi.second.size();
     } else {
+      abundance_ratio = std::numeric_limits<double>::infinity();
       for (const auto & nread : mi.second) {
-        abundance_ratio = double(nread.second) / double(nread.first);
-        if (abundance_ratio <= min_abundance_ratio) {
-          break;
+        double my_abundance_ratio = double(nread.second) / double(nread.first);
+        if (my_abundance_ratio < abundance_ratio) {
+          abundance_ratio = my_abundance_ratio;
         }
       }
     }
     if (abundance_ratio > min_abundance_ratio) {
+      if (verbose > 1) {
+        Rcpp::Rcerr << (use_mean_abundance_ratio ? "mean abundance ratio " : "abundance ratio ")
+                    << abundance_ratio << " greater than minimum "
+                    << min_abundance_ratio << std::endl;
+      }
       if (verbose > 0) {
         Rcpp::Rcerr << "Mapping child " << mi.first.first
                     << " to parent " << mi.first.second
@@ -262,7 +276,7 @@ Rcpp::DataFrame lulu_map_impl(
     } else {
       if (verbose > 0) {
         Rcpp::Rcerr << (use_mean_abundance_ratio ? "mean abundance ratio " : "abundance ratio ")
-                    << abundance_ratio << " less than minimum " << min_abundance_ratio
+                    << abundance_ratio << " less than or equal to minimum " << min_abundance_ratio
                     << "; skipping" << std::endl;
       }
     }

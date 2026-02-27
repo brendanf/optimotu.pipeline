@@ -57,6 +57,9 @@ is interpreted as a minimum value for the mean of the abundance ratios in
 all samples where the two sequences co-occur.  Otherwise (default) it is
 interpreted as a minimum value for the the abundance ratio of all samples
 where the two sequences co-occur.}
+
+\item{verbose}{(\code{integer}) level of verbosity. At level 0 (default),
+no messages are printed.}
 }
 \value{
 a two-column \code{data.frame} with columns \code{seq_idx} and \code{lulu_idx}.

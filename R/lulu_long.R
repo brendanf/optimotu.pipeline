@@ -73,6 +73,7 @@
 #' computational cost of sorting the OTUs, but will cause an error if they are
 #' not sorted as described. Default: `TRUE` if `id_is_int` is `TRUE`, otherwise
 #' `FALSE`.
+#' @param verbose (`integer` scalar) level of verbosity for progress messages.
 #'
 #' @returns a two-column `data.frame` with columns `seq_idx` and `lulu_idx`
 #' or `seq_id` and `lulu_id`. `seq_id*` includes all values which occur in
@@ -88,7 +89,8 @@ lulu_map <- function(
   min_cooccurrence_ratio = lulu_min_cooccurrence_ratio(),
   use_mean_abundance_ratio = lulu_use_mean_abundance_ratio(),
   id_is_int = "seq_idx" %in% names(otu_table),
-  id_is_sorted = id_is_int
+  id_is_sorted = id_is_int,
+  verbose = 0
 ) {
   checkmate::assert_flag(id_is_int)
   id_col <- if (id_is_int) "seq_idx" else "seq_id"
@@ -140,6 +142,7 @@ lulu_map <- function(
   }
   checkmate::assert_numeric(max_dist, lower = 0)
   checkmate::assert_numeric(min_abundance_ratio, lower = 0, upper = 1)
+  checkmate::assert_int(verbose)
 
   match_table <- dplyr::filter(
     match_table,
@@ -195,12 +198,14 @@ lulu_map <- function(
     max_dist = max_dist,
     min_abundance_ratio = min_abundance_ratio,
     min_cooccurrence_ratio = min_cooccurrence_ratio,
-    use_mean_abundance_ratio = use_mean_abundance_ratio
+    use_mean_abundance_ratio = use_mean_abundance_ratio,
+    verbose = verbose
   )
 
   # Map the result back to the original IDs
   if (is.ordered(otu_table[[id_col]])) {
-    out <- dplyr::mutate(out, dplyr::across(everything(), as.character))
+    out$seq_idx <- levels(otu_table[[id_col]])[out$seq_idx]
+    out$lulu_idx <- levels(otu_table[[id_col]])[out$lulu_idx]
     if (id_is_int) {
       out <- dplyr::mutate(out, dplyr::across(everything(), as.integer))
     } else {
@@ -231,8 +236,8 @@ lulu_table <- function(
   checkmate::assert_data_frame(lulu_map)
   checkmate::assert_data_frame(otu_table)
   checkmate::assert(
-    checkmate::check_integerish(otu_table$seq_idx, lower = 1L),
-    checkmate::check_character(otu_table$seq_id)
+    checkmate::check_integerish(otu_table[["seq_idx"]], lower = 1L),
+    checkmate::check_character(otu_table[["seq_id"]])
   )
   if ("seq_id" %in% names(otu_table) && "seq_idx" %in% names(otu_table)) {
     stop("`otu_table` may have column `seq_id` or `seq_idx`, but not both")
