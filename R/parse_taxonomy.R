@@ -195,6 +195,8 @@ sintax_ranks <- c(d = "domain", k = "kingdom", p = "phylum",
                   g = "genus", s = "species", t = "strain")
 
 parse_sintax_header <- function(header) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  seq_id <- taxonomy <- NULL
   tibble::tibble(header = header) |>
     tidyr::separate_wider_regex(
       header,
@@ -245,9 +247,11 @@ bold_ranks <- c(
 )
 
 parse_bold_header <- function(header) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  seq_id <- taxonomy <- NULL
   parts <- strsplit(header, "|", fixed = TRUE)
   seq_id <- vapply(parts, `[`, 1L, FUN.VALUE = character(1))
-  taxonomy_str <- vapply(parts, tail, 1L, FUN.VALUE = character(1))
+  taxonomy_str <- vapply(parts, utils::tail, 1L, FUN.VALUE = character(1))
   tibble::tibble(seq_id = seq_id, taxonomy = taxonomy_str) |>
     tidyr::separate_wider_delim(
       taxonomy,
@@ -271,6 +275,8 @@ unite_ranks <- c(
 )
 
 parse_unite_header <- function(header) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  taxonomy <- NULL
   parts <- strsplit(header, "|", fixed = TRUE)
   seq_id <- vapply(parts, `[`, 1L, FUN.VALUE = character(1))
   taxonomy_str <- vapply(parts, `[`, 2L, FUN.VALUE = character(1))
@@ -298,6 +304,8 @@ parse_unite_header <- function(header) {
 #' @keywords internal
 #' @noRd
 parse_taxonomy_header <- function(header, ranks = tax_ranks(), rank_map = NULL) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  seq_id <- NULL
   out <- if (is_sintax_header(header)) {
     parse_sintax_header(header)
   } else if (is_bold_header(header)) {

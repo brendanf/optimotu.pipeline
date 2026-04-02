@@ -31,6 +31,9 @@ tip_rank(ranks = tax_ranks())
 
 tip_rank_var(ranks = tax_ranks())
 }
+\arguments{
+\item{ranks}{(\code{character} vector) the taxonomic ranks to use}
+}
 \description{
 Shortcuts for accessing taxonomy options
 }

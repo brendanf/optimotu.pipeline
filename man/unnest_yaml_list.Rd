@@ -13,8 +13,8 @@ unnest_yaml_list(x)
 a \code{list} with all nested lists unnested
 }
 \description{
-This function is useful for unnesting lists originally imported from YAML files
-formatted like:
+This function is useful for unnesting lists originally imported from YAML
+files formatted like:
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{list:
   - key1: value1

@@ -17,7 +17,7 @@ run_protax(
 path to a FASTA file, \code{character} vector, or \code{data.frame}) sequences to
 taxonomically identify}
 
-\item{outdir}{(\code{character} string) directory to write output to. If the'
+\item{outdir}{(\code{character} string) directory to write output to. If the
 directory exists, all existing files in it will be deleted.}
 
 \item{modeldir}{(\code{character} string) directory containing trained model files

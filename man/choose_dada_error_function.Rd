@@ -8,6 +8,8 @@ choose_dada_error_function(fls, ...)
 }
 \arguments{
 \item{fls}{File names}
+
+\item{...}{Additional arguments (passed to \code{\link[=fastq_qual_bins]{fastq_qual_bins()}})}
 }
 \value{
 A function that estimates error rates based on binned quality scores

@@ -7,10 +7,10 @@ find_vsearch <- function() {
 
 #' "usearch_global" function of vsearch
 #'
-#' @param query (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class], `character` vector, or
-#' file name) query sequences
-#' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class], `character` vector, or
-#' file name) reference sequences
+#' @param query (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
+#' `character` vector, or file name) query sequences
+#' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
+#' `character` vector, or file name) reference sequences
 #' @param threshold (`numeric` scalar) identity threshold, in range 0.0-1.0
 #' @param global (`logical` flag) if `TRUE`, end gaps and internal gaps are
 #' penalized equally.  Otherwise end gaps are not penalized.
@@ -18,9 +18,9 @@ find_vsearch <- function() {
 #' @param id_is_int (`logical` flag) if `TRUE`, return the sequence IDs as
 #' integers
 #'
-#' @return `tibble::tibble` with columns `seq_id`, `clust`, and `dist`, where `seq_id` is
-#' the name of a sequence from `query`, `clust` is the closest match to that
-#' sequence in `ref`, and `dist` is the distance between them
+#' @return `tibble::tibble` with columns `seq_id`, `clust`, and `dist`, where
+#' `seq_id` is the name of a sequence from `query`, `clust` is the closest match
+#' to that sequence in `ref`, and `dist` is the distance between them
 #' @export
 vsearch_usearch_global <- function(query, ref, threshold, global = TRUE,
                                    ncpu = local_cpus(), id_is_int = FALSE) {
@@ -39,7 +39,7 @@ vsearch_usearch_global <- function(query, ref, threshold, global = TRUE,
   }
   checkmate::assert_flag(global)
   gap <- if (global) "1" else "1I/0E"
-  uc = system(
+  uc <- system(
     paste(
       find_vsearch(),
       "--usearch_global", tquery,
@@ -81,10 +81,10 @@ vsearch_usearch_global <- function(query, ref, threshold, global = TRUE,
 }
 
 #' "uchime_ref" function of vsearch
-#' @param query (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class], `character` vector,
-#' or file name) query sequences
-#' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class], `character` vector, or
-#' file name) reference sequences
+#' @param query (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
+#' `character` vector, or file name) query sequences
+#' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
+#' `character` vector, or file name) reference sequences
 #' @param ncpu (`integer` count) number of threads to use
 #' @param id_only (`logical` flag) if `TRUE`, return only the sequence IDs
 #' @param id_is_int (`logical` flag) if `TRUE`, return the sequence IDs as
@@ -149,10 +149,12 @@ vsearch_uchime_ref <- function(query, ref, ncpu = local_cpus(), id_only = FALSE,
 }
 
 #' Perform closed-reference clustering using vsearch
-#' @param query (`data.frame`, [`Biostrings::DNAStringSet`][Biostrings::XStringSet-class], `character` vector,
-#' or file name) query sequences
-#' @param ref (`data.frame`, `Biostrings::DNAStringSet`[`Biostrings::DNAStringSet`][Biostrings::XStringSet-class], `character` vector, or
-#' file name) reference sequences
+#' @param query (`data.frame`,
+#' [`Biostrings::DNAStringSet`][Biostrings::XStringSet-class], `character`
+#' vector, or file name) query sequences
+#' @param ref (`data.frame`,
+#' [`Biostrings::DNAStringSet`][Biostrings::XStringSet-class], `character`
+#' vector, or file name) reference sequences
 #' @param threshold (`numeric` scalar) identity threshold, in range 0.0-1.0
 #' @param ... additional arguments to pass to `vsearch_usearch_global()`
 #' @return `tibble::tibble` with columns `seq_id` and `cluster`, where `seq_id`
@@ -163,7 +165,7 @@ vsearch_usearch_global_closed_ref <- function(query, ref, threshold, ...) {
   # avoid R CMD check NOTE for undeclared global variables due to NSE
   seq_id <- cluster <- NULL
   out <- tibble::tibble(seq_id = character(0), cluster = character(0))
-  while(sequence_size(query) > 0 && sequence_size(ref) > 0) {
+  while (sequence_size(query) > 0 && sequence_size(ref) > 0) {
     result <- vsearch_usearch_global(query, ref, threshold, ...)
     if (nrow(out) > 0) {
       result <- dplyr::left_join(
@@ -182,8 +184,8 @@ vsearch_usearch_global_closed_ref <- function(query, ref, threshold, ...) {
 }
 
 #' "cluster_smallmem" function of vsearch
-#' @param seq (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class], `character` vector, or
-#' file name) sequences to cluster
+#' @param seq (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
+#' `character` vector, or file name) sequences to cluster
 #' @param threshold (`numeric` scalar) identity threshold, in range 0.0-1.0
 #' @param ncpu (`integer` count) number of threads to use
 #' @return `tibble::tibble` with columns `query` and `hit`, where `query` is
@@ -197,7 +199,7 @@ vsearch_cluster_smallmem <- function(seq, threshold = 1, ncpu = local_cpus()) {
     tout <- withr::local_tempfile(pattern = "data", fileext = ".fasta")
     write_sequence(seq, tout)
   }
-  uc = system(
+  uc <- system(
     paste(
       find_vsearch(),
       "--cluster_smallmem", tout,
@@ -240,14 +242,19 @@ collapseNoMismatch_vsearch <- function(seqtab, ..., ncpu = local_cpus()) {
   if (nrow(matches) > 0) {
     matches$query <- as.integer(matches$query)
     matches$hit <- as.integer(matches$hit)
-    matches <- matches[order(matches$query),]
+    matches <- matches[order(matches$query), ]
     for (i in unique(matches$hit)) {
-      seqtab[,i] <- seqtab[,i] +
-        as.integer(rowSums(seqtab[,matches$query[matches$hit == i], drop = FALSE]))
+      seqtab[, i] <- seqtab[, i] +
+        as.integer(
+          rowSums(
+            seqtab[, matches$query[matches$hit == i], drop = FALSE]
+          )
+        )
     }
-    seqtab <- seqtab[,-matches$query]
+    seqtab <- seqtab[, -matches$query]
     map$seq_idx_out[matches$query] <- matches$hit
-    map$seq_idx_out = map$seq_idx_out - findInterval(map$seq_idx_out, matches$query)
+    map$seq_idx_out <- map$seq_idx_out -
+      findInterval(map$seq_idx_out, matches$query)
   }
   attr(seqtab, "map") <- map
   return(seqtab)
@@ -305,7 +312,6 @@ nomismatch_hits_vsearch <- function(seqtab, seqs = NULL,
     seqs <- seqs[o]
     names(seqs) <- as.character(o)
   }
-  nseqs <- sequence_size(seqs)
   vsearch_cluster_smallmem(seqs, ncpu = ncpu) |>
     dplyr::mutate(dplyr::across(everything(), as.integer))
 }
@@ -328,6 +334,8 @@ nomismatch_hits_vsearch <- function(seqtab, seqs = NULL,
 #' taxon being the correct classification of the sequence
 #' @export
 sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  seq_id <- taxonomy <- taxon <- NULL
   checkmate::assert_file_exists(ref, access = "r")
   checkmate::assert_count(ncpu, null.ok = TRUE)
   if (is.character(query) && length(query) == 1 && file.exists(query)) {
@@ -336,22 +344,21 @@ sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
     tout <- withr::local_tempfile(pattern = "data", fileext = ".fasta")
     write_sequence(query, tout)
   }
-  tin <- tempfile("data", fileext = ".tab")
   version <- processx::run(find_vsearch(), "--version")$stderr |>
     sub("vsearch v([0-9.]+).+", "\\1", x = _) |>
     strsplit(split = ".", fixed = TRUE) |>
     unlist() |>
     as.integer()
   has_random <- version[1] > 2L || (version[1] == 2L && version[2] >= 28L)
-  result <-processx::run(
-      find_vsearch(),
-      c(
-        "--sintax", tout,
-        if (has_random) "--sintax_random",
-        "--db", ref,
-        "--tabbedout", "-",
-        if (!is.null(ncpu)) c("--threads", ncpu)
-      )
+  result <- processx::run(
+    find_vsearch(),
+    c(
+      "--sintax", tout,
+      if (has_random) "--sintax_random",
+      "--db", ref,
+      "--tabbedout", "-",
+      if (!is.null(ncpu)) c("--threads", ncpu)
+    )
   )
   stopifnot(result$status == 0)
   out <- (if (length(result$stdout) > 0) {
@@ -380,7 +387,10 @@ sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
     ) |>
     dplyr::mutate(
       rank = rank2factor(tax_ranks()[seq_len(dplyr::n())]),
-      parent_taxonomy = purrr::accumulate(taxon, \(...) paste(..., sep = ",") ) |>
+      parent_taxonomy = purrr::accumulate(
+        taxon,
+        \(...) paste(..., sep = ",")
+      ) |>
         dplyr::lag(default = ""),
       .by = seq_id,
       .before = taxon

@@ -36,7 +36,7 @@ least-inclusive (e.g., from "kingdom" to "species")}
 
 \item{denovo_thresholds}{(\code{list}) a list of thresholds to use for
 denovo clustering. These are interpreted as distances on the
-interval \link{0, 100}, where 0 is a perfect match and 100 is a perfect
+interval [0, 100], where 0 is a perfect match and 100 is a perfect
 mismatch.}
 
 \item{dist_config}{(\code{list}) a list of configuration options for the

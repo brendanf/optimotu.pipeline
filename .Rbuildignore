@@ -5,3 +5,7 @@
 ^\.github$
 ^README\.Rmd$
 ^codecov\.yml$
+^\.vscode$
+^\.git$
+^\.gitignore$
+^\.DS_Store$

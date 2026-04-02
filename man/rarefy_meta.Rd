@@ -6,6 +6,11 @@
 \usage{
 rarefy_meta(dots = TRUE)
 }
+\arguments{
+\item{dots}{(\code{logical} scalar) whether to prefix the variable names with a
+dot; if \code{TRUE}, the variable names will be prefixed with a dot, e.g.
+\code{.numerator} instead of \code{numerator}}
+}
 \value{
 a \code{data.frame} giving the variables to map over for rarefaction;
 when rarefaction is to be performed (as determined by \code{do_rarefy()}) then

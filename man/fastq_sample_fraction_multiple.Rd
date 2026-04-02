@@ -35,6 +35,10 @@ reads to sample.}
 \item{output}{(\code{character} vector) a vector of output file names. If an
 element ends in ".gz", the output will be gzipped.}
 
+\item{rename}{(\code{logical} scalar) whether to rename the reads in the output;
+if \code{TRUE}, the read names will be replaced with hexadecimal sequential
+numbers}
+
 \item{file_R1}{(\code{character} string) the path to the R1 FASTQ file. May be gzipped.}
 
 \item{file_R2}{(\code{character} string) the path to the R2 FASTQ file. May be gzipped..}

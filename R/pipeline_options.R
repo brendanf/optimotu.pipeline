@@ -1,7 +1,7 @@
 #' Flatten a nested list of length-1 lists into a single list
 #'
-#' This function is useful for unnesting lists originally imported from YAML files
-#' formatted like:
+#' This function is useful for unnesting lists originally imported from YAML
+#' files formatted like:
 #' ```
 #' list:
 #'   - key1: value1
@@ -16,8 +16,8 @@ unnest_yaml_list <- function(x) {
   checkmate::assert_list(x)
   if (
     is.null(names(x)) &&
-    checkmate::check_list(x, types = "list") &&
-    all(vapply(x, length, 1L) == 1)
+      checkmate::check_list(x, types = "list") &&
+      all(vapply(x, length, 1L) == 1L)
   ) {
     do.call(c, x)
   } else {
@@ -73,7 +73,8 @@ parse_file_extension <- function(pipeline_options) {
     null.ok = TRUE
   )
   if (!is.null(pipeline_options$file_extension)) {
-    options(optimotu.pipeline.read_file_extension = pipeline_options$file_extension)
+    options(optimotu.pipeline.read_file_extension =
+              pipeline_options$file_extension)
   }
 }
 
@@ -145,7 +146,8 @@ parse_custom_sample_table <- function(pipeline_options) {
   )
   if (is.character(pipeline_options$custom_sample_table)) {
     options(
-      optimotu.pipeline.custom_sample_table = pipeline_options$custom_sample_table
+      optimotu.pipeline.custom_sample_table =
+        pipeline_options$custom_sample_table
     )
   }
 }
@@ -175,8 +177,8 @@ parse_added_reference <- function(pipeline_options) {
     if (xor(is.null(added_reference$fasta),
             is.null(added_reference$table))) {
       stop(
-        "If one of 'added_reference_fasta' and 'added_reference_table' is given ",
-        "in 'pipeline_options.yaml', then both must be given."
+        "If one of 'added_reference_fasta' and 'added_reference_table' is ",
+        "given in 'pipeline_options.yaml', then both must be given."
       )
     }
     if (!is.null(added_reference$fasta)) {
@@ -213,25 +215,30 @@ added_reference_table <- function() {
 #' @rdname parse_pipeline_options
 #' @keywords internal
 parse_parallel_options <- function(pipeline_options) {
-  checkmate::assert_count(pipeline_options$local_threads, positive = TRUE, null.ok = TRUE)
+  checkmate::assert_count(pipeline_options$local_threads, positive = TRUE,
+                          null.ok = TRUE)
   if (!is.null(pipeline_options$local_threads)) {
     options(optimotu_num_threads = pipeline_options$local_threads)
   }
 
-  checkmate::assert_count(pipeline_options$max_batchsize, na.ok = TRUE, null.ok = TRUE)
+  checkmate::assert_count(pipeline_options$max_batchsize, na.ok = TRUE,
+                          null.ok = TRUE)
   max_batchsize <- NULL
   if (checkmate::test_count(pipeline_options$max_batchsize, positive = TRUE))
     max_batchsize <- pipeline_options$max_batchsize
 
   workers_per_seqrun <- 1L
-  checkmate::assert_count(pipeline_options$workers_per_seqrun, positive = TRUE, null.ok = TRUE)
-  checkmate::assert_count(pipeline_options$jobs_per_seqrun, positive = TRUE, null.ok = TRUE)
+  checkmate::assert_count(pipeline_options$workers_per_seqrun, positive = TRUE,
+                          null.ok = TRUE)
+  checkmate::assert_count(pipeline_options$jobs_per_seqrun, positive = TRUE,
+                          null.ok = TRUE)
   if (!is.null(pipeline_options$workers_per_seqrun)) {
     if (!is.null(pipeline_options$jobs_per_seqrun)) {
       warning(
-        "both 'workers_per_seqrun' and 'jobs_per_seqrun' (deprecated) were given",
-        " in 'pipeline_options.yaml'. Using 'workers_per_seqrun' (=",
-        pipeline_options$workers_per_seqrun, ")")
+        "both 'workers_per_seqrun' and 'jobs_per_seqrun' (deprecated) were ",
+        "given in 'pipeline_options.yaml'. Using 'workers_per_seqrun' (=",
+        pipeline_options$workers_per_seqrun, ")"
+      )
     }
     workers_per_seqrun <- pipeline_options$workers_per_seqrun
   } else if (!is.null(pipeline_options$jobs_per_seqrun)) {
@@ -243,12 +250,14 @@ parse_parallel_options <- function(pipeline_options) {
   }
 
   min_workers <- 1L
-  checkmate::assert_int(pipeline_options$min_workers, lower = 1L, null.ok = TRUE)
+  checkmate::assert_int(pipeline_options$min_workers, lower = 1L,
+                        null.ok = TRUE)
   if (!is.null(pipeline_options$min_workers))
     min_workers <- pipeline_options$min_workers
 
   max_workers <- Inf
-  checkmate::assert_int(pipeline_options$max_workers, lower = min_workers, null.ok = TRUE)
+  checkmate::assert_int(pipeline_options$max_workers, lower = min_workers,
+                        null.ok = TRUE)
   if (!is.null(pipeline_options$max_workers))
     max_workers <- pipeline_options$max_workers
 
@@ -433,7 +442,7 @@ parse_filter_options <- function(pipeline_options) {
       null.ok = TRUE
     )
     options(
-      optimotu.pipeline.dada2_maxEE = update(dada2_maxEE(), filtering)
+      optimotu.pipeline.dada2_maxEE = stats::update(dada2_maxEE(), filtering)
     )
   }
 }
@@ -638,7 +647,7 @@ lulu_use_mean_abundance_ratio <- function() {
 #' @rdname pipeline_options
 #' @export
 lulu_dist_config <- function() {
-  getOption("optimotu.pipeline.lulu_dist_config", dist_config())
+  getOption("optimotu.pipeline.lulu_dist_config", cluster_dist_config())
 }
 
 
@@ -646,10 +655,12 @@ lulu_dist_config <- function() {
 
 #' @rdname parse_pipeline_options
 #' @export
-#' @param amplicon_model_options (`list`) the amplicon model options to parse
+#' @param pipeline_options (`list`) the pipeline options to parse
 parse_amplicon_model_options <- function(pipeline_options) {
   amplicon_model_options <- pipeline_options$amplicon_model
-  if (is.null(amplicon_model_options) || isFALSE(amplicon_model_options)) return()
+  if (is.null(amplicon_model_options) || isFALSE(amplicon_model_options)) {
+    return()
+  }
 
   checkmate::assert_list(amplicon_model_options)
   amplicon_model_options <- unnest_yaml_list(amplicon_model_options)
@@ -663,7 +674,8 @@ parse_amplicon_model_options <- function(pipeline_options) {
     amplicon_model_options$model_type,
     c("CM", "HMM", "none")
   )
-  options(optimotu.pipeline.amplicon_model_type = amplicon_model_options$model_type)
+  options(optimotu.pipeline.amplicon_model_type =
+            amplicon_model_options$model_type)
 
   if (!identical(amplicon_model_type, "none")) {
     # #### seed_aln ####
@@ -684,7 +696,8 @@ parse_amplicon_model_options <- function(pipeline_options) {
     # } else {
     #   checkmate::assert_path_for_output(model_file, overwrite = TRUE)
     # }
-    options(optimotu.pipeline.amplicon_model_file = amplicon_model_options$model_file)
+    options(optimotu.pipeline.amplicon_model_file =
+              amplicon_model_options$model_file)
 
     #### amplicon model filtering settings ####
     if (!is.null(amplicon_model_options$model_filter)) {
@@ -891,15 +904,18 @@ parse_taxonomy_options <- function(pipeline_options) {
   if (length(selected_classifier) > 1) {
     stop("Only one of options 'taxonomy:protax', 'taxonomy:sintax',",
          " 'taxonomy:bayesant' and 'taxonomy:epa' may be given.",
-         "(File: pipeline_options.yaml)")
+         "(file: pipeline_options.yaml)")
   }
   if (length(selected_classifier) == 0) {
-    stop("No classifier selected. Please select one of the following classifiers:\n",
-         "  - protax\n",
-         "  - sintax\n",
-         "  - bayesant\n",
-         "  - epa\n",
-         "(File: pipeline_options.yaml)")
+    stop(
+      "No classifier selected. Please select one of the following ",
+      "classifiers:\n",
+      "  - protax\n",
+      "  - sintax\n",
+      "  - bayesant\n",
+      "  - epa\n",
+      "(file: pipeline_options.yaml)"
+    )
   }
   switch(
     selected_classifier,
@@ -918,12 +934,13 @@ parse_taxonomy_options <- function(pipeline_options) {
 
 #' @rdname parse_pipeline_options
 #' @export
-#' @param rank_options (`list` or `character` vector) the taxonomic ranks to use in the
-#' pipeline, in order from most inclusive (e.g., kingdom) to least inclusive
-#' (e.g., species). Values may be either named or unnamed. When named, the name is
-#' taken to be the rank, and the value is the "in-group" taxon at that rank, i.e.
-#' the taxon for which results are desired. When unnamed, the value is taken to
-#' be the rank. Example: `list(kingdom = "Fungi", "phylum", "class", "order", "family", "genus", "species")`
+#' @param rank_options (`list` or `character` vector) the taxonomic ranks to
+#' use in the pipeline, in order from most inclusive (e.g., kingdom) to least
+#' inclusive (e.g., species). Values may be either named or unnamed. When
+#' named, the name is taken to be the rank, and the value is the "in-group"
+#' taxon at that rank, i.e. the taxon for which results are desired. When
+#' unnamed, the value is taken to be the rank. Example: `list(kingdom =
+#' "Fungi", "phylum", "class", "order", "family", "genus", "species")`
 #' @return `NULL`.  This function is called for its side effect, which is to
 #' configure global options.
 parse_taxonomy_ranks <- function(rank_options) {
@@ -951,10 +968,13 @@ parse_taxonomy_ranks <- function(rank_options) {
     unlist()
   if (length(UNKNOWN_RANKS) == 0 || !is.null(names(UNKNOWN_RANKS))) {
     stop(
-      "Option 'taxonomy':'ranks' should start from the most inclusive rank (e.g. kingdom)\n",
-      "  and continue to the least inclusive rank (e.g. species).  Optionally the first\n",
-      "  rank(s) may be defined (e.g. '- kingdom: Fungi') but subsequent ranks must be \n",
-      "  undefined (e.g. '- class')."
+      "Option 'taxonomy':'ranks' should start from the most inclusive rank ",
+      "(e.g. kingdom)\n",
+      "  and continue to the least inclusive rank (e.g. species).  Optionally",
+      " the first\n",
+      "  rank(s) may be defined (e.g. '- kingdom: Fungi') but subsequent ranks",
+      " must be undefined (e.g. '- class').\n",
+      "  (file: pipeline_options.yaml)"
     )
   }
   if (length(KNOWN_TAXA) == 0) {
@@ -1155,8 +1175,9 @@ parse_outgroup_options <- function(pipeline_options) {
   if (isFALSE(pipeline_options$outgroup_reference)) {
     if (do_outgroup()) {
       warning(
-        "Taxonomic rank definitions imply the possibility of outgroup sequences",
-        "but no outgroup reference file was provided.\n",
+        "Taxonomic rank definitions imply the possibility of outgroup ",
+        "sequences but no outgroup reference file was provided.\n",
+        "(file: pipeline_options.yaml)"
       )
     }
     options(
@@ -1207,6 +1228,7 @@ outgroup_taxonomy <- function() {
 parse_cluster_options <- function(pipeline_options) {
   checkmate::assert_list(pipeline_options$clustering, null.ok = TRUE)
   if (is.null(pipeline_options$clustering)) {
+
     checkmate::assert_string(
       pipeline_options$cluster_thresholds,
       null.ok = TRUE
@@ -1239,7 +1261,8 @@ parse_cluster_options <- function(pipeline_options) {
       )
     }
     dist_config <- parse_dist_config(clustering$dist_config)
-    if (!is.null(clustering$force_denovo) && !isFALSE(clustering$force_denovo)) {
+    if (!is.null(clustering$force_denovo) &&
+          !isFALSE(clustering$force_denovo)) {
       checkmate::assert_character(clustering$force_denovo, unique = TRUE)
       checkmate::assert_subset(clustering$force_denovo, unknown_ranks())
     } else {
@@ -1255,21 +1278,21 @@ parse_cluster_options <- function(pipeline_options) {
 }
 
 parse_dist_config <- function(dist_config) {
-    if (is.character(dist_config)) {
-      dist_config <- list(method = dist_config)
-    }
-    dist_config <- c(list(quote(optimotu::dist_config)), dist_config)
-    if (dist_config$method == "usearch" && !"usearch" %in% names(dist_config)) {
-      dist_config$usearch <- find_usearch()
-    }
-    if (dist_config$method == "hamming" && !do_model_align()) {
-      stop(
-        "Hamming distance requires model alignment to be enabled ",
-        "(amplicon_model: model_align: true).\n",
-        "(file: pipeline_options.yaml)"
-      )
-    }
-    eval(as.call(dist_config))
+  if (is.character(dist_config)) {
+    dist_config <- list(method = dist_config)
+  }
+  dist_config <- c(list(quote(optimotu::dist_config)), dist_config)
+  if (dist_config$method == "usearch" && !"usearch" %in% names(dist_config)) {
+    dist_config$usearch <- find_usearch()
+  }
+  if (dist_config$method == "hamming" && !do_model_align()) {
+    stop(
+      "Hamming distance requires model alignment to be enabled ",
+      "(amplicon_model: model_align: true).\n",
+      "(file: pipeline_options.yaml)"
+    )
+  }
+  eval(as.call(dist_config))
 }
 
 #' @rdname pipeline_options
@@ -1288,7 +1311,10 @@ cluster_measure <- function() {
 #' @rdname pipeline_options
 #' @export
 cluster_dist_config <- function() {
-  getOption("optimotu.pipeline.clustering_dist_config", optimotu::dist_usearch())
+  getOption(
+    "optimotu.pipeline.clustering_dist_config",
+    optimotu::dist_usearch()
+  )
 }
 
 #' @rdname pipeline_options
@@ -1321,9 +1347,11 @@ do_guilds <- function() {
 #' @rdname parse_pipeline_options
 #' @keywords internal
 parse_otu_table_options <- function(pipeline_options) {
-  if (!is.null(pipeline_options$wide_table) && !is.null(pipeline_options$dense_table)) {
+  if (!is.null(pipeline_options$wide_table) &&
+        !is.null(pipeline_options$dense_table)) {
     stop(
-      "Only one of 'wide_table' and 'dense_table' may be set in 'pipeline_options.yaml'.\n",
+      "Only one of 'wide_table' and 'dense_table' may be set in ",
+      "'pipeline_options.yaml'.\n",
       "Please remove one of them."
     )
   }
@@ -1415,6 +1443,9 @@ do_rarefy <- function() {
 }
 
 #' Mapping variables for rarefaction
+#' @param dots (`logical` scalar) whether to prefix the variable names with a
+#' dot; if `TRUE`, the variable names will be prefixed with a dot, e.g.
+#' `.numerator` instead of `numerator`
 #' @return a `data.frame` giving the variables to map over for rarefaction;
 #' when rarefaction is to be performed (as determined by `do_rarefy()`) then
 #' these will always include `.rarefy_text` (`character)`), and will also
@@ -1423,6 +1454,8 @@ do_rarefy <- function() {
 #' empty data.frame.
 #' @export
 rarefy_meta <- function(dots = TRUE) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  numerator <- denominator <- number <- NULL
   if (do_rarefy()) {
     (if (is.null(rarefy_number())) {
       tibble::tibble(

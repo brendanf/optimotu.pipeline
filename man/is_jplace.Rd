@@ -6,6 +6,13 @@
 \usage{
 is_jplace(jplace)
 }
+\arguments{
+\item{jplace}{(\code{list}) a jplace object}
+}
+\value{
+(\code{logical}) whether the jplace object is valid
+}
 \description{
 Test whether a jplace object is valid
 }
+\keyword{internal}

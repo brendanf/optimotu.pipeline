@@ -14,11 +14,11 @@ vsearch_usearch_global(
 )
 }
 \arguments{
-\item{query}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{character} vector, or
-file name) query sequences}
+\item{query}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
+\code{character} vector, or file name) query sequences}
 
-\item{ref}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{character} vector, or
-file name) reference sequences}
+\item{ref}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
+\code{character} vector, or file name) reference sequences}
 
 \item{threshold}{(\code{numeric} scalar) identity threshold, in range 0.0-1.0}
 
@@ -31,9 +31,9 @@ penalized equally.  Otherwise end gaps are not penalized.}
 integers}
 }
 \value{
-\code{tibble::tibble} with columns \code{seq_id}, \code{clust}, and \code{dist}, where \code{seq_id} is
-the name of a sequence from \code{query}, \code{clust} is the closest match to that
-sequence in \code{ref}, and \code{dist} is the distance between them
+\code{tibble::tibble} with columns \code{seq_id}, \code{clust}, and \code{dist}, where
+\code{seq_id} is the name of a sequence from \code{query}, \code{clust} is the closest match
+to that sequence in \code{ref}, and \code{dist} is the distance between them
 }
 \description{
 "usearch_global" function of vsearch

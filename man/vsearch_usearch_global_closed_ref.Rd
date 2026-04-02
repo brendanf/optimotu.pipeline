@@ -7,11 +7,13 @@
 vsearch_usearch_global_closed_ref(query, ref, threshold, ...)
 }
 \arguments{
-\item{query}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{Biostrings::DNAStringSet}}, \code{character} vector,
-or file name) query sequences}
+\item{query}{(\code{data.frame},
+\code{\link[Biostrings:XStringSet-class]{Biostrings::DNAStringSet}}, \code{character}
+vector, or file name) query sequences}
 
-\item{ref}{(\code{data.frame}, \code{Biostrings::DNAStringSet}\code{\link[Biostrings:XStringSet-class]{Biostrings::DNAStringSet}}, \code{character} vector, or
-file name) reference sequences}
+\item{ref}{(\code{data.frame},
+\code{\link[Biostrings:XStringSet-class]{Biostrings::DNAStringSet}}, \code{character}
+vector, or file name) reference sequences}
 
 \item{threshold}{(\code{numeric} scalar) identity threshold, in range 0.0-1.0}
 

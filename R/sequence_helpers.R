@@ -353,3 +353,20 @@ name_seqs.matrix <- function(seq, prefix, ...) {
   colnames(seq) <- make_seq_names(ncol(seq), prefix)
   seq
 }
+
+# borrowed from https://github.com/brendanf/tzara
+#' Test if all characters in a character vector are members of an alphabet.
+#'
+#' @param seq (`character`) character string(s) to test
+#' @param alphabet (`character`) with all elements of width 1)
+#' @return (`logical`) `TRUE` if all characters in `seq` are also in `alphabet`
+#' @details This function internally uses regular expressions, so `alphabet`
+#' should not begin with "^" or contain "\\".  "-", which commonly represents
+#' a gap, is handled correctly.
+#' @keywords internal
+has_alphabet <- function(seq, alphabet) {
+  regex <- paste0("^[", paste0(alphabet, collapse = ""), "]+$")
+  # make sure '-' is not interpreted as defining a character range
+  regex <- sub(x = regex, pattern = "-", replacement = "\\\\-")
+  all(grepl(pattern = regex, x = seq, perl = TRUE), na.rm = TRUE)
+}

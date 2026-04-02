@@ -13,6 +13,29 @@ bayesant(
   min_prob = 0.01
 )
 }
+\arguments{
+\item{query}{(\code{character} vector) the sequences to identify}
+
+\item{model}{(\code{character} file name or \code{BayesANT} model) the BayesANT model
+to use.  If a file name, it must be in .rds, .qs, or .qs2 format.}
+
+\item{ncpu}{(\code{integer}) the number of CPU cores to use}
+
+\item{id_is_int}{(\code{logical}) if \code{TRUE}, parse the sequence IDs as integers}
+
+\item{n_top_taxa}{(\code{integer}) the number of top taxa to return}
+
+\item{min_prob}{(\code{numeric}) the minimum probability to return}
+}
+\value{
+a \code{data.frame} with columns \code{seq_id} (or \code{seq_idx} if \code{id_is_int} is
+\code{TRUE}), \code{rank}, \code{parent_taxonomy}, \code{taxon}, and \code{prob}, where \code{seq_id}
+(\code{seq_idx}) is the ID of a sequence from \code{query}, \code{rank} is the taxonomic
+rank at which the prediction is being made, \code{parent_taxonomy} is the parent
+taxonomic unit of the taxon at the previous rank, \code{taxon} is the name of the
+predicted taxon, and \code{prob} is the probability of the predicted taxon being
+the correct classification of the sequence from \code{query} at the current rank.
+}
 \description{
 Identify sequences using BayesANT
 }

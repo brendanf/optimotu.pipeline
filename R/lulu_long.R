@@ -92,6 +92,9 @@ lulu_map <- function(
   id_is_sorted = id_is_int,
   verbose = 0
 ) {
+  # Avoid R CMD check NOTEs for NSE
+  dist <- nread <- nsample <- nread_total <- nread1 <- swap <- nread2 <-
+    nread3 <- seq_id3 <- seq_idx <- lulu_idx <- NULL
   checkmate::assert_flag(id_is_int)
   id_col <- if (id_is_int) "seq_idx" else "seq_id"
   id_col_sym <- rlang::sym(id_col)
@@ -233,6 +236,8 @@ lulu_table <- function(
     lulu_map,
     otu_table
 ) {
+  # Avoid R CMD check NOTE for NSE
+  nread <- NULL
   checkmate::assert_data_frame(lulu_map)
   checkmate::assert_data_frame(otu_table)
   checkmate::assert(
@@ -305,6 +310,9 @@ lulu_distmx <- function(
   parallel_config = optimotu::parallel_concurrent(local_cpus()),
   ...
 ) {
+  # Avoid R CMD check NOTEs
+  seq_id1 <- seq_id2 <- dist2 <- align_length <- n_insert <- n_delete <-
+    max_insert <- max_delete <- seq_idx <- nread <- NULL
   if (length(seqall_file) == 1L && !is.null(seqall_index)) {
     seqs <- fastx_gz_random_access_extract(
       infile = seqall_file,

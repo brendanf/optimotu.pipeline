@@ -7,8 +7,8 @@
 vsearch_cluster_smallmem(seq, threshold = 1, ncpu = local_cpus())
 }
 \arguments{
-\item{seq}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{character} vector, or
-file name) sequences to cluster}
+\item{seq}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
+\code{character} vector, or file name) sequences to cluster}
 
 \item{threshold}{(\code{numeric} scalar) identity threshold, in range 0.0-1.0}
 

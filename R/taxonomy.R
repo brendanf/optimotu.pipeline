@@ -94,6 +94,7 @@ unknown_rank_vars <- function() {
 
 #' Shortcuts for accessing taxonomy options
 #' @name tax_opts
+#' @param ranks (`character` vector) the taxonomic ranks to use
 NULL
 
 #' @describeIn tax_opts Get the root taxonomic rank as a string

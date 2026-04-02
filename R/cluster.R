@@ -24,6 +24,8 @@ full_preclosed_taxon_table <- function(
   parent_rank,
   tax_ranks
 ) {
+  # avoid R CMD check NOTEs
+  seq_idx <- seq_id <- seq_idx_in <- NULL
   # check input
   checkmate::assert_string(rank)
   checkmate::assert_string(parent_rank)
@@ -196,7 +198,7 @@ small_preclosed_taxon_table <- function(
 #' @param seq_file_index (`character`) the path to the sequence file index
 #' @param thresholds (`numeric`) a named vector of thresholds to use for
 #' closed-reference clustering. These are interpreted as distances on the
-#' interval [0, 100], where 0 is a perfect match and 100 is a perfect
+#' interval \[0, 100\], where 0 is a perfect match and 100 is a perfect
 #' mismatch.
 #' @param dist_config (`list`) a list of configuration options for the
 #' distance calculation, as returned by [optimotu::dist_config()].
@@ -295,6 +297,10 @@ do_closed_ref_cluster <- function(
 #' [do_denovo_cluster()], with a single group for each parent taxon.
 #' It is also used internally by [large_predenovo_taxon_table()] and
 #' [small_predenovo_taxon_table()].
+#' @inheritParams large_predenovo_taxon_table
+#' @return (`data.frame`) a table of sequences for which denovo clustering
+#' should be performed.
+#' @keywords internal
 full_predenovo_taxon_table <- function(
   closedref_taxon_table,
   asv_taxsort,
@@ -302,6 +308,8 @@ full_predenovo_taxon_table <- function(
   parent_rank,
   tax_ranks
 ) {
+  # avoid R CMD check NOTEs
+  seq_idx <- seq_id <- seq_idx_in <- NULL
   checkmate::assert_data_frame(closedref_taxon_table)
   checkmate::assert_data_frame(asv_taxsort)
   checkmate::assert_string(rank)
@@ -326,7 +334,8 @@ full_predenovo_taxon_table <- function(
     ),
     combine = "or"
   )
-  checkmate::assert_integerish(closedref_taxon_table[["seq_idx"]], null.ok = TRUE)
+  checkmate::assert_integerish(closedref_taxon_table[["seq_idx"]],
+                               null.ok = TRUE)
   checkmate::assert_character(closedref_taxon_table[["seq_id"]], null.ok = TRUE)
 
   rank_sym <- rlang::sym(rank)
@@ -388,8 +397,6 @@ large_predenovo_taxon_table <- function(
   min_ops = 1e6
 ) {
   checkmate::assert_number(min_ops, lower = 1)
-
-  rank_sym <- rlang::sym(rank)
 
   fptt <- full_predenovo_taxon_table(
     closedref_taxon_table,
@@ -480,7 +487,7 @@ small_predenovo_taxon_table <- function(
 #' least-inclusive (e.g., from "kingdom" to "species")
 #' @param denovo_thresholds (`list`) a list of thresholds to use for
 #' denovo clustering. These are interpreted as distances on the
-#' interval [0, 100], where 0 is a perfect match and 100 is a perfect
+#' interval \[0, 100\], where 0 is a perfect match and 100 is a perfect
 #' mismatch.
 #' @param dist_config (`list`) a list of configuration options for the
 #' distance calculation, as returned by [optimotu::dist_config()].

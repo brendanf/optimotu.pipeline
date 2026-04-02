@@ -31,7 +31,7 @@ columns with names matching \code{rank} and \code{parent_rank}.}
 
 \item{thresholds}{(\code{numeric}) a named vector of thresholds to use for
 closed-reference clustering. These are interpreted as distances on the
-interval \link{0, 100}, where 0 is a perfect match and 100 is a perfect
+interval [0, 100], where 0 is a perfect match and 100 is a perfect
 mismatch.}
 
 \item{dist_config}{(\code{list}) a list of configuration options for the

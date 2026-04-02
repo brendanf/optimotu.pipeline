@@ -150,6 +150,9 @@ epa_ng <- function(
 }
 
 #' Test whether a jplace object is valid
+#' @param jplace (`list`) a jplace object
+#' @return (`logical`) whether the jplace object is valid
+#' @keywords internal
 is_jplace <- function(jplace) {
   is.list(jplace) &&
     setequal(
@@ -206,7 +209,7 @@ parse_iqtree_model <- function(file = NULL, text = NULL) {
 
   input_data_regex <-
     "^Input data: [0-9]+ sequences with [0-9]+ (amino-acid|nucleotide) sites$"
-  input_data_line <- grep(input_line_regex, text, value = TRUE)
+  input_data_line <- grep(input_data_regex, text, value = TRUE)
   checkmate::assert_character(input_data_line, len = 1)
   alphabet <- sub(input_data_regex, "\\1", input_data_line)
 
@@ -353,6 +356,8 @@ gappa_assign <- function(
 #' @param id_is_int (`logical`) whether the sequence IDs are integers
 #' @keywords internal
 parse_gappa_per_query <- function(per_query, ranks, id_is_int = FALSE) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  name <- taxopath <- fract <- parent_taxon <- taxon <- prob <- afract <- NULL
   checkmate::assert_file(per_query, "r")
   checkmate::assert_character(ranks, any.missing = FALSE)
   checkmate::assert_flag(id_is_int)

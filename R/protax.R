@@ -3,7 +3,7 @@
 #' @param seqs ([`DNAStringSet`][Biostrings::XStringSet-class], `character`
 #' path to a FASTA file, `character` vector, or `data.frame`) sequences to
 #' taxonomically identify
-#' @param outdir (`character` string) directory to write output to. If the'
+#' @param outdir (`character` string) directory to write output to. If the
 #' directory exists, all existing files in it will be deleted.
 #' @param modeldir (`character` string) directory containing trained model files
 #' for ProtaxFungi

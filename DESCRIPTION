@@ -8,11 +8,12 @@ Authors@R:
            role = c("aut", "cre"),
            email = "brendan.furneaux@gmail.com",
            comment = c(ORCID = "0000-0003-3522-7363"))
+Author: Brendan Furneaux [aut, cre]
+Maintainer: Brendan Furneaux <brendan.furneaux@gmail.com>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 7.3.2
 SystemRequirements: zlib
 Requires:
@@ -21,6 +22,8 @@ LinkingTo:
     Rcpp,
     BH
 Imports:
+    ape,
+    assertthat,
     BiocGenerics,
     Biostrings,
     checkmate,
@@ -28,6 +31,7 @@ Imports:
     dplyr,
     glue,
     IRanges,
+    jsonlite,
     methods,
     optimotu (>= 0.9.4),
     processx,
@@ -36,11 +40,13 @@ Imports:
     rlang,
     stats,
     stringr,
+    targets,
     tarchetypes,
     tibble,
     tidyr,
     vctrs,
     withr,
+    yaml,
     Rcpp
 Roxygen: list(markdown = TRUE)
 Suggests:
@@ -48,6 +54,8 @@ Suggests:
     dada2,
     ggplot2,
     lulu,
+    qs,
+    qs2,
     readxl,
     RcppParallel,
     S4Vectors,

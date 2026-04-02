@@ -290,7 +290,7 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
 #'   `R1` and `R2` suffixes for the forward and reverse reads, respectively.
 #' 3) The first part of the file name is the sample name.
 #' 4) Between the sample name and the `R1`/`R2` suffix, there may be sample and
-#'   lane indices of the form "S{nnn}_L{nnn}".  These are ignored.
+#'   lane indices of the form "S\{nnn\}_L\{nnn\}".  These are ignored.
 #' 5) Sample name, sample/lane indices, and `R1`/`R2` suffixes may be separated
 #'   by underscores or dots.
 #' 6) After the `R1`/`R2` suffix, there may be an additional `_nnn` suffix,

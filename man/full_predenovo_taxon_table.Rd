@@ -12,9 +12,28 @@ full_predenovo_taxon_table(
   tax_ranks
 )
 }
+\arguments{
+\item{closedref_taxon_table}{(\code{data.frame}) a table of sequences for which
+closed-reference clustering is required. Must have columns \code{seq_idx}
+(\code{integer}) giving the indices of sequences in \code{seq_file}, as well as
+columns with names matching \code{rank} and \code{parent_rank}.}
+
+\item{asv_taxsort}{(\code{data.frame}) a table of ASV taxonomic assignments}
+
+\item{rank}{(\code{character}) the taxonomic rank to calculate}
+
+\item{parent_rank}{(\code{character}) the taxonomic rank to use as a parent}
+
+\item{tax_ranks}{(\code{character}) the taxonomic ranks to use}
+}
+\value{
+(\code{data.frame}) a table of sequences for which denovo clustering
+should be performed.
+}
 \description{
 This calculates the full table of inputs to be passed to
 \code{\link[=do_denovo_cluster]{do_denovo_cluster()}}, with a single group for each parent taxon.
 It is also used internally by \code{\link[=large_predenovo_taxon_table]{large_predenovo_taxon_table()}} and
 \code{\link[=small_predenovo_taxon_table]{small_predenovo_taxon_table()}}.
 }
+\keyword{internal}

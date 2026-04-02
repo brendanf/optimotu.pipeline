@@ -13,11 +13,11 @@ vsearch_uchime_ref(
 )
 }
 \arguments{
-\item{query}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{character} vector,
-or file name) query sequences}
+\item{query}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
+\code{character} vector, or file name) query sequences}
 
-\item{ref}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{character} vector, or
-file name) reference sequences}
+\item{ref}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
+\code{character} vector, or file name) reference sequences}
 
 \item{ncpu}{(\code{integer} count) number of threads to use}
 

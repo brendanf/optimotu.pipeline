@@ -70,8 +70,9 @@ Rcpp::CharacterVector fastq_sample_fraction(
   }
 
   // temporary storage for input records
+  const std::size_t denominator_size = static_cast<std::size_t>(denominator);
   std::vector<std::string> pool;
-  pool.reserve(denominator);
+  pool.reserve(denominator_size);
 
   std::string record;
   while (std::getline(instream, record) && !record.empty()){
@@ -101,7 +102,7 @@ Rcpp::CharacterVector fastq_sample_fraction(
 
     pool.push_back(record);
 
-    if (pool.size() == denominator) {
+    if (pool.size() == denominator_size) {
       // Reservoir sampling: randomly select a record to keep
       Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
       for (int i = 0; i < numerator; ++i) {
@@ -115,7 +116,11 @@ Rcpp::CharacterVector fastq_sample_fraction(
     // If there are remaining records, sample from them
     Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
     for (int i = 0; i < numerator; ++i) {
-      int selected = idx[i] - 1; // Convert to zero-based index
+      if (idx[i] < 1) {
+        // Rcpp::sample should always give results >= 1
+        Rcpp::stop("Internal error: sampled index cannot be less than 1.");
+      }
+      std::size_t selected = idx[i] - 1; // Convert to zero-based index
       if (selected < pool.size()) {
         outstream << pool[selected] << "\n";
       }
@@ -137,6 +142,9 @@ Rcpp::CharacterVector fastq_sample_fraction(
 //' reads to sample.
 //' @param output (`character` vector) a vector of output file names. If an
 //' element ends in ".gz", the output will be gzipped.
+//' @param rename (`logical` scalar) whether to rename the reads in the output;
+//' if `TRUE`, the read names will be replaced with hexadecimal sequential
+//' numbers
 //'
 //' @return a character vector of output file names
 //' @export
@@ -154,6 +162,7 @@ Rcpp::CharacterVector fastq_sample_fraction_multiple(
   if (denominator <= 0) {
     Rcpp::stop("Denominator must be a positive integer.");
   }
+  const std::size_t denominator_size = static_cast<std::size_t>(denominator);
   int max_numerator = 0;
   for (const auto& num : numerators) {
     if (num <= 0 || num > denominator) {
@@ -173,7 +182,7 @@ Rcpp::CharacterVector fastq_sample_fraction_multiple(
   open_fastx_in(instream, file);
 
   std::vector<filter_stream_out> out_streams(output.size());
-  for (size_t i = 0; i < output.size(); ++i) {
+  for (R_xlen_t i = 0; i < output.size(); ++i) {
     if (output[i].empty()) {
       Rcpp::stop("Output file name cannot be empty.");
     }
@@ -186,7 +195,7 @@ Rcpp::CharacterVector fastq_sample_fraction_multiple(
 
   // temporary storage for input records
   std::vector<std::string> pool;
-  pool.reserve(denominator);
+  pool.reserve(denominator_size);
 
   std::string record;
   while (std::getline(instream, record) && !record.empty()) {
@@ -216,7 +225,7 @@ Rcpp::CharacterVector fastq_sample_fraction_multiple(
 
     pool.push_back(record);
 
-    if (pool.size() == denominator) {
+    if (pool.size() == denominator_size) {
       // Reservoir sampling: randomly select records to keep
       Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
       for (int i = 0; i < max_numerator; ++i) {
@@ -234,7 +243,11 @@ Rcpp::CharacterVector fastq_sample_fraction_multiple(
     // If there are remaining records, sample from them
     Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
     for (int i = 0; i < max_numerator; ++i) {
-      int selected = idx[i] - 1; // Convert to zero-based index
+      if (idx[i] < 1) {
+        // Rcpp::sample should always give results >= 1
+        Rcpp::stop("Internal error: sampled index cannot be less than 1.");
+      }
+      std::size_t selected = idx[i] - 1; // Convert to zero-based index
       if (selected >= pool.size()) {
         continue; // Skip if selected index is out of bounds
       }
@@ -455,8 +468,9 @@ Rcpp::CharacterVector fastq_pair_sample_fraction(
   }
 
   // temporary storage for input records
+  const std::size_t denominator_size = static_cast<std::size_t>(denominator);
   std::vector<std::pair<std::string, std::string>> pool;
-  pool.reserve(denominator);
+  pool.reserve(denominator_size);
 
   std::string record_R1, record_R2;
   while (std::getline(instream_R1, record_R1) && !record_R1.empty()) {
@@ -506,7 +520,7 @@ Rcpp::CharacterVector fastq_pair_sample_fraction(
     record_R2 += "\n" + line;
     pool.push_back(std::make_pair(record_R1, record_R2));
 
-    if (pool.size() == denominator) {
+    if (pool.size() == denominator_size) {
       // Reservoir sampling: randomly select a record to keep
       Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
       for (int i = 0; i < numerator; ++i) {
@@ -521,7 +535,11 @@ Rcpp::CharacterVector fastq_pair_sample_fraction(
     // If there are remaining records, sample from them
     Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
     for (int i = 0; i < numerator; ++i) {
-      int selected = idx[i] - 1; // Convert to zero-based index
+      if (idx[i] < 1) {
+        // Rcpp::sample should always give results >= 1
+        Rcpp::stop("Internal error: sampled index cannot be less than 1.");
+      }
+      std::size_t selected = idx[i] - 1; // Convert to zero-based index
       if (selected < pool.size()) {
         outstream_R1 << pool[selected].first << "\n";
         outstream_R2 << pool[selected].second << "\n";
@@ -559,6 +577,7 @@ Rcpp::List fastq_pair_sample_fraction_multiple(
   if (denominator <= 0) {
     Rcpp::stop("Denominator must be a positive integer.");
   }
+  const std::size_t denominator_size = static_cast<std::size_t>(denominator);
   int max_numerator = 0;
   for (const auto& num : numerators) {
     if (num <= 0 || num > denominator) {
@@ -585,7 +604,7 @@ Rcpp::List fastq_pair_sample_fraction_multiple(
   }
 
   std::vector<std::pair<filter_stream_out, filter_stream_out>> out_streams(output_R1.size());
-  for (size_t i = 0; i < output_R1.size(); ++i) {
+  for (R_xlen_t i = 0; i < output_R1.size(); ++i) {
     if (output_R1[i].empty() || output_R2[i].empty()) {
       Rcpp::stop("Output file name cannot be empty.");
     }
@@ -603,7 +622,7 @@ Rcpp::List fastq_pair_sample_fraction_multiple(
 
   // temporary storage for input records
   std::vector<std::pair<std::string, std::string>> pool;
-  pool.reserve(denominator);
+  pool.reserve(denominator_size);
 
   std::string record_R1, record_R2;
   while (std::getline(instream_R1, record_R1) && !record_R1.empty()) {
@@ -653,7 +672,7 @@ Rcpp::List fastq_pair_sample_fraction_multiple(
     record_R2 += "\n" + line;
     pool.push_back(std::make_pair(record_R1, record_R2));
 
-    if (pool.size() == denominator) {
+    if (pool.size() == denominator_size) {
       // Reservoir sampling: randomly select records to keep
       Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
       for (int i = 0; i < max_numerator; ++i) {
@@ -672,7 +691,11 @@ Rcpp::List fastq_pair_sample_fraction_multiple(
     // If there are remaining records, sample from them
     Rcpp::IntegerVector idx = Rcpp::sample(denominator, denominator);
     for (int i = 0; i < max_numerator; ++i) {
-      int selected = idx[i] - 1; // Convert to zero-based index
+      if (idx[i] < 1) {
+        // Rcpp::sample should always give results >= 1
+        Rcpp::stop("Internal error: sampled index cannot be less than 1.");
+      }
+      std::size_t selected = idx[i] - 1; // Convert to zero-based index
       if (selected >= pool.size()) {
         continue; // Skip if selected index is out of bounds
       }

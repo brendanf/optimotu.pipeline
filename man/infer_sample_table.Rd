@@ -39,7 +39,7 @@ actual read files can be nested in further subdirectories below this.
 \code{R1} and \code{R2} suffixes for the forward and reverse reads, respectively.
 \item The first part of the file name is the sample name.
 \item Between the sample name and the \code{R1}/\code{R2} suffix, there may be sample and
-lane indices of the form "S{nnn}_L{nnn}".  These are ignored.
+lane indices of the form "S\{nnn\}_L\{nnn\}".  These are ignored.
 \item Sample name, sample/lane indices, and \code{R1}/\code{R2} suffixes may be separated
 by underscores or dots.
 \item After the \code{R1}/\code{R2} suffix, there may be an additional \verb{_nnn} suffix,

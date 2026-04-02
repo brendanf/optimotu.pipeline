@@ -194,6 +194,9 @@ fastq_sample_fraction <- function(file, numerator, denominator, output, rename =
 #' reads to sample.
 #' @param output (`character` vector) a vector of output file names. If an
 #' element ends in ".gz", the output will be gzipped.
+#' @param rename (`logical` scalar) whether to rename the reads in the output;
+#' if `TRUE`, the read names will be replaced with hexadecimal sequential
+#' numbers
 #'
 #' @return a character vector of output file names
 #' @export

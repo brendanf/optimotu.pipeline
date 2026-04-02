@@ -24,6 +24,7 @@
 \alias{parse_epa_options}
 \alias{parse_outgroup_options}
 \alias{parse_cluster_options}
+\alias{parse_dist_config}
 \alias{parse_guilds_options}
 \alias{parse_otu_table_options}
 \alias{parse_rarefy_options}
@@ -76,6 +77,8 @@ parse_outgroup_options(pipeline_options)
 
 parse_cluster_options(pipeline_options)
 
+parse_dist_config(dist_config)
+
 parse_guilds_options(pipeline_options)
 
 parse_otu_table_options(pipeline_options)
@@ -87,12 +90,12 @@ parse_pipeline_options()
 \arguments{
 \item{pipeline_options}{(\code{list}) the pipeline options to parse}
 
-\item{rank_options}{(\code{list} or \code{character} vector) the taxonomic ranks to use in the
-pipeline, in order from most inclusive (e.g., kingdom) to least inclusive
-(e.g., species). Values may be either named or unnamed. When named, the name is
-taken to be the rank, and the value is the "in-group" taxon at that rank, i.e.
-the taxon for which results are desired. When unnamed, the value is taken to
-be the rank. Example: \code{list(kingdom = "Fungi", "phylum", "class", "order", "family", "genus", "species")}}
+\item{rank_options}{(\code{list} or \code{character} vector) the taxonomic ranks to
+use in the pipeline, in order from most inclusive (e.g., kingdom) to least
+inclusive (e.g., species). Values may be either named or unnamed. When
+named, the name is taken to be the rank, and the value is the "in-group"
+taxon at that rank, i.e. the taxon for which results are desired. When
+unnamed, the value is taken to be the rank. Example: \code{list(kingdom = "Fungi", "phylum", "class", "order", "family", "genus", "species")}}
 
 \item{protax_options}{(\code{list}) the protax options to parse}
 
@@ -101,8 +104,6 @@ be the rank. Example: \code{list(kingdom = "Fungi", "phylum", "class", "order", 
 \item{bayesant_options}{(\code{list}) the bayesant options to parse}
 
 \item{epa_options}{(\code{list}) the epa options to parse}
-
-\item{amplicon_model_options}{(\code{list}) the amplicon model options to parse}
 }
 \value{
 \code{NULL}.  This function is called for its side effect, which is to

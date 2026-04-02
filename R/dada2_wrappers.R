@@ -172,6 +172,7 @@ makeBinnedQualErrfun <- function(binnedQ=c(2, 11, 25, 37)) {
 
 #' Choose error function for dada2
 #' @param fls File names
+#' @param ... Additional arguments (passed to [fastq_qual_bins()])
 #' @return A function that estimates error rates based on binned quality scores
 #' if the input files are binned, otherwise the default dada2 error function.
 #' @export
@@ -198,10 +199,19 @@ choose_dada_error_function <- function(fls, ...) {
 #' @param ... Additional arguments (passed to [dada2::learnErrors()])
 #' @return An error object or `NULL` if no input files are given
 #' @export
-learnErrors <- function(fls, nbases = 1e+09, nreads = NULL,
-                        errorEstimationFunction = choose_dada_error_function,
-                        multithread = FALSE, randomize = FALSE, MAX_CONSIST = 10,
-                        OMEGA_C = 0, qualityType = "Auto", verbose = FALSE, ...) {
+learnErrors <- function(
+  fls,
+  nbases = 1e+09,
+  nreads = NULL,
+  errorEstimationFunction = choose_dada_error_function,
+  multithread = FALSE,
+  randomize = FALSE,
+  MAX_CONSIST = 10,
+  OMEGA_C = 0,
+  qualityType = "Auto",
+  verbose = FALSE,
+  ...
+) {
   if (length(fls) == 0) {
     NULL
   } else {

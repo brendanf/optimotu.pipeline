@@ -170,14 +170,15 @@ Rcpp::DataFrame lulu_map_impl(
   Rcpp::IntegerVector seq_idx_out(n_seq_idx);
   Rcpp::IntegerVector lulu_idx_out(n_seq_idx);
   int j = 0;
-  for (int i = 0; i < total_occurrence.size(); i++) {
+  
+  for (std::size_t i = 0; i < total_occurrence.size(); i++) {
     if (total_occurrence[i] > 0) {
       seq_idx_out[j] = i;
       j++;
     }
   }
 
-  for (std::size_t i = 1; i < seq_idx_out.size(); i++) {
+  for (R_xlen_t i = 1; i < seq_idx_out.size(); i++) {
     if (total_occurrence[seq_idx_out[i]] > total_occurrence[seq_idx_out[i - 1]]) {
       Rcpp::stop(
         "seq_idx %d has %d occurences, greater than seq_idx %d with %d.",
@@ -282,7 +283,7 @@ Rcpp::DataFrame lulu_map_impl(
     }
   }
 
-  for (int i = 0; i < seq_idx_out.size(); i++) {
+  for (R_xlen_t i = 0; i < seq_idx_out.size(); i++) {
     int j = seq_idx_out[i];
     while (lulu_map[j] != j) {
       j = lulu_map[j];
