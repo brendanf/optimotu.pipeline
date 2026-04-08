@@ -6,7 +6,9 @@
 #' @export
 ensure_directory <- function(file) {
   d <- dirname(file)
-  if (!dir.exists(d)) dir.create(d, recursive = TRUE)
+  if (!dir.exists(d)) {
+    dir.create(d, recursive = TRUE)
+  }
   invisible(file)
 }
 
@@ -33,7 +35,12 @@ write_and_return_file.XStringSet <- function(x, file, width = 20001L, ...) {
 #' @exportS3Method write_and_return_file data.frame
 #' @param type (`character` string) the type of file to write to; currently
 #'   supported are `"rds"` (default) and `"tsv"`
-write_and_return_file.data.frame <- function(x, file, type = c("rds", "tsv"), ...) {
+write_and_return_file.data.frame <- function(
+  x,
+  file,
+  type = c("rds", "tsv"),
+  ...
+) {
   ensure_directory(file)
   type = match.arg(type)
   switch(
@@ -63,8 +70,44 @@ write_and_return_file.ggplot <- function(x, file, ...) {
 
 #' @rdname write_and_return_file
 #' @exportS3Method
-write_and_return_file.default <- function(x, file, ...) {
-  ensure_directory(file)
-  saveRDS(x, file, ...)
+write_and_return_file.default <- function(
+  x,
+  file,
+  type = tolower(tools::file_ext(file)),
+  ...
+) {
+  checkmate::assert_choice(type, c("rds", "qs", "qs2", "qd", "qdata"))
+  if (type == "rds") {
+    ensure_directory(file)
+    saveRDS(x, file, ...)
+  } else if (type == "qs") {
+    if (!requireNamespace("qs", quietly = TRUE)) {
+      stop(
+        "qs package is required to save a file with format 'qs'.",
+        " Please install it using `install.packages('qs')`."
+      )
+    }
+    ensure_directory(file)
+    qs::qsave(x, file, ...)
+  } else if (type == "qs2") {
+    if (!requireNamespace("qs2", quietly = TRUE)) {
+      stop(
+        "qs2 package is required to save a file with format 'qs2'.",
+        " Please install it using `install.packages('qs2')`."
+      )
+    }
+    ensure_directory(file)
+    qs2::qs_save(x, file, ...)
+  } else if (type == "qdata" || type == "qd") {
+    if (!requireNamespace("qs2", quietly = TRUE)) {
+      stop(
+        "qs2 package is required to save a file with format '",
+        type,
+        "'. Please install it using `install.packages('qs2')`."
+      )
+    }
+    ensure_directory(file)
+    qs2::qd_save(x, file, ...)
+  }
   file
 }

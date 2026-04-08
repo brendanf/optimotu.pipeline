@@ -19,7 +19,7 @@ write_and_return_file(x, file, ...)
 
 \method{write_and_return_file}{ggplot}(x, file, ...)
 
-\method{write_and_return_file}{default}(x, file, ...)
+\method{write_and_return_file}{default}(x, file, type = tolower(tools::file_ext(file)), ...)
 }
 \arguments{
 \item{x}{(any object) object to write}
