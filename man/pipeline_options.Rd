@@ -53,7 +53,9 @@
 \alias{do_sintax}
 \alias{sintax_ref}
 \alias{do_bayesant}
+\alias{bayesant_aligned}
 \alias{bayesant_ref}
+\alias{bayesant_model}
 \alias{do_epa}
 \alias{epa_ref}
 \alias{epa_taxonomy}
@@ -180,7 +182,11 @@ sintax_ref()
 
 do_bayesant()
 
+bayesant_aligned()
+
 bayesant_ref()
+
+bayesant_model()
 
 do_epa()
 
@@ -231,3 +237,4 @@ did_pipeline_options()
 When used in a targets plan, these should always be
 pre-evaluated with \verb{!!} or \verb{!!!} to ensure proper dependency tracking.
 }
+\keyword{internal}

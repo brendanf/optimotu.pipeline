@@ -1079,10 +1079,16 @@ sintax_ref <- function() {
 parse_bayesant_options <- function(bayesant_options) {
   checkmate::assert_list(bayesant_options)
   bayesant_options <- unnest_yaml_list(bayesant_options)
-  checkmate::assert_file_exists(bayesant_options$reftax, "r")
+  checkmate::assert(
+    checkmate::check_file_exists(bayesant_options$reftax, "r"),
+    checkmate::check_file_exists(bayesant_options$model, "r")
+  )
+  checkmate::assert_flag(bayesant_options$aligned, null.ok = TRUE)
   options(
     optimotu.pipeline.do_bayesant = TRUE,
-    optimotu.pipeline.bayesant_ref = bayesant_options$reftax
+    optimotu.pipeline.bayesant_aligned = bayesant_options$aligned,
+    optimotu.pipeline.bayesant_ref = bayesant_options$reftax,
+    optimotu.pipeline.bayesant_model = bayesant_options$model
   )
 }
 
@@ -1094,8 +1100,20 @@ do_bayesant <- function() {
 
 #' @rdname pipeline_options
 #' @export
+bayesant_aligned <- function() {
+  getOption("optimotu.pipeline.bayesant_aligned", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @export
 bayesant_ref <- function() {
   getOption("optimotu.pipeline.bayesant_ref")
+}
+
+#' @rdname pipeline_options
+#' @export
+bayesant_model <- function() {
+  getOption("optimotu.pipeline.bayesant_model")
 }
 
 ##### epa-ng #####
