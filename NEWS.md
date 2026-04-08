@@ -2,6 +2,7 @@
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from
   fasta/fastq headers used by common reference databases as well as TSV files.
 * Fixed parsing of options for BayesANT taxonomic classifier.
+* Added options for optimizing cluster thresholds in `pipeline_options.yaml`.
 # optimotu.pipeline 0.6.2
 * Add option `force_denovo` in `pipeline_options.yaml` to force de novo
   clustering at some or all taxonomic ranks, i.e., to ignore taxonomic

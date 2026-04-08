@@ -24,6 +24,7 @@
 \alias{parse_epa_options}
 \alias{parse_outgroup_options}
 \alias{parse_cluster_options}
+\alias{parse_cluster_thresholds}
 \alias{parse_dist_config}
 \alias{parse_guilds_options}
 \alias{parse_otu_table_options}
@@ -76,6 +77,8 @@ parse_epa_options(epa_options)
 parse_outgroup_options(pipeline_options)
 
 parse_cluster_options(pipeline_options)
+
+parse_cluster_thresholds(thresh_opts)
 
 parse_dist_config(dist_config)
 

@@ -1287,7 +1287,6 @@ parse_cluster_options <- function(pipeline_options) {
       clustering$force_denovo <- character(0)
     }
     options(
-      optimotu.pipeline.clustering_thresholds = clustering$thresholds,
       optimotu.pipeline.clustering_measure = clustering$measure,
       optimotu.pipeline.clustering_dist_config = dist_config,
       optimotu.pipeline.clustering_force_denovo = clustering$force_denovo
@@ -1295,6 +1294,127 @@ parse_cluster_options <- function(pipeline_options) {
   }
 }
 
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_cluster_thresholds <- function(thresh_opts) {
+  if (is.null(thresh_opts)) {
+    message(
+      "No threshold options given in 'pipeline_options.yaml'\n",
+      "  Using default thresholds file:",
+      cluster_thresholds(),
+      "\n"
+    )
+    return()
+  }
+  if (names(thresh_opts) == "file") {
+    thresh_opts <- thresh_opts$file
+  }
+  if (is.character(thresh_opts)) {
+    checkmate::assert_file_exists(thresh_opts, "r")
+    options(
+      optimotu.pipeline.clustering_thresholds = thresh_opts
+    )
+  } else {
+    checkmate::assert_list(thresh_opts)
+    checkmate::assert_names(
+      names(thresh_opts),
+      subset.of = c(
+        "file",
+        "train_data",
+        "min_conf",
+        "dist_max",
+        "dist_step",
+        "min_taxa",
+        "min_refseq"
+      ),
+      must.include = "train_data"
+    )
+    checkmate::assert_string(thresh_opts$train_data)
+    checkmate::assert(
+      checkmate::check_file_exists(thresh_opts$train_data, "r"),
+      checkmate::check_choice(
+        thresh_opts$train_data,
+        c("self", "reference")
+      )
+    )
+    checkmate::assert_number(
+      thresh_opts$min_conf,
+      lower = 0,
+      upper = 1,
+      null.ok = TRUE
+    )
+    checkmate::assert_number(
+      thresh_opts$dist_max,
+      lower = 0,
+      upper = 1,
+      null.ok = TRUE
+    )
+    checkmate::assert_number(
+      thresh_opts$dist_step,
+      lower = 0,
+      upper = 1,
+      null.ok = TRUE
+    )
+    if (
+      !is.null(thresh_opts$dist_max) &&
+        !is.null(thresh_opts$dist_step) &&
+        thresh_opts$dist_step > thresh_opts$dist_max
+    ) {
+      stop(
+        "Option 'dist_step' must be less than or equal to option",
+        " 'dist_max'.\n",
+        "(file: pipeline_options.yaml)"
+      )
+    }
+    checkmate::assert_count(
+      thresh_opts$min_taxa,
+      lower = 2,
+      null.ok = TRUE
+    )
+    checkmate::assert_count(
+      thresh_opts$min_refseq,
+      lower = 2,
+      null.ok = TRUE
+    )
+    if (
+      !is.null(thresh_opts$min_taxa) &&
+        !is.null(thresh_opts$min_refseq) &&
+        thresh_opts$min_taxa > thresh_opts$min_refseq
+    ) {
+      stop(
+        "Option 'min_refseq' must be greater than or equal to option",
+        " 'min_taxa' (and ideally should be >=2x 'min_taxa').\n",
+        "(file: pipeline_options.yaml)"
+      )
+    }
+    options(
+      optimotu.pipeline.clustering_thresholds = thresh_opts$file,
+      optimotu.pipeline.do_optimize_thresholds = thresh_opts$train_data %in%
+        c("self", "reference"),
+      optimotu.pipeline.do_optimize_thresholds_self = thresh_opts$train_data ==
+        "self",
+      optimotu.pipeline.do_optimize_thresholds_reference = thresh_opts$train_data ==
+        "reference",
+      optimotu.pipeline.do_optimize_thresholds_file = !thresh_opts$train_data %in%
+        c("self", "reference"),
+      optimotu.pipeline.optimize_thresholds_file = if (
+        thresh_opts$train_data %in% c("self", "reference")
+      ) {
+        NULL
+      } else {
+        thresh_opts$train_data
+      },
+      optimotu.pipeline.clustering_min_conf = thresh_opts$min_conf,
+      optimotu.pipeline.clustering_dist_max = thresh_opts$dist_max,
+      optimotu.pipeline.clustering_dist_step = thresh_opts$dist_step,
+      optimotu.pipeline.clustering_min_taxa = thresh_opts$min_taxa,
+      optimotu.pipeline.clustering_min_refseq = thresh_opts$min_refseq
+    )
+  }
+}
+
+#' @rdname parse_pipeline_options
+#' @keywords internal
 parse_dist_config <- function(dist_config) {
   if (is.character(dist_config)) {
     dist_config <- list(method = dist_config)
@@ -1316,8 +1436,40 @@ parse_dist_config <- function(dist_config) {
 #' @rdname pipeline_options
 #' @export
 cluster_thresholds <- function() {
-  getOption("optimotu.pipeline.clustering_thresholds",
-            "metadata/GSSP_thresholds.tsv")
+  getOption(
+    "optimotu.pipeline.clustering_thresholds",
+    "metadata/GSSP_thresholds.tsv"
+  )
+}
+
+#' @rdname pipeline_options
+#' @keywords internal
+do_optimize_thresholds <- function() {
+  getOption("optimotu.pipeline.do_optimize_thresholds", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @keywords internal
+do_optimize_thresholds_self <- function() {
+  getOption("optimotu.pipeline.do_optimize_thresholds_self", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @keywords internal
+do_optimize_thresholds_reference <- function() {
+  getOption("optimotu.pipeline.do_optimize_thresholds_reference", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @keywords internal
+do_optimize_thresholds_file <- function() {
+  getOption("optimotu.pipeline.do_optimize_thresholds_file", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @keywords internal
+optimize_thresholds_file <- function() {
+  getOption("optimotu.pipeline.optimize_thresholds_file", NULL)
 }
 
 #' @rdname pipeline_options
@@ -1339,6 +1491,36 @@ cluster_dist_config <- function() {
 #' @export
 cluster_force_denovo <- function() {
   getOption("optimotu.pipeline.clustering_force_denovo", character(0))
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_min_conf <- function() {
+  getOption("optimotu.pipeline.clustering_min_conf", 0.5)
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_dist_max <- function() {
+  getOption("optimotu.pipeline.clustering_dist_max", 0.4)
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_dist_step <- function() {
+  getOption("optimotu.pipeline.clustering_dist_step", 0.001)
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_min_taxa <- function() {
+  getOption("optimotu.pipeline.clustering_min_taxa", 5)
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_min_refseq <- function() {
+  getOption("optimotu.pipeline.clustering_min_refseq", 2 * cluster_min_taxa())
 }
 
 #### guilds settings ####

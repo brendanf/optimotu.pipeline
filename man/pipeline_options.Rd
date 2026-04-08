@@ -66,9 +66,19 @@
 \alias{outgroup_reference}
 \alias{outgroup_taxonomy}
 \alias{cluster_thresholds}
+\alias{do_optimize_thresholds}
+\alias{do_optimize_thresholds_self}
+\alias{do_optimize_thresholds_reference}
+\alias{do_optimize_thresholds_file}
+\alias{optimize_thresholds_file}
 \alias{cluster_measure}
 \alias{cluster_dist_config}
 \alias{cluster_force_denovo}
+\alias{cluster_min_conf}
+\alias{cluster_dist_max}
+\alias{cluster_dist_step}
+\alias{cluster_min_taxa}
+\alias{cluster_min_refseq}
 \alias{do_guilds}
 \alias{do_wide_otu_table}
 \alias{rarefy_number}
@@ -208,11 +218,31 @@ outgroup_taxonomy()
 
 cluster_thresholds()
 
+do_optimize_thresholds()
+
+do_optimize_thresholds_self()
+
+do_optimize_thresholds_reference()
+
+do_optimize_thresholds_file()
+
+optimize_thresholds_file()
+
 cluster_measure()
 
 cluster_dist_config()
 
 cluster_force_denovo()
+
+cluster_min_conf()
+
+cluster_dist_max()
+
+cluster_dist_step()
+
+cluster_min_taxa()
+
+cluster_min_refseq()
 
 do_guilds()
 
