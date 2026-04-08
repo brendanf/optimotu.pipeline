@@ -21,16 +21,22 @@ a \code{data.frame} with column \code{seq_id} and named columns for each
 taxonomic rank in \code{ranks}
 }
 \description{
+Parse taxonomy from a fasta, fastq, or tabular file
+}
+\details{
 Accepts various formats of taxonomy for fasta/fastq headers, including:
 \itemize{
 \item \code{"sintax"}: \verb{(ID);(other_fields;)*tax=d:(kingdom),p:(phylum),c:(class),o:(order),f:(family),g:(genus),s:(species)}
 \item \code{"BOLD"}: \verb{(ID)|(marker_name)|(country)|(kingdom),(phylum),(class),(order),(family),(subfamily),(tribe),(genus),(species),(subspecies)}
 \item \code{"UNITE"}: \verb{(ID)|k__(kingdom);p__(phylum);c__(class);o__(order);f__(family);g__(genus);s__(species)|(SH_ID)}
+\item \code{"BayesANT"}: \verb{(ID) Root;(rank1);\{...\};(rankN)}
 }
 
 For tabular files, the first column is assumed to be the sequence ID.
 There should also be a named column for each taxonomic rank, or
 alternatively, a single column named "taxonomy" that is either a
 comma-, semicolon-, or pipe-delimited string of taxonomic ranks, or matches
-one of the above formats for fasta headers.
+one of the above formats for fasta headers. An additional column between the
+sequence ID and taxonomic columns is allowed but ignored (for instance the
+rank in a protax seqid2tax file).
 }

@@ -1,103 +1,85 @@
-#' Parse taxonomy from tabular (TSV) lines
-#' @param lines (`character`) lines of a TSV file (with or without header)
+#' Parse taxonomy from tabular (TSV) file
+#' @param file (`character`) path to a TSV file (with or without header)
 #' @param ranks (`character` vector) the taxonomic ranks to parse
 #' from most inclusive (e.g., kingdom) to least inclusive (e.g., species)
 #' @param rank_map (two-column `data.frame`) a mapping of taxonomic ranks
 #' as used in the project (first column) to their names in the taxonomy file
 #' (second column).  If not provided, the ranks are assumed to be the same.
 #' @noRd
-parse_taxonomy_tabular <- function(lines, ranks = tax_ranks(), rank_map = NULL) {
-  if (length(lines) == 0) {
-    return(tibble::tibble(seq_id = character(), !!!stats::setNames(
-      rep(list(character()), length(ranks)), ranks
-    )))
-  }
-  n_ranks <- length(ranks)
-  text <- paste(lines, collapse = "\n")
-
-  # Try reading with header
-  tab <- readr::read_tsv(
-    I(text),
-    show_col_types = FALSE,
-    na = character()
+parse_taxonomy_tabular <- function(
+  file,
+  ranks = tax_ranks(),
+  rank_map = NULL
+) {
+  checkmate::assert(
+    checkmate::check_file_exists(file, "r"),
+    checkmate::check_class(file, "AsIs")
   )
-  tab <- dplyr::rename(tab, seq_id = 1)
+  n_ranks <- length(ranks)
 
-  # If rank_map provided, rename file rank columns to project rank names
+  file_ranks <- ranks
   if (!is.null(rank_map)) {
-    checkmate::assert_data_frame(rank_map, ncols = 2, min.rows = 1)
-    file_ranks <- rank_map[[2]]
-    project_ranks <- rank_map[[1]]
-    for (i in seq_len(nrow(rank_map))) {
-      if (file_ranks[[i]] %in% names(tab)) {
-        names(tab)[names(tab) == file_ranks[[i]]] <- project_ranks[[i]]
-      }
-    }
+    checkmate::assert_data_frame(rank_map, min.cols = 2)
+    checkmate::assert_subset(ranks, rank_map[[1]])
+    file_ranks <- rank_map[[2]][match(ranks, rank_map[[1]])]
   }
 
+  # Read first line to determine if file has header
+  first_line <- (if (methods::is(file, "AsIs")) {
+    checkmate::assert_character(file)
+    if (length(file) == 0) {
+      return(
+        tibble::tibble(
+          seq_id = character(),
+          !!!stats::setNames(
+            replicate(n_ranks, character(), simplify = FALSE),
+            ranks
+          )
+        )
+      )
+    }
+    first_line <- strsplit(file, "\n")[[1]][1]
+  } else {
+    first_line <- readLines(file, n = 1)
+  }) |>
+    strsplit("\t") |>
+    unlist()
+  n_cols <- length(first_line)
   has_compliant_header <-
-    all(ranks %in% names(tab)) || "taxonomy" %in% names(tab)
+    all(file_ranks %in% utils::tail(first_line, -1)) ||
+    "taxonomy" %in% utils::tail(first_line, -1)
 
   if (has_compliant_header) {
-    return(parse_taxonomy_tabular_with_header(tab, ranks))
-  }
-
-  # No compliant header: re-read as headerless and detect format
-  tab0 <- readr::read_tsv(
-    I(text),
-    col_names = FALSE,
-    show_col_types = FALSE,
-    na = character()
-  )
-  n_cols <- ncol(tab0)
-
-  if (n_cols == 2L) {
-    return(parse_taxonomy_tabular_headerless_taxonomy(tab0, ranks))
-  }
-  if (n_cols == 1L + n_ranks) {
-    return(parse_taxonomy_tabular_headerless_ranks(tab0, ranks))
-  }
-
-  stop(
-    "Could not detect tabular format. With no header, expected either ",
-    "2 columns (seq_id, taxonomy) or ", 1L + n_ranks,
-    " columns (seq_id + ", n_ranks, " rank columns in order); got ", n_cols,
-    " columns."
-  )
-}
-
-parse_taxonomy_tabular_with_header <- function(tab, ranks) {
-  # avoid R CMD check NOTE about global variables due to NSE
-  seq_id <- taxonomy <- NULL
-  rank_cols_present <- ranks %in% names(tab)
-  if (all(rank_cols_present)) {
-    out <- dplyr::select(tab, seq_id, dplyr::all_of(ranks))
-    return(dplyr::mutate(out, dplyr::across(
-      dplyr::any_of(ranks),
-      \(x) dplyr::na_if(trimws(x), "")
-    )))
-  }
-  if (!"taxonomy" %in% names(tab)) {
+    out <- parse_taxonomy_tabular_with_header(file, file_ranks)
+  } else if (n_cols == 2L) {
+    out <- parse_taxonomy_tabular_headerless_taxonomy(file, file_ranks)
+  } else if (n_cols == 1L + n_ranks) {
+    out <- parse_taxonomy_tabular_headerless_ranks(file, file_ranks)
+  } else if (n_cols == 3L) {
+    out <- parse_taxonomy_tabular_headerless_taxonomy(
+      file,
+      file_ranks,
+      middle_column = TRUE
+    )
+  } else {
     stop(
-      "Tabular file must have either a column for each requested rank (",
-      paste(ranks, collapse = ", "),
-      ") or a column named 'taxonomy'."
+      "Could not detect tabular format. With no header, expected either ",
+      "2 columns (seq_id, taxonomy), 3 columns (seq_id, [ignored], taxonomy), ",
+      "or 1 + ",
+      n_ranks,
+      " columns (seq_id + ",
+      n_ranks,
+      " rank columns in ",
+      "order); got ",
+      n_cols,
+      " columns."
     )
   }
-  parsed <- parse_taxonomy_header(tab[["taxonomy"]], ranks)
-  if (!is.null(parsed)) {
-    out <- dplyr::mutate(parsed, seq_id = tab[["seq_id"]])
-    return(dplyr::select(out, seq_id, dplyr::any_of(ranks)))
+  if (!is.null(rank_map)) {
+    names(out)[-1] <- rank_map[[1]][match(names(out)[-1], rank_map[[2]])]
   }
-  tidyr::separate_wider_delim(
-    tab,
-    taxonomy,
-    delim = stringr::regex("[,;|]"),
-    too_few = "align_start",
-    too_many = "drop",
-    names = ranks
-  ) |>
   dplyr::mutate(
+    out,
     dplyr::across(
       dplyr::any_of(ranks),
       \(x) dplyr::na_if(trimws(x), "")
@@ -105,51 +87,99 @@ parse_taxonomy_tabular_with_header <- function(tab, ranks) {
   )
 }
 
-parse_taxonomy_tabular_headerless_ranks <- function(tab0, ranks) {
+parse_taxonomy_tabular_with_header <- function(file, ranks) {
   # avoid R CMD check NOTE about global variables due to NSE
-  seq_id <- NULL
-  names(tab0) <- c("seq_id", ranks)
-  out <- dplyr::mutate(tab0, dplyr::across(
-    dplyr::any_of(ranks),
-    \(x) dplyr::na_if(trimws(as.character(x)), "")
-  ))
-  dplyr::select(out, seq_id, dplyr::all_of(ranks))
+  seq_id <- taxonomy <- NULL
+  tab <- readr::read_tsv(file, col_types = c(.default = "c")) |>
+    dplyr::rename(seq_id = 1)
+
+  if (all(ranks %in% names(tab)[-1])) {
+    dplyr::select(tab, seq_id, dplyr::all_of(ranks)) |>
+      dplyr::mutate(
+        dplyr::across(
+          dplyr::all_of(ranks),
+          \(x) dplyr::na_if(trimws(x), "")
+        )
+      )
+  } else if ("taxonomy" %in% names(tab)) {
+    parsed <- parse_taxonomy_header(tab[["taxonomy"]], ranks)
+    if (is.null(parsed)) {
+      tidyr::separate_wider_delim(
+        tab,
+        cols = taxonomy,
+        delim = stringr::regex("[,;|]"),
+        names = ranks,
+        too_few = "align_start",
+        too_many = "drop"
+      )
+    } else {
+      dplyr::bind_cols(
+        dplyr::select(tab, seq_id),
+        dplyr::select(parsed, any_of(ranks))
+      )
+    }
+  } else {
+    stop(
+      "Tabular file must have either a column for each requested rank (",
+      paste(ranks, collapse = ", "),
+      ") or a column named 'taxonomy'."
+    )
+  }
 }
 
-parse_taxonomy_tabular_headerless_taxonomy <- function(tab0, ranks) {
-  seq_id <- as.character(tab0[[1]])
-  taxonomy <- as.character(tab0[[2]])
-  tax_parts <- strsplit(taxonomy, "[,;|]")
-  n_ranks <- length(ranks)
-  out <- matrix(NA_character_, nrow = length(seq_id), ncol = n_ranks)
-  for (i in seq_along(tax_parts)) {
-    vals <- trimws(tax_parts[[i]])
-    n <- min(length(vals), n_ranks)
-    if (n > 0) {
-      out[i, seq_len(n)] <- vals[seq_len(n)]
-    }
+parse_taxonomy_tabular_headerless_ranks <- function(file, ranks) {
+  readr::read_tsv(
+    file,
+    col_types = c(.default = "c"),
+    col_names = c("seq_id", ranks)
+  )
+}
+
+parse_taxonomy_tabular_headerless_taxonomy <- function(
+  file,
+  ranks,
+  middle_column = FALSE
+) {
+  checkmate::assert_flag(middle_column)
+
+  tab <- readr::read_tsv(
+    file,
+    col_types = if (middle_column) "c-c" else "cc",
+    col_names = c("seq_id", "taxonomy")
+  )
+  taxonomy <- parse_taxonomy_header(tab[["taxonomy"]], ranks)
+  if (is.null(taxonomy)) {
+    tidyr::separate_wider_delim(
+      tab,
+      cols = taxonomy,
+      delim = stringr::regex("[,;|]"),
+      names = ranks,
+      too_few = "align_start",
+      too_many = "drop"
+    )
+  } else {
+    dplyr::bind_cols(
+      dplyr::select(tab, "seq_id"),
+      dplyr::select(taxonomy, any_of(ranks))
+    )
   }
-  out <- as.data.frame(out, stringsAsFactors = FALSE)
-  names(out) <- ranks
-  out <- dplyr::mutate(out, dplyr::across(
-    dplyr::everything(),
-    \(x) dplyr::na_if(x, "")
-  ))
-  tibble::as_tibble(dplyr::bind_cols(seq_id = seq_id, out))
 }
 
 #' Parse taxonomy from a fasta, fastq, or tabular file
 #'
-#' @description Accepts various formats of taxonomy for fasta/fastq headers, including:
+#' @details Accepts various formats of taxonomy for fasta/fastq headers, including:
 #' - `"sintax"`: `(ID);(other_fields;)*tax=d:(kingdom),p:(phylum),c:(class),o:(order),f:(family),g:(genus),s:(species)`
 #' - `"BOLD"`: `(ID)|(marker_name)|(country)|(kingdom),(phylum),(class),(order),(family),(subfamily),(tribe),(genus),(species),(subspecies)`
 #' - `"UNITE"`: `(ID)|k__(kingdom);p__(phylum);c__(class);o__(order);f__(family);g__(genus);s__(species)|(SH_ID)`
+#' - `"BayesANT"`: `(ID) Root;(rank1);{...};(rankN)`
 #'
 #' For tabular files, the first column is assumed to be the sequence ID.
 #' There should also be a named column for each taxonomic rank, or
 #' alternatively, a single column named "taxonomy" that is either a
 #' comma-, semicolon-, or pipe-delimited string of taxonomic ranks, or matches
-#' one of the above formats for fasta headers.
+#' one of the above formats for fasta headers. An additional column between the
+#' sequence ID and taxonomic columns is allowed but ignored (for instance the
+#' rank in a protax seqid2tax file).
 #' @param file (`character`) path to the file to parse
 #' @param ranks (`character` vector) the taxonomic ranks to parse, in order
 #' from most inclusive (e.g., kingdom) to least inclusive (e.g., species)
@@ -159,24 +189,36 @@ parse_taxonomy_tabular_headerless_taxonomy <- function(tab0, ranks) {
 #' @return a `data.frame` with column `seq_id` and named columns for each
 #' taxonomic rank in `ranks`
 #' @export
-parse_reference_taxonomy <- function(file, ranks = tax_ranks(), rank_map = NULL) {
+parse_reference_taxonomy <- function(
+  file,
+  ranks = tax_ranks(),
+  rank_map = NULL
+) {
   checkmate::assert_file(file, "r")
-  if (grepl("\\.fa(s(ta)?)?", file)) {
+  if (grepl("\\.fa(s(ta)?)?(.gz)?$", file)) {
     result <- parse_taxonomy_header(
-      names(Biostrings::fasta.seqlengths(file)), ranks, rank_map
+      names(Biostrings::fasta.seqlengths(file)),
+      ranks,
+      rank_map
     )
     if (is.null(result)) {
-      stop("Unrecognized sequence header format. Supported: sintax, BOLD, UNITE.")
+      stop(
+        "Unrecognized sequence header format. Supported: SINTAX, BOLD, UNITE,",
+        " and BayesANT."
+      )
     }
     result
   } else if (grepl("\\.f(a(st)?)?q", file)) {
     result <- parse_taxonomy_header(fastq_names(file), ranks, rank_map)
     if (is.null(result)) {
-      stop("Unrecognized sequence header format. Supported: sintax, BOLD, UNITE.")
+      stop(
+        "Unrecognized sequence header format. Supported: SINTAX, BOLD, UNITE,",
+        " and BayesANT."
+      )
     }
     result
   } else {
-    parse_taxonomy_tabular(readLines(file), ranks, rank_map)
+    parse_taxonomy_tabular(file, ranks, rank_map)
   }
 }
 
@@ -190,9 +232,17 @@ is_sintax_header <- function(header) {
   }
 }
 
-sintax_ranks <- c(d = "domain", k = "kingdom", p = "phylum",
-                  c = "class", o = "order", f = "family",
-                  g = "genus", s = "species", t = "strain")
+sintax_ranks <- c(
+  d = "domain",
+  k = "kingdom",
+  p = "phylum",
+  c = "class",
+  o = "order",
+  f = "family",
+  g = "genus",
+  s = "species",
+  t = "strain"
+)
 
 parse_sintax_header <- function(header) {
   # avoid R CMD check NOTE about global variables due to NSE
@@ -241,9 +291,26 @@ is_unite_header <- function(header) {
   }
 }
 
+is_bayesant_header <- function(header) {
+  bayesant_regex <- "^[^[:space:];]+[[:space:]]+Root(?:;[^;]*)+$"
+  if (length(header) <= 100 || all(grepl(bayesant_regex, header[1:100]))) {
+    all(grepl(bayesant_regex, header))
+  } else {
+    FALSE
+  }
+}
+
 bold_ranks <- c(
-  "kingdom", "phylum", "class", "order", "family",
-  "subfamily", "tribe", "genus", "species", "subspecies"
+  "kingdom",
+  "phylum",
+  "class",
+  "order",
+  "family",
+  "subfamily",
+  "tribe",
+  "genus",
+  "species",
+  "subspecies"
 )
 
 parse_bold_header <- function(header) {
@@ -270,8 +337,13 @@ parse_bold_header <- function(header) {
 }
 
 unite_ranks <- c(
-  k = "kingdom", p = "phylum", c = "class", o = "order", f = "family",
-  g = "genus", s = "species"
+  k = "kingdom",
+  p = "phylum",
+  c = "class",
+  o = "order",
+  f = "family",
+  g = "genus",
+  s = "species"
 )
 
 parse_unite_header <- function(header) {
@@ -297,13 +369,49 @@ parse_unite_header <- function(header) {
     dplyr::select(seq_id, dplyr::any_of(unname(unite_ranks)))
 }
 
-#' Parse taxonomy from sequence headers (sintax, BOLD, or UNITE format)
+parse_bayesant_header <- function(header, ranks = tax_ranks()) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  seq_id <- taxonomy <- pos <- NULL
+  out <- tibble::tibble(header = header) |>
+    tidyr::separate_wider_regex(
+      header,
+      patterns = c(
+        seq_id = "[^[:space:];]+",
+        "[[:space:]]+",
+        taxonomy = ".*"
+      )
+    ) |>
+    tidyr::separate_rows(
+      taxonomy,
+      sep = ";"
+    ) |>
+    dplyr::group_by(seq_id) |>
+    dplyr::mutate(pos = dplyr::row_number()) |>
+    dplyr::ungroup() |>
+    dplyr::filter(pos > 1) |>
+    dplyr::mutate(rank = ranks[pos - 1]) |>
+    dplyr::filter(!is.na(rank)) |>
+    dplyr::mutate(taxonomy = dplyr::na_if(trimws(taxonomy), "")) |>
+    tidyr::pivot_wider(
+      id_cols = seq_id,
+      names_from = rank,
+      values_from = taxonomy
+    )
+  dplyr::select(out, seq_id, dplyr::any_of(ranks))
+}
+
+#' Parse taxonomy from sequence headers
 #' @param header (`character`) vector of sequence header strings
 #' @inheritParams parse_taxonomy
-#' @return A tibble with `seq_id` and rank columns, or `NULL` if format unrecognized
+#' @return A tibble with `seq_id` and rank columns, or `NULL` if format
+#' is unrecognized
 #' @keywords internal
 #' @noRd
-parse_taxonomy_header <- function(header, ranks = tax_ranks(), rank_map = NULL) {
+parse_taxonomy_header <- function(
+  header,
+  ranks = tax_ranks(),
+  rank_map = NULL
+) {
   # avoid R CMD check NOTE about global variables due to NSE
   seq_id <- NULL
   out <- if (is_sintax_header(header)) {
@@ -312,6 +420,8 @@ parse_taxonomy_header <- function(header, ranks = tax_ranks(), rank_map = NULL) 
     parse_bold_header(header)
   } else if (is_unite_header(header)) {
     parse_unite_header(header)
+  } else if (is_bayesant_header(header)) {
+    parse_bayesant_header(header, ranks)
   } else {
     return(NULL)
   }

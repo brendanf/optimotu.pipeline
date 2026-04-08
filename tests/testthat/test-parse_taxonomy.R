@@ -11,6 +11,10 @@ unite_headers <- c(
   "SH123456.01FU|k__Fungi;p__Ascomycota;c__Dothideomycetes;o__Pleosporales;f__Pleosporaceae;g__Alternaria;s__Alternaria alternata|SH123456",
   "SH789012.01FU|k__Fungi;p__Basidiomycota;c__Agaricomycetes;o__Agaricales;f__Agaricaceae;g__Agaricus;s__Agaricus bisporus|SH789012"
 )
+bayesant_headers <- c(
+  "seqBA1 Root;Fungi;Ascomycota;Dothideomycetes;Pleosporales;Pleosporaceae;Alternaria;Alternaria alternata",
+  "seqBA2 Root;Fungi;Basidiomycota;Agaricomycetes;Agaricales;Agaricaceae;Agaricus;Agaricus bisporus"
+)
 
 # Rank map for testing
 # Encodes BOLD ranks to the set supported by sintax
@@ -45,6 +49,13 @@ test_that("is_unite_header detects UNITE format", {
   expect_false(optimotu.pipeline:::is_unite_header(bold_headers))
 })
 
+test_that("is_bayesant_header detects BayesANT format", {
+  expect_true(optimotu.pipeline:::is_bayesant_header(bayesant_headers))
+  expect_false(optimotu.pipeline:::is_bayesant_header(sintax_headers))
+  expect_false(optimotu.pipeline:::is_bayesant_header(bold_headers))
+  expect_false(optimotu.pipeline:::is_bayesant_header(unite_headers))
+})
+
 test_that("parse_sintax_header returns seq_id and rank columns", {
   ranks <- tax_ranks()
   out <- optimotu.pipeline:::parse_sintax_header(sintax_headers)
@@ -72,6 +83,18 @@ test_that("parse_unite_header returns seq_id and rank columns", {
   expect_equal(out$species[1], "Alternaria alternata")
 })
 
+test_that("parse_bayesant_header returns seq_id and rank columns", {
+  ranks <- tax_ranks()
+  out <- optimotu.pipeline:::parse_bayesant_header(bayesant_headers, ranks)
+  checkmate::expect_names(
+    names(out),
+    must.include = c("seq_id", "kingdom", "species")
+  )
+  expect_equal(out$seq_id, c("seqBA1", "seqBA2"))
+  expect_equal(out$kingdom, c("Fungi", "Fungi"))
+  expect_equal(out$species, c("Alternaria alternata", "Agaricus bisporus"))
+})
+
 test_that("parse_taxonomy_header detects format and dispatches", {
   ranks <- tax_ranks()
   out_sintax <- optimotu.pipeline:::parse_taxonomy_header(sintax_headers, ranks)
@@ -86,6 +109,13 @@ test_that("parse_taxonomy_header detects format and dispatches", {
   out_unite <- optimotu.pipeline:::parse_taxonomy_header(unite_headers, ranks)
   expect_false(is.null(out_unite))
   expect_equal(out_unite$seq_id[1], "SH123456.01FU")
+
+  out_bayesant <- optimotu.pipeline:::parse_taxonomy_header(
+    bayesant_headers,
+    ranks
+  )
+  expect_false(is.null(out_bayesant))
+  expect_equal(out_bayesant$seq_id[1], "seqBA1")
 })
 
 test_that("parse_taxonomy_header returns NULL for unrecognized format", {
@@ -98,7 +128,7 @@ test_that("parse_taxonomy_tabular with rank columns", {
     "seq_id\tkingdom\tphylum\tclass\torder\tfamily\tgenus\tspecies",
     "s1\tFungi\tAscomycota\tDothideomycetes\tPleosporales\tPleosporaceae\tAlternaria\tAlternaria alternata"
   )
-  out <- optimotu.pipeline:::parse_taxonomy_tabular(lines, tax_ranks())
+  out <- optimotu.pipeline:::parse_taxonomy_tabular(I(lines), tax_ranks())
   expect_equal(nrow(out), 1)
   expect_equal(out$seq_id, "s1")
   expect_equal(out$kingdom, "Fungi")
@@ -110,7 +140,7 @@ test_that("parse_taxonomy_tabular with taxonomy column (comma-delimited)", {
     "seq_id\ttaxonomy",
     "s1\tFungi,Ascomycota,Dothideomycetes,Pleosporales,Pleosporaceae,Alternaria,Alternaria alternata"
   )
-  out <- optimotu.pipeline:::parse_taxonomy_tabular(lines, tax_ranks())
+  out <- optimotu.pipeline:::parse_taxonomy_tabular(I(lines), tax_ranks())
   expect_equal(nrow(out), 1)
   expect_equal(out$seq_id, "s1")
   expect_equal(out$kingdom, "Fungi")
@@ -122,22 +152,25 @@ test_that("parse_taxonomy_tabular with taxonomy column (sintax-style)", {
     "id\ttaxonomy",
     "s1\tseq1;tax=k:Fungi,p:Ascomycota,c:Dothideomycetes,o:Pleosporales,f:Pleosporaceae,g:Alternaria,s:Alternaria alternata"
   )
-  out <- optimotu.pipeline:::parse_taxonomy_tabular(lines, tax_ranks())
+  out <- optimotu.pipeline:::parse_taxonomy_tabular(I(lines), tax_ranks())
   expect_equal(nrow(out), 1)
   expect_equal(out$seq_id, "s1")
   expect_equal(out$kingdom, "Fungi")
 })
 
 test_that("parse_taxonomy_tabular empty lines returns empty tibble", {
-  out <- optimotu.pipeline:::parse_taxonomy_tabular(character(0), tax_ranks())
+  out <- optimotu.pipeline:::parse_taxonomy_tabular(
+    I(character(0)),
+    tax_ranks()
+  )
   expect_equal(nrow(out), 0)
   expect_true(all(c("seq_id", tax_ranks()) %in% names(out)))
 })
 
 test_that("parse_taxonomy_tabular errors when format not detected", {
-  lines <- c("id\tfoo\tbar", "1\ta\tb")
+  lines <- c("id\tfoo\tbar\tbaf", "1\ta\tb")
   expect_error(
-    optimotu.pipeline:::parse_taxonomy_tabular(lines, tax_ranks()),
+    optimotu.pipeline:::parse_taxonomy_tabular(I(lines), tax_ranks()),
     "Could not detect tabular format"
   )
 })
@@ -148,7 +181,7 @@ test_that("parse_taxonomy_tabular headerless: seq_id + rank columns in order", {
     "s1\tFungi\tAscomycota\tDothideomycetes\tPleosporales\tPleosporaceae\tAlternaria\tAlternaria alternata",
     "s2\tProtista\tOchrophyta\tBacillariophyta\tNaviculales\tNaviculaceae\tNavicula\tNavicula sp."
   )
-  out <- optimotu.pipeline:::parse_taxonomy_tabular(lines, ranks)
+  out <- optimotu.pipeline:::parse_taxonomy_tabular(I(lines), ranks)
   expect_equal(nrow(out), 2)
   expect_equal(names(out), c("seq_id", ranks))
   expect_equal(out$seq_id, c("s1", "s2"))
@@ -161,7 +194,7 @@ test_that("parse_taxonomy_tabular headerless: seq_id + taxonomy column", {
     "s1\tFungi,Ascomycota,Dothideomycetes,Pleosporales,Pleosporaceae,Alternaria,Alternaria alternata",
     "s2\tProtista;Ochrophyta;Bacillariophyta;Naviculales;Naviculaceae;Navicula;Navicula sp."
   )
-  out <- optimotu.pipeline:::parse_taxonomy_tabular(lines, tax_ranks())
+  out <- optimotu.pipeline:::parse_taxonomy_tabular(I(lines), tax_ranks())
   expect_equal(nrow(out), 2)
   expect_equal(out$seq_id, c("s1", "s2"))
   expect_equal(out$kingdom, c("Fungi", "Protista"))
@@ -225,6 +258,23 @@ test_that("parse_reference_taxonomy detects format and dispatches", {
   expect_equal(out_unite$seq_id[1], "SH123456.01FU")
   expect_equal(out_unite$kingdom[1], "Fungi")
   expect_equal(out_unite$species[1], "Alternaria alternata")
+
+  test_file <- withr::local_tempfile(fileext = ".fa")
+  stats::setNames(dna, bayesant_headers) |>
+    Biostrings::DNAStringSet() |>
+    Biostrings::writeXStringSet(test_file)
+  out_bayesant <- optimotu.pipeline:::parse_reference_taxonomy(
+    test_file,
+    tax_ranks()
+  )
+  expect_false(is.null(out_bayesant))
+  checkmate::expect_names(
+    names(out_bayesant),
+    must.include = c("seq_id", tax_ranks())
+  )
+  expect_equal(out_bayesant$seq_id[1], "seqBA1")
+  expect_equal(out_bayesant$kingdom[1], "Fungi")
+  expect_equal(out_bayesant$species[1], "Alternaria alternata")
 
   test_file <- withr::local_tempfile(fileext = ".tsv")
   writeLines(c("seq_id\tkingdom\tphylum\tclass\torder\tfamily\tgenus\tspecies", "s1\tFungi\tAscomycota\tDothideomycetes\tPleosporales\tPleosporaceae\tAlternaria\tAlternaria alternata"), test_file)
