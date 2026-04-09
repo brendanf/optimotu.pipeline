@@ -7,6 +7,9 @@
   These, as well as "rds", will be autodetected from the file extension if
   possible. This might break some old usages where a file was saved in RDS
   format without an ".rds" extension (not case-sensitive).
+* Fixed a bug in `fasta_rename()` and `fastq_rename()` which caused them to
+  only rename the first sequence in the file. This affected pipeline outputs
+  for `otu_(plausible|reliable).fasta.gz`.
 # optimotu.pipeline 0.6.2
 * Add option `force_denovo` in `pipeline_options.yaml` to force de novo
   clustering at some or all taxonomic ranks, i.e., to ignore taxonomic
