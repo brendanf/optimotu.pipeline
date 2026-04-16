@@ -36,8 +36,10 @@ unnest_yaml_list <- function(x) {
 #' @param pipeline_options (`list`) the pipeline options to parse
 #' @keywords internal
 parse_project_name <- function(pipeline_options) {
-  if (!("project_name" %in% names(pipeline_options))
-      || length(pipeline_options$project_name) == 0) {
+  if (
+    !("project_name" %in% names(pipeline_options)) ||
+      length(pipeline_options$project_name) == 0
+  ) {
     warning(
       "Missing project name in 'pipeline_options.yaml'.\n",
       "Using default name 'metabarcoding_project'."
@@ -51,8 +53,10 @@ parse_project_name <- function(pipeline_options) {
       "You can change it by editing the file 'pipeline_options.yaml'"
     )
   } else if (!grepl("^[[:alnum:]_-]+$", pipeline_options$project_name)) {
-    stop("Project name should consist of alphanumeric characters, '_', and",
-         " '-'. (file:pipeline_options.yaml)")
+    stop(
+      "Project name should consist of alphanumeric characters, '_', and",
+      " '-'. (file:pipeline_options.yaml)"
+    )
   }
   options(optimotu.pipeline.project_name = pipeline_options$project_name)
 }
@@ -73,8 +77,9 @@ parse_file_extension <- function(pipeline_options) {
     null.ok = TRUE
   )
   if (!is.null(pipeline_options$file_extension)) {
-    options(optimotu.pipeline.read_file_extension =
-              pipeline_options$file_extension)
+    options(
+      optimotu.pipeline.read_file_extension = pipeline_options$file_extension
+    )
   }
 }
 
@@ -94,8 +99,10 @@ parse_orient <- function(pipeline_options) {
     pattern = "^(fwd|rev|mixed|custom)$"
   )
   if (is.null(pipeline_options$orient)) {
-    message("No read orientation specified in 'pipeline_options.yaml'.\n",
-            "Using default: 'forward'")
+    message(
+      "No read orientation specified in 'pipeline_options.yaml'.\n",
+      "Using default: 'forward'"
+    )
     options(optimotu.pipeline.read_orientation = "fwd")
   } else {
     options(optimotu.pipeline.read_orientation = pipeline_options$orient)
@@ -146,8 +153,7 @@ parse_custom_sample_table <- function(pipeline_options) {
   )
   if (is.character(pipeline_options$custom_sample_table)) {
     options(
-      optimotu.pipeline.custom_sample_table =
-        pipeline_options$custom_sample_table
+      optimotu.pipeline.custom_sample_table = pipeline_options$custom_sample_table
     )
   }
 }
@@ -174,8 +180,7 @@ parse_added_reference <- function(pipeline_options) {
     checkmate::assert_string(added_reference$fasta, null.ok = TRUE)
     checkmate::assert_string(added_reference$table, null.ok = TRUE)
 
-    if (xor(is.null(added_reference$fasta),
-            is.null(added_reference$table))) {
+    if (xor(is.null(added_reference$fasta), is.null(added_reference$table))) {
       stop(
         "If one of 'added_reference_fasta' and 'added_reference_table' is ",
         "given in 'pipeline_options.yaml', then both must be given."
@@ -215,29 +220,43 @@ added_reference_table <- function() {
 #' @rdname parse_pipeline_options
 #' @keywords internal
 parse_parallel_options <- function(pipeline_options) {
-  checkmate::assert_count(pipeline_options$local_threads, positive = TRUE,
-                          null.ok = TRUE)
+  checkmate::assert_count(
+    pipeline_options$local_threads,
+    positive = TRUE,
+    null.ok = TRUE
+  )
   if (!is.null(pipeline_options$local_threads)) {
     options(optimotu_num_threads = pipeline_options$local_threads)
   }
 
-  checkmate::assert_count(pipeline_options$max_batchsize, na.ok = TRUE,
-                          null.ok = TRUE)
+  checkmate::assert_count(
+    pipeline_options$max_batchsize,
+    na.ok = TRUE,
+    null.ok = TRUE
+  )
   max_batchsize <- NULL
-  if (checkmate::test_count(pipeline_options$max_batchsize, positive = TRUE))
+  if (checkmate::test_count(pipeline_options$max_batchsize, positive = TRUE)) {
     max_batchsize <- pipeline_options$max_batchsize
+  }
 
   workers_per_seqrun <- 1L
-  checkmate::assert_count(pipeline_options$workers_per_seqrun, positive = TRUE,
-                          null.ok = TRUE)
-  checkmate::assert_count(pipeline_options$jobs_per_seqrun, positive = TRUE,
-                          null.ok = TRUE)
+  checkmate::assert_count(
+    pipeline_options$workers_per_seqrun,
+    positive = TRUE,
+    null.ok = TRUE
+  )
+  checkmate::assert_count(
+    pipeline_options$jobs_per_seqrun,
+    positive = TRUE,
+    null.ok = TRUE
+  )
   if (!is.null(pipeline_options$workers_per_seqrun)) {
     if (!is.null(pipeline_options$jobs_per_seqrun)) {
       warning(
         "both 'workers_per_seqrun' and 'jobs_per_seqrun' (deprecated) were ",
         "given in 'pipeline_options.yaml'. Using 'workers_per_seqrun' (=",
-        pipeline_options$workers_per_seqrun, ")"
+        pipeline_options$workers_per_seqrun,
+        ")"
       )
     }
     workers_per_seqrun <- pipeline_options$workers_per_seqrun
@@ -250,16 +269,24 @@ parse_parallel_options <- function(pipeline_options) {
   }
 
   min_workers <- 1L
-  checkmate::assert_int(pipeline_options$min_workers, lower = 1L,
-                        null.ok = TRUE)
-  if (!is.null(pipeline_options$min_workers))
+  checkmate::assert_int(
+    pipeline_options$min_workers,
+    lower = 1L,
+    null.ok = TRUE
+  )
+  if (!is.null(pipeline_options$min_workers)) {
     min_workers <- pipeline_options$min_workers
+  }
 
   max_workers <- Inf
-  checkmate::assert_int(pipeline_options$max_workers, lower = min_workers,
-                        null.ok = TRUE)
-  if (!is.null(pipeline_options$max_workers))
+  checkmate::assert_int(
+    pipeline_options$max_workers,
+    lower = min_workers,
+    null.ok = TRUE
+  )
+  if (!is.null(pipeline_options$max_workers)) {
     max_workers <- pipeline_options$max_workers
+  }
 
   options(
     optimotu.pipeline.max_workers = max_workers,
@@ -331,8 +358,10 @@ parse_forward_primer <- function(pipeline_options) {
     ignore.case = TRUE
   )
   if (is.null(pipeline_options$forward_primer)) {
-    message("Forward primer string missing (file: pipeline_options.yaml)\n",
-            "Using default: GCATCGATGAAGAACGCAGC")
+    message(
+      "Forward primer string missing (file: pipeline_options.yaml)\n",
+      "Using default: GCATCGATGAAGAACGCAGC"
+    )
   } else {
     options(optimotu.pipeline.forward_primer = pipeline_options$forward_primer)
   }
@@ -356,8 +385,10 @@ parse_reverse_primer <- function(pipeline_options) {
     ignore.case = TRUE
   )
   if (is.null(pipeline_options$reverse_primer)) {
-    message("Reverse primer string missing (file: pipeline_options.yaml)\n",
-            "Using default: TCCTCCGCTTATTGATATGC")
+    message(
+      "Reverse primer string missing (file: pipeline_options.yaml)\n",
+      "Using default: TCCTCCGCTTATTGATATGC"
+    )
   } else {
     options(optimotu.pipeline.reverse_primer = pipeline_options$reverse_primer)
   }
@@ -397,8 +428,10 @@ trim_primer_merged <- function() {
 parse_trim_options <- function(pipeline_options) {
   checkmate::assert_list(pipeline_options$trimming, null.ok = TRUE)
   if (is.null(pipeline_options$trimming)) {
-    message("No 'trimming' options given in 'pipeline_options.yaml'\n",
-            "Using defaults.")
+    message(
+      "No 'trimming' options given in 'pipeline_options.yaml'\n",
+      "Using defaults."
+    )
   } else {
     options(
       optimotu.pipeline.trim_options = do.call(
@@ -421,8 +454,10 @@ trim_options <- function() {
 parse_filter_options <- function(pipeline_options) {
   checkmate::assert_list(pipeline_options$filtering, null.ok = TRUE)
   if (is.null(pipeline_options$filtering)) {
-    message("No 'filtering' options given in 'pipeline_options.yaml'\n",
-            "Using defaults.")
+    message(
+      "No 'filtering' options given in 'pipeline_options.yaml'\n",
+      "Using defaults."
+    )
   } else {
     filtering <- unnest_yaml_list(pipeline_options$filtering)
     checkmate::assert_names(
@@ -513,14 +548,23 @@ tag_jump_p <- function() {
 #' @keywords internal
 parse_lulu_options <- function(pipeline_options) {
   lulu_options <- pipeline_options$lulu
-  if (is.null(lulu_options) || isFALSE(lulu_options)) return()
+  if (is.null(lulu_options) || isFALSE(lulu_options)) {
+    return()
+  }
   checkmate::assert_list(lulu_options)
   lulu_options <- unnest_yaml_list(lulu_options)
   checkmate::assert_names(
     names(lulu_options),
-    subset.of = c("dist_type", "max_dist", "max_gap_length", "max_gap_total",
-                  "min_abundance_ratio", "min_cooccurrence_ratio",
-                  "use_mean_abundance_ratio", "dist_config")
+    subset.of = c(
+      "dist_type",
+      "max_dist",
+      "max_gap_length",
+      "max_gap_total",
+      "min_abundance_ratio",
+      "min_cooccurrence_ratio",
+      "use_mean_abundance_ratio",
+      "dist_config"
+    )
   )
   options(optimotu.pipeline.lulu_options = lulu_options)
   options(optimotu.pipeline.do_lulu = TRUE)
@@ -537,8 +581,11 @@ parse_lulu_options <- function(pipeline_options) {
   if ("max_dist" %in% names(lulu_options)) {
     switch(
       lulu_options$dist_type,
-      fraction = checkmate::assert_number(lulu_options$max_dist,
-                                          lower = 0, upper = 1),
+      fraction = checkmate::assert_number(
+        lulu_options$max_dist,
+        lower = 0,
+        upper = 1
+      ),
       score = checkmate::assert_number(lulu_options$max_dist, lower = 0),
       base = checkmate::assert_integerish(lulu_options$max_dist, lower = 0)
     )
@@ -565,8 +612,7 @@ parse_lulu_options <- function(pipeline_options) {
       upper = 1
     )
     options(
-      optimotu.pipeline.lulu_min_abundance_ratio =
-        lulu_options$min_abundance_ratio
+      optimotu.pipeline.lulu_min_abundance_ratio = lulu_options$min_abundance_ratio
     )
   }
   ##### min_cooccurrence_ratio #####
@@ -577,16 +623,14 @@ parse_lulu_options <- function(pipeline_options) {
       upper = 1
     )
     options(
-      optimotu.pipeline.lulu_min_cooccurrence_ratio =
-        lulu_options$min_cooccurrence_ratio
+      optimotu.pipeline.lulu_min_cooccurrence_ratio = lulu_options$min_cooccurrence_ratio
     )
   }
   ##### use_mean_abundance_ratio #####
   if ("use_mean_abundance_ratio" %in% names(lulu_options)) {
     checkmate::assert_flag(lulu_options$use_mean_abundance_ratio)
     options(
-      optimotu.pipeline.lulu_use_mean_abundance_ratio =
-        lulu_options$use_mean_abundance_ratio
+      optimotu.pipeline.lulu_use_mean_abundance_ratio = lulu_options$use_mean_abundance_ratio
     )
   }
   ##### dist_config #####
@@ -674,8 +718,9 @@ parse_amplicon_model_options <- function(pipeline_options) {
     amplicon_model_options$model_type,
     c("CM", "HMM", "none")
   )
-  options(optimotu.pipeline.amplicon_model_type =
-            amplicon_model_options$model_type)
+  options(
+    optimotu.pipeline.amplicon_model_type = amplicon_model_options$model_type
+  )
 
   if (!identical(amplicon_model_type, "none")) {
     # #### seed_aln ####
@@ -692,12 +737,13 @@ parse_amplicon_model_options <- function(pipeline_options) {
     )
     checkmate::assert_string(amplicon_model_options$model_file)
     # if (isFALSE(do_generate_model)) {
-      checkmate::assert_file_exists(amplicon_model_options$model_file, "r")
+    checkmate::assert_file_exists(amplicon_model_options$model_file, "r")
     # } else {
     #   checkmate::assert_path_for_output(model_file, overwrite = TRUE)
     # }
-    options(optimotu.pipeline.amplicon_model_file =
-              amplicon_model_options$model_file)
+    options(
+      optimotu.pipeline.amplicon_model_file = amplicon_model_options$model_file
+    )
 
     #### amplicon model filtering settings ####
     if (!is.null(amplicon_model_options$model_filter)) {
@@ -716,8 +762,9 @@ parse_amplicon_model_options <- function(pipeline_options) {
     if ("numt_filter" %in% names(amplicon_model_options)) {
       checkmate::assert_logical(amplicon_model_options$numt_filter)
       if (isTRUE(amplicon_model_options$numt_filter)) {
-        if (!identical(amplicon_model_type(), "HMM"))
+        if (!identical(amplicon_model_type(), "HMM")) {
           stop("NuMt filter is only valid when HMM alignment is used")
+        }
         options(optimotu.pipeline.do_numt_filter = TRUE)
       }
     }
@@ -838,8 +885,10 @@ parse_control_options <- function(pipeline_options) {
         checkmate::check_flag(control_options$spike, null.ok = TRUE)
       )
       if (isTRUE(control_options$spike)) {
-        stop("Option 'control':'spike' should be a file path, evaluate to ",
-             "FALSE, or be left blank")
+        stop(
+          "Option 'control':'spike' should be a file path, evaluate to ",
+          "FALSE, or be left blank"
+        )
       }
       if (is.character(control_options$spike)) {
         options(optimotu.pipeline.spike_file = control_options$spike)
@@ -851,8 +900,10 @@ parse_control_options <- function(pipeline_options) {
         checkmate::check_flag(control_options$positive, null.ok = TRUE)
       )
       if (isTRUE(control_options$positive)) {
-        stop("Option 'control':'positive' should be a file path, evaluate ",
-             "to FALSE, or be left blank")
+        stop(
+          "Option 'control':'positive' should be a file path, evaluate ",
+          "to FALSE, or be left blank"
+        )
       }
       if (is.character(control_options$positive)) {
         options(optimotu.pipeline.pos_control_file = control_options$positive)
@@ -902,9 +953,11 @@ parse_taxonomy_options <- function(pipeline_options) {
     classifier_names
   )
   if (length(selected_classifier) > 1) {
-    stop("Only one of options 'taxonomy:protax', 'taxonomy:sintax',",
-         " 'taxonomy:bayesant' and 'taxonomy:epa' may be given.",
-         "(file: pipeline_options.yaml)")
+    stop(
+      "Only one of options 'taxonomy:protax', 'taxonomy:sintax',",
+      " 'taxonomy:bayesant' and 'taxonomy:epa' may be given.",
+      "(file: pipeline_options.yaml)"
+    )
   }
   if (length(selected_classifier) == 0) {
     stop(
@@ -1000,9 +1053,11 @@ parse_protax_options <- function(protax_options) {
   if ("aligned" %in% names(protax_options)) {
     checkmate::assert_flag(protax_options$aligned)
     if (protax_options$aligned && !do_model_align()) {
-      stop("Aligned Protax (taxonomy: protax: aligned: true) requires model",
-           "alignment to be enabled (amplicon_model: model_align: true).\n",
-           "(file: pipeline_options.yaml)")
+      stop(
+        "Aligned Protax (taxonomy: protax: aligned: true) requires model",
+        "alignment to be enabled (amplicon_model: model_align: true).\n",
+        "(file: pipeline_options.yaml)"
+      )
     }
     options(optimotu.pipeline.protax_aligned = protax_options$aligned)
   } else {
@@ -1186,7 +1241,9 @@ epa_outgroup <- function() {
 parse_outgroup_options <- function(pipeline_options) {
   # if outgroup_reference is not set at all, then we defer to the setting
   # during parsing of taxonomic ranks
-  if (is.null(pipeline_options$outgroup_reference)) return()
+  if (is.null(pipeline_options$outgroup_reference)) {
+    return()
+  }
   # if outgroup_reference is explicitly FALSE, then we set the option.
   # this may lead to cases where there is a defined ingroup, but no outgroup
   # reference.
@@ -1246,7 +1303,6 @@ outgroup_taxonomy <- function() {
 parse_cluster_options <- function(pipeline_options) {
   checkmate::assert_list(pipeline_options$clustering, null.ok = TRUE)
   if (is.null(pipeline_options$clustering)) {
-
     checkmate::assert_string(
       pipeline_options$cluster_thresholds,
       null.ok = TRUE
@@ -1257,12 +1313,13 @@ parse_cluster_options <- function(pipeline_options) {
         access = "r"
       )
       options(
-        optimotu.pipeline.clustering_thresholds =
-          pipeline_options$cluster_thresholds
+        optimotu.pipeline.clustering_thresholds = pipeline_options$cluster_thresholds
       )
     } else {
-      message("No clustering options given in 'pipeline_options.yaml'\n",
-              "Using defaults.")
+      message(
+        "No clustering options given in 'pipeline_options.yaml'\n",
+        "Using defaults."
+      )
     }
   } else {
     clustering <- unnest_yaml_list(pipeline_options$clustering)
@@ -1270,7 +1327,7 @@ parse_cluster_options <- function(pipeline_options) {
       names(clustering),
       subset.of = c("thresholds", "measure", "dist_config", "force_denovo")
     )
-    checkmate::assert_file_exists(clustering$thresholds, "r")
+    parse_cluster_thresholds(clustering$thresholds)
     checkmate::assert_string(clustering$measure, null.ok = TRUE)
     if (!is.null(clustering$measure)) {
       checkmate::assert_subset(
@@ -1279,8 +1336,10 @@ parse_cluster_options <- function(pipeline_options) {
       )
     }
     dist_config <- parse_dist_config(clustering$dist_config)
-    if (!is.null(clustering$force_denovo) &&
-          !isFALSE(clustering$force_denovo)) {
+    if (
+      !is.null(clustering$force_denovo) &&
+        !isFALSE(clustering$force_denovo)
+    ) {
       checkmate::assert_character(clustering$force_denovo, unique = TRUE)
       checkmate::assert_subset(clustering$force_denovo, unknown_ranks())
     } else {
@@ -1306,7 +1365,7 @@ parse_cluster_thresholds <- function(thresh_opts) {
     )
     return()
   }
-  if (names(thresh_opts) == "file") {
+  if (identical(names(thresh_opts), "file", )) {
     thresh_opts <- thresh_opts$file
   }
   if (is.character(thresh_opts)) {
@@ -1547,8 +1606,10 @@ do_guilds <- function() {
 #' @rdname parse_pipeline_options
 #' @keywords internal
 parse_otu_table_options <- function(pipeline_options) {
-  if (!is.null(pipeline_options$wide_table) &&
-        !is.null(pipeline_options$dense_table)) {
+  if (
+    !is.null(pipeline_options$wide_table) &&
+      !is.null(pipeline_options$dense_table)
+  ) {
     stop(
       "Only one of 'wide_table' and 'dense_table' may be set in ",
       "'pipeline_options.yaml'.\n",
@@ -1612,8 +1673,10 @@ parse_rarefy_options <- function(pipeline_options) {
         "(file: pipeline_options.yaml)"
       )
     } else {
-      warning("Empty rarefy options given in 'pipeline_options.yaml'\n",
-              "No rarefaction will be performed.")
+      warning(
+        "Empty rarefy options given in 'pipeline_options.yaml'\n",
+        "No rarefaction will be performed."
+      )
     }
   }
 }
