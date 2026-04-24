@@ -6,6 +6,9 @@
   with explicit failure when parsing is not possible.
 * Fixed parsing of options for BayesANT taxonomic classifier.
 * Added options for optimizing cluster thresholds in `pipeline_options.yaml`.
+* Exported threshold optimization option accessors
+  (`do_optimize_thresholds*()` and `optimize_thresholds_file()`), and aligned
+  parsing so optimization is enabled when a thresholds file is configured.
 * Added new formats "qs", "qs2", "qdata" for `write_and_return_file.default()`.
   These, as well as "rds", will be autodetected from the file extension if
   possible. This might break some old usages where a file was saved in RDS

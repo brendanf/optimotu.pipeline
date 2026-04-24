@@ -1448,8 +1448,7 @@ parse_cluster_thresholds <- function(thresh_opts) {
     }
     options(
       optimotu.pipeline.clustering_thresholds = thresh_opts$file,
-      optimotu.pipeline.do_optimize_thresholds = thresh_opts$train_data %in%
-        c("self", "reference"),
+      optimotu.pipeline.do_optimize_thresholds = TRUE,
       optimotu.pipeline.do_optimize_thresholds_self = thresh_opts$train_data ==
         "self",
       optimotu.pipeline.do_optimize_thresholds_reference = thresh_opts$train_data ==
@@ -1502,31 +1501,31 @@ cluster_thresholds <- function() {
 }
 
 #' @rdname pipeline_options
-#' @keywords internal
+#' @export
 do_optimize_thresholds <- function() {
   getOption("optimotu.pipeline.do_optimize_thresholds", FALSE)
 }
 
 #' @rdname pipeline_options
-#' @keywords internal
+#' @export
 do_optimize_thresholds_self <- function() {
   getOption("optimotu.pipeline.do_optimize_thresholds_self", FALSE)
 }
 
 #' @rdname pipeline_options
-#' @keywords internal
+#' @export
 do_optimize_thresholds_reference <- function() {
   getOption("optimotu.pipeline.do_optimize_thresholds_reference", FALSE)
 }
 
 #' @rdname pipeline_options
-#' @keywords internal
+#' @export
 do_optimize_thresholds_file <- function() {
   getOption("optimotu.pipeline.do_optimize_thresholds_file", FALSE)
 }
 
 #' @rdname pipeline_options
-#' @keywords internal
+#' @export
 optimize_thresholds_file <- function() {
   getOption("optimotu.pipeline.optimize_thresholds_file", NULL)
 }

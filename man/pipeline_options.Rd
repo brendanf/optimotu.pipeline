@@ -267,4 +267,3 @@ did_pipeline_options()
 When used in a targets plan, these should always be
 pre-evaluated with \verb{!!} or \verb{!!!} to ensure proper dependency tracking.
 }
-\keyword{internal}
