@@ -22,13 +22,13 @@ detect_numts <- function(a2m, id_is_int = FALSE) {
 
   a2m_frameshifts <- gregexpr("-+|[actg]+", a2m) |>
     purrr::map_dfr(
-      ~data.frame(pos = .x, len = attr(.x, "match.length")),
+      ~ data.frame(pos = .x, len = attr(.x, "match.length")),
       .id = "i"
     ) |>
     dplyr::filter(pos != 1L, pos + len != 659L, len %% 3 != 0)
   a2m_stops <- gregexpr("TA[GA]", a2m) |>
     purrr::map_dfr(
-      ~data.frame(pos = .x, len = attr(.x, "match.length")),
+      ~ data.frame(pos = .x, len = attr(.x, "match.length")),
       .id = "i"
     ) |>
     dplyr::filter(pos %% 3 == 2, pos > 0)
@@ -47,7 +47,7 @@ detect_numts <- function(a2m, id_is_int = FALSE) {
       pos,
       len
     )
-  } else (
+  } else {
     dplyr::select(numts, seq_id, numt_indicator, pos, len)
-  )
+  }
 }

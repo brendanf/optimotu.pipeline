@@ -16,8 +16,8 @@ generate_krona_data <- function(otu_taxonomy) {
   # avoid R CMD check NOTE: no visible binding for global variable
   genus <- species <- kingdom <- phylum_parent <- phylum <- class_parent <-
     order_parent <- family_parent <- family <- genus_parent <- kingdom_taxon <-
-    species_parent <- taxon <- parent <- phylum_unknown <- species_unknown <-
-    nread <- nsample <- nocc <- notu <- NULL
+      species_parent <- taxon <- parent <- phylum_unknown <- species_unknown <-
+        nread <- nsample <- nocc <- notu <- NULL
 
   if (nrow(otu_taxonomy) == 0) {
     tibble::tibble(
@@ -82,9 +82,9 @@ generate_krona_data <- function(otu_taxonomy) {
         dplyr::across(
           phylum_unknown:species_unknown,
           list(
-            fread = ~sum(nread * .)/sum(nread),
-            fotu = ~sum(.)/dplyr::n(),
-            focc = ~sum(nsample*.)/(sum(nsample))
+            fread = ~ sum(nread * .) / sum(nread),
+            fotu = ~ sum(.) / dplyr::n(),
+            focc = ~ sum(nsample * .) / (sum(nsample))
           ),
           .names = "{.col}_{.fn}"
         ),
@@ -121,9 +121,9 @@ generate_krona_data <- function(otu_taxonomy) {
       ) |>
       dplyr::group_by(rank) |>
       dplyr::mutate(
-        fread = nread/sum(nread),
-        focc = nocc/sum(nocc),
-        fotu = notu/sum(notu)
+        fread = nread / sum(nread),
+        focc = nocc / sum(nocc),
+        fotu = notu / sum(notu)
       ) |>
       dplyr::rename(parent_taxonomy = parent)
   }
@@ -140,7 +140,7 @@ generate_krona_data <- function(otu_taxonomy) {
 xml_format <- function(data_format) {
   lapply(data_format, vapply, sprintf, "", fmt = "<val>{%s}</val>") |>
     vapply(paste, "", collapse = ",") |>
-    purrr::imap_chr(sprintf, fmt="<%2$s>%1$s</%2$s>") |>
+    purrr::imap_chr(sprintf, fmt = "<%2$s>%1$s</%2$s>") |>
     paste(collapse = "\n")
 }
 
@@ -160,21 +160,23 @@ xml_format <- function(data_format) {
 #' @return (`character`) the name of the file written
 #' @export
 krona_xml_nodes <- function(
-    data,
-    .rank,
-    maxrank = rank2factor(tip_rank()),
-    outfile,
-    pre = NULL,
-    post = NULL,
-    taxonomy = paste(known_taxa(), collapse = ","),
-    node_data_format = NULL,
-    node_xml_format = xml_format(node_data_format),
-    ...
+  data,
+  .rank,
+  maxrank = rank2factor(tip_rank()),
+  outfile,
+  pre = NULL,
+  post = NULL,
+  taxonomy = paste(known_taxa(), collapse = ","),
+  node_data_format = NULL,
+  node_xml_format = xml_format(node_data_format),
+  ...
 ) {
   # avoid R CMD check NOTE: no visible binding for global variable
   parent_taxonomy <- taxon <- NULL
 
-  if (is.character(.rank)) .rank <- rank2factor(.rank)
+  if (is.character(.rank)) {
+    .rank <- rank2factor(.rank)
+  }
   con <- outfile
   if (!methods::is(con, "connection")) {
     con <- file(con, open = "w")
@@ -187,7 +189,11 @@ krona_xml_nodes <- function(
   xml <- dplyr::filter(my_data, rank == .rank) |>
     dplyr::transmute(
       taxon = taxon,
-      taxonomy = ifelse(is.na(parent_taxonomy), taxon, paste(parent_taxonomy, taxon, sep = ",")),
+      taxonomy = ifelse(
+        is.na(parent_taxonomy),
+        taxon,
+        paste(parent_taxonomy, taxon, sep = ",")
+      ),
       pre = glue::glue(
         '<node name="{taxon}">',
         node_xml_format,
@@ -212,6 +218,8 @@ krona_xml_nodes <- function(
       node_xml_format = node_xml_format
     )
   }
-  if (!is.null(post)) writeLines(post, con)
+  if (!is.null(post)) {
+    writeLines(post, con)
+  }
   outfile
 }

@@ -2,7 +2,7 @@ test_splits <- c(1, 4, 7)
 
 test_that("fastq_split works fastq->fastq", {
   for (n in test_splits) {
-    splitfiles <- replicate(n, withr::local_tempfile(fileext=".fastq"))
+    splitfiles <- replicate(n, withr::local_tempfile(fileext = ".fastq"))
     expect_no_error(
       splits <- fastq_split(raw2_fastq, splitfiles)
     )
@@ -17,7 +17,7 @@ test_that("fastq_split works fastq->fastq", {
         )
       )
     }
-    recombine_file <- withr::local_tempfile(fileext=".fastq")
+    recombine_file <- withr::local_tempfile(fileext = ".fastq")
     expect_no_error(
       recombine <- fastq_combine(splitfiles, recombine_file)
     )
@@ -26,17 +26,15 @@ test_that("fastq_split works fastq->fastq", {
     expect_true(file.size(recombine_file) > 0)
     expect_true(
       all(
-        test_qsdss2 ==
-          Biostrings::readQualityScaledDNAStringSet(recombine_file)
+        test_qsdss2 == Biostrings::readQualityScaledDNAStringSet(recombine_file)
       )
     )
-
   }
 })
 
 test_that("fastq_split and combine works fastq.gz->fastq->fastq.gz ", {
   for (n in 1:10) {
-    splitfiles <- replicate(n, withr::local_tempfile(fileext=".fastq"))
+    splitfiles <- replicate(n, withr::local_tempfile(fileext = ".fastq"))
     expect_no_error(
       splits <- fastq_split(raw2_fastq_gz, splitfiles)
     )
@@ -51,7 +49,7 @@ test_that("fastq_split and combine works fastq.gz->fastq->fastq.gz ", {
         )
       )
     }
-    recombine_file <- withr::local_tempfile(fileext=".fastq.gz")
+    recombine_file <- withr::local_tempfile(fileext = ".fastq.gz")
     expect_no_error(
       recombine <- fastq_combine(splitfiles, recombine_file, compress = TRUE)
     )
@@ -61,8 +59,7 @@ test_that("fastq_split and combine works fastq.gz->fastq->fastq.gz ", {
     expect_true(file.size(recombine_file) > 0)
     expect_true(
       all(
-        test_qsdss2 ==
-          Biostrings::readQualityScaledDNAStringSet(recombine_file)
+        test_qsdss2 == Biostrings::readQualityScaledDNAStringSet(recombine_file)
       )
     )
   }
@@ -70,9 +67,9 @@ test_that("fastq_split and combine works fastq.gz->fastq->fastq.gz ", {
 
 test_that("fastq_split and combine works fastq.gz->fastq.gz->fastq.gz", {
   for (n in test_splits) {
-    splitfiles <- replicate(n, withr::local_tempfile(fileext=".fastq.gz"))
+    splitfiles <- replicate(n, withr::local_tempfile(fileext = ".fastq.gz"))
     expect_no_error(
-      splits <- fastq_split(raw2_fastq_gz, splitfiles, compress=TRUE)
+      splits <- fastq_split(raw2_fastq_gz, splitfiles, compress = TRUE)
     )
     expect_equal(splitfiles, splits)
     for (i in 1:n) {
@@ -86,9 +83,9 @@ test_that("fastq_split and combine works fastq.gz->fastq.gz->fastq.gz", {
         )
       )
     }
-    recombine_file <- withr::local_tempfile(fileext=".fastq.gz")
+    recombine_file <- withr::local_tempfile(fileext = ".fastq.gz")
     expect_no_error(
-      recombine <- fastq_combine(splitfiles, recombine_file, compress=TRUE)
+      recombine <- fastq_combine(splitfiles, recombine_file, compress = TRUE)
     )
     expect_identical(recombine, recombine_file)
     expect_true(file.exists(recombine_file))
@@ -96,8 +93,7 @@ test_that("fastq_split and combine works fastq.gz->fastq.gz->fastq.gz", {
     expect_true(file.size(recombine_file) > 0)
     expect_true(
       all(
-        test_qsdss2 ==
-          Biostrings::readQualityScaledDNAStringSet(recombine_file)
+        test_qsdss2 == Biostrings::readQualityScaledDNAStringSet(recombine_file)
       )
     )
   }
@@ -105,9 +101,9 @@ test_that("fastq_split and combine works fastq.gz->fastq.gz->fastq.gz", {
 
 test_that("fastq_split works fastq->fastq.gz->fastq", {
   for (n in test_splits) {
-    splitfiles <- replicate(n, withr::local_tempfile(fileext=".fastq.gz"))
+    splitfiles <- replicate(n, withr::local_tempfile(fileext = ".fastq.gz"))
     expect_no_error(
-      splits <- fastq_split(raw2_fastq, splitfiles, compress=TRUE)
+      splits <- fastq_split(raw2_fastq, splitfiles, compress = TRUE)
     )
     expect_equal(splitfiles, splits)
     for (i in 1:n) {
@@ -121,7 +117,7 @@ test_that("fastq_split works fastq->fastq.gz->fastq", {
         )
       )
     }
-    recombine_file <- withr::local_tempfile(fileext=".fastq")
+    recombine_file <- withr::local_tempfile(fileext = ".fastq")
     expect_no_error(
       recombine <- fastq_combine(splitfiles, recombine_file)
     )
@@ -130,8 +126,7 @@ test_that("fastq_split works fastq->fastq.gz->fastq", {
     expect_true(file.size(recombine_file) > 0)
     expect_true(
       all(
-        test_qsdss2 ==
-          Biostrings::readQualityScaledDNAStringSet(recombine_file)
+        test_qsdss2 == Biostrings::readQualityScaledDNAStringSet(recombine_file)
       )
     )
   }
@@ -139,7 +134,7 @@ test_that("fastq_split works fastq->fastq.gz->fastq", {
 
 test_that("fasta_split and combine works fasta->fasta->fasta", {
   for (n in test_splits) {
-    splitfiles <- replicate(n, withr::local_tempfile(fileext=".fasta"))
+    splitfiles <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
     expect_no_error(
       splits <- fasta_split(raw2_fasta, splitfiles)
     )
@@ -154,7 +149,7 @@ test_that("fasta_split and combine works fasta->fasta->fasta", {
         )
       )
     }
-    recombine_file <- withr::local_tempfile(fileext=".fasta")
+    recombine_file <- withr::local_tempfile(fileext = ".fasta")
     expect_no_error(
       recombine <- fasta_combine(splitfiles, recombine_file)
     )
@@ -163,8 +158,7 @@ test_that("fasta_split and combine works fasta->fasta->fasta", {
     expect_true(file.size(recombine_file) > 0)
     expect_true(
       all(
-        test_dss2 ==
-          Biostrings::readDNAStringSet(recombine_file)
+        test_dss2 == Biostrings::readDNAStringSet(recombine_file)
       )
     )
   }
@@ -172,7 +166,7 @@ test_that("fasta_split and combine works fasta->fasta->fasta", {
 
 test_that("fasta_split works fasta.gz->fasta->fasta.gz", {
   for (n in test_splits) {
-    splitfiles <- replicate(n, withr::local_tempfile(fileext=".fasta"))
+    splitfiles <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
     expect_no_error(
       splits <- fasta_split(raw2_fasta_gz, splitfiles)
     )
@@ -187,9 +181,9 @@ test_that("fasta_split works fasta.gz->fasta->fasta.gz", {
         )
       )
     }
-    recombine_file <- withr::local_tempfile(fileext=".fasta.gz")
+    recombine_file <- withr::local_tempfile(fileext = ".fasta.gz")
     expect_no_error(
-      recombine <- fasta_combine(splitfiles, recombine_file, compress=TRUE)
+      recombine <- fasta_combine(splitfiles, recombine_file, compress = TRUE)
     )
     expect_identical(recombine, recombine_file)
     expect_true(file.exists(recombine_file))
@@ -197,8 +191,7 @@ test_that("fasta_split works fasta.gz->fasta->fasta.gz", {
     expect_true(file.size(recombine_file) > 0)
     expect_true(
       all(
-        test_dss2 ==
-          Biostrings::readDNAStringSet(recombine_file)
+        test_dss2 == Biostrings::readDNAStringSet(recombine_file)
       )
     )
   }
@@ -206,9 +199,9 @@ test_that("fasta_split works fasta.gz->fasta->fasta.gz", {
 
 test_that("fasta_split works fasta.gz->fasta.gz->fasta.gz", {
   for (n in test_splits) {
-    splitfiles <- replicate(n, withr::local_tempfile(fileext=".fasta.gz"))
+    splitfiles <- replicate(n, withr::local_tempfile(fileext = ".fasta.gz"))
     expect_no_error(
-      splits <- fasta_split(raw2_fasta_gz, splitfiles, compress=TRUE)
+      splits <- fasta_split(raw2_fasta_gz, splitfiles, compress = TRUE)
     )
     expect_equal(splitfiles, splits)
     for (i in 1:n) {
@@ -222,9 +215,9 @@ test_that("fasta_split works fasta.gz->fasta.gz->fasta.gz", {
         )
       )
     }
-    recombine_file <- withr::local_tempfile(fileext=".fasta.gz")
+    recombine_file <- withr::local_tempfile(fileext = ".fasta.gz")
     expect_no_error(
-      recombine <- fasta_combine(splitfiles, recombine_file, compress=TRUE)
+      recombine <- fasta_combine(splitfiles, recombine_file, compress = TRUE)
     )
     expect_identical(recombine, recombine_file)
     expect_true(file.exists(recombine_file))
@@ -232,8 +225,7 @@ test_that("fasta_split works fasta.gz->fasta.gz->fasta.gz", {
     expect_true(file.size(recombine_file) > 0)
     expect_true(
       all(
-        test_dss2 ==
-          Biostrings::readDNAStringSet(recombine_file)
+        test_dss2 == Biostrings::readDNAStringSet(recombine_file)
       )
     )
   }
@@ -241,9 +233,9 @@ test_that("fasta_split works fasta.gz->fasta.gz->fasta.gz", {
 
 test_that("fasta_split works fasta->fasta.gz->fasta", {
   for (n in test_splits) {
-    splitfiles <- replicate(n, withr::local_tempfile(fileext=".fasta.gz"))
+    splitfiles <- replicate(n, withr::local_tempfile(fileext = ".fasta.gz"))
     expect_no_error(
-      splits <- fasta_split(raw2_fasta, splitfiles, compress=TRUE)
+      splits <- fasta_split(raw2_fasta, splitfiles, compress = TRUE)
     )
     expect_equal(splitfiles, splits)
     for (i in 1:n) {
@@ -257,7 +249,7 @@ test_that("fasta_split works fasta->fasta.gz->fasta", {
         )
       )
     }
-    recombine_file <- withr::local_tempfile(fileext=".fasta")
+    recombine_file <- withr::local_tempfile(fileext = ".fasta")
     expect_no_error(
       recombine <- fasta_combine(splitfiles, recombine_file)
     )
@@ -266,8 +258,7 @@ test_that("fasta_split works fasta->fasta.gz->fasta", {
     expect_true(file.size(recombine_file) > 0)
     expect_true(
       all(
-        test_dss2 ==
-          Biostrings::readDNAStringSet(recombine_file)
+        test_dss2 == Biostrings::readDNAStringSet(recombine_file)
       )
     )
   }

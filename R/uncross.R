@@ -17,14 +17,17 @@ remove_tag_jumps <- function(seqtable, f, p, id_col = "seq") {
   nread <- NULL
 
   checkmate::assert_data_frame(seqtable)
-  checkmate::assert_names(names(seqtable), must.include = c(id_col, "sample", "nread"))
+  checkmate::assert_names(
+    names(seqtable),
+    must.include = c(id_col, "sample", "nread")
+  )
   ## Load ASV table
   cat("...Number of ASVs: ", dplyr::n_distinct(seqtable[[id_col]]), "\n")
   n <- dplyr::n_distinct(seqtable$sample)
   cat("...Number of samples: ", n, "\n")
 
   ## UNCROSS score (with original parameter - take a root from the exp in denominator, to make curves more steep)
-  uncross_score <- function(x, N, n, f = 0.01, tmin = 0.1, p = 1){
+  uncross_score <- function(x, N, n, f = 0.01, tmin = 0.1, p = 1) {
     # x = ASV abundance in a sample
     # N = total ASV abundance
     # n = number of samples
@@ -32,17 +35,18 @@ remove_tag_jumps <- function(seqtable, f, p, id_col = "seq") {
     # tmin = min score to be considered as cross-talk
     # p = power to rise the exponent (default, 1; use 1/2 or 1/3 to make cureves more stepp)
 
-    z <- f * N / n               # Expected treshold
-    sc <- 2 / (1 + exp(x/z)^p)   # t-score
+    z <- f * N / n # Expected treshold
+    sc <- 2 / (1 + exp(x / z)^p) # t-score
     data.frame(uncross = sc, is_tag_jump = sc >= tmin)
   }
 
   ## Estimate total abundance of sequence per plate
   out <- seqtable |>
-    dplyr::mutate(total = sum(nread, na.rm = TRUE), .by = dplyr::all_of(id_col)) |>
+    dplyr::mutate(
+      total = sum(nread, na.rm = TRUE),
+      .by = dplyr::all_of(id_col)
+    ) |>
     dplyr::select(-dplyr::all_of(id_col))
-
-
 
   ## Esimate UNCROSS score
   out <- cbind(

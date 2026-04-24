@@ -1,5 +1,3 @@
-
-
 #### targets metaprogramming ####
 
 #' Get all the target names defined in a plan
@@ -23,8 +21,12 @@ get_target_names <- function(plan) {
 #' to extract variants of
 #' @return a `list` of `symbol` giving the names of the target variants
 tar_map_symbols <- function(plan, target_name = NULL) {
-  if (!is.null(target_name)) plan <- plan[[target_name]]
-  if (length(plan) == 0) return(list())
+  if (!is.null(target_name)) {
+    plan <- plan[[target_name]]
+  }
+  if (length(plan) == 0) {
+    return(list())
+  }
   rlang::syms(tarchetypes::tar_select_names(plan, everything()))
 }
 
@@ -80,7 +82,10 @@ tar_substitute.tar_target <- function(target, values) {
     checkmate::check_list(values, names = "unique"),
     checkmate::check_data_frame(values)
   )
-  command <- do.call(substitute, list(expr = target$command$expr[[1]], env = values))
+  command <- do.call(
+    substitute,
+    list(expr = target$command$expr[[1]], env = values)
+  )
   pattern <- if (is.null(target$settings$pattern)) {
     NULL
   } else {

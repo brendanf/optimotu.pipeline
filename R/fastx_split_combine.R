@@ -11,16 +11,22 @@ fastx_split <- function(infile, n, outroot = tempfile(), compress = FALSE) {
   checkmate::assert_string(infile)
   checkmate::assert_file(infile, access = "r")
   checkmate::assert_int(n, lower = 1, upper = 64)
-  if (!dir.exists(outroot)) dir.create(outroot, showWarnings = FALSE, recursive = TRUE)
+  if (!dir.exists(outroot)) {
+    dir.create(outroot, showWarnings = FALSE, recursive = TRUE)
+  }
   checkmate::assert_flag(compress)
 
   is_fastq <- grepl(fastq_regex, infile)
   is_gz <- endsWith(infile, ".gz")
 
-  if (n == 1 && is_gz == compress) return(infile)
+  if (n == 1 && is_gz == compress) {
+    return(infile)
+  }
 
   suffix <- if (is_fastq) ".fastq" else ".fasta"
-  if (compress) suffix <- paste0(suffix, ".gz")
+  if (compress) {
+    suffix <- paste0(suffix, ".gz")
+  }
 
   outfiles <- replicate(n, tempfile(fileext = suffix, tmpdir = outroot))
   if (is_fastq) {
@@ -47,7 +53,7 @@ fastx_combine <- function(infiles, outfile) {
   stopifnot(all(is_fastq) | all(!is_fastq))
   is_fastq <- all(is_fastq)
 
-  is_gz <-endsWith(infiles, ".gz")
+  is_gz <- endsWith(infiles, ".gz")
   stopifnot(all(is_gz) | all(!is_gz))
   is_gz <- all(is_gz)
 

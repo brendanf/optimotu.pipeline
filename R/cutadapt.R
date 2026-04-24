@@ -47,15 +47,18 @@ cutadapt_paired_option_names <- c(
 #' @return an object of class `cutadapt_paired_options`
 #' @export
 cutadapt_paired_options <- function(
-    max_err = 0.2,
-    min_overlap = 10L,
-    action = "retain",
-    discard_untrimmed = TRUE,
-    max_n = 0L,
-    max_ee = NULL,
-    min_length = NULL, max_length = NULL,
-    truncQ_R1 = 2, truncQ_R2 = 2,
-    cut_R1 = NULL, cut_R2 = NULL
+  max_err = 0.2,
+  min_overlap = 10L,
+  action = "retain",
+  discard_untrimmed = TRUE,
+  max_n = 0L,
+  max_ee = NULL,
+  min_length = NULL,
+  max_length = NULL,
+  truncQ_R1 = 2,
+  truncQ_R2 = 2,
+  cut_R1 = NULL,
+  cut_R2 = NULL
 ) {
   checkmate::assert_number(max_err, lower = 0, null.ok = TRUE)
   checkmate::assert_count(min_overlap, positive = TRUE, null.ok = TRUE)
@@ -68,8 +71,18 @@ cutadapt_paired_options <- function(
   checkmate::assert_count(max_n, null.ok = TRUE)
   checkmate::assert_number(max_ee, lower = 0, finite = TRUE, null.ok = TRUE)
   checkmate::assert_count(min_length, positive = TRUE, null.ok = TRUE)
-  checkmate::assert_integerish(truncQ_R1, min.len = 1, max.len = 2, null.ok = TRUE)
-  checkmate::assert_integerish(truncQ_R2, min.len = 1, max.len = 2, null.ok = TRUE)
+  checkmate::assert_integerish(
+    truncQ_R1,
+    min.len = 1,
+    max.len = 2,
+    null.ok = TRUE
+  )
+  checkmate::assert_integerish(
+    truncQ_R2,
+    min.len = 1,
+    max.len = 2,
+    null.ok = TRUE
+  )
   checkmate::assert_integerish(cut_R1, min.len = 1, max.len = 2, null.ok = TRUE)
   checkmate::assert_integerish(cut_R2, min.len = 1, max.len = 2, null.ok = TRUE)
   structure(
@@ -107,9 +120,12 @@ cutadapt_paired_options <- function(
 #' @return a character vector of the trimmed output files
 #' @export
 cutadapt_paired_filter_trim <- function(
-  file_R1, file_R2,
-  primer_R1, primer_R2,
-  trim_R1, trim_R2,
+  file_R1,
+  file_R2,
+  primer_R1,
+  primer_R2,
+  trim_R1,
+  trim_R2,
   options = cutadapt_paired_options(),
   ncpu = local_cpus(),
   cutadapt = find_cutadapt(),
@@ -117,6 +133,7 @@ cutadapt_paired_filter_trim <- function(
   ...
 ) {
   checkmate::assert_class(options, "cutadapt_paired_options")
+  # fmt: skip
   args <- c(
     "-g", primer_R1,
     "-G", primer_R2,
@@ -184,7 +201,9 @@ cutadapt_paired_filter_trim <- function(
     args = args,
     error_on_status = TRUE
   )
-  if (!is.null(logfile)) writeLines(out$stdout, logfile)
+  if (!is.null(logfile)) {
+    writeLines(out$stdout, logfile)
+  }
   c(trim_R1, trim_R2)
 }
 
@@ -222,15 +241,16 @@ cutadapt_option_names <- c(
 #' @return an object of class `cutadapt_options`
 #' @export
 cutadapt_options <- function(
-    max_err = 0.2,
-    min_overlap = 10L,
-    action = "retain",
-    discard_untrimmed = TRUE,
-    max_n = 0L,
-    max_ee = NULL,
-    min_length = NULL, max_length = NULL,
-    truncQ = NULL,
-    cut = NULL
+  max_err = 0.2,
+  min_overlap = 10L,
+  action = "retain",
+  discard_untrimmed = TRUE,
+  max_n = 0L,
+  max_ee = NULL,
+  min_length = NULL,
+  max_length = NULL,
+  truncQ = NULL,
+  cut = NULL
 ) {
   checkmate::assert_number(max_err, lower = 0, null.ok = TRUE)
   checkmate::assert_count(min_overlap, positive = TRUE, null.ok = TRUE)
@@ -285,12 +305,14 @@ update.cutadapt_paired_options <- function(object, new_options, ...) {
     new_options[intersect(names(new_options), cutadapt_paired_option_names)]
   if (is.data.frame(new_options) && ncol(new_options) > 0) {
     new_options <- unique(new_options)
-    if (nrow(new_options) > 1L)
+    if (nrow(new_options) > 1L) {
       stop(
         "'new_options' must be the same for all samples in a batch. \n",
-        "Current batch has ", nrow(new_options),
+        "Current batch has ",
+        nrow(new_options),
         "unique combinations of options."
       )
+    }
   }
   new_options <- lapply(unclass(new_options), unlist)
   if (length(new_options) > 0) {
@@ -313,12 +335,14 @@ update.cutadapt_options <- function(object, new_options, ...) {
     new_options[intersect(names(new_options), cutadapt_option_names)]
   if (is.data.frame(new_options) && ncol(new_options) > 0) {
     new_options <- unique(new_options)
-    if (nrow(new_options) > 1L)
+    if (nrow(new_options) > 1L) {
       stop(
         "'new_options' must be the same for all samples in a batch. \n",
-        "Current batch has ", nrow(new_options),
+        "Current batch has ",
+        nrow(new_options),
         "unique combinations of options."
       )
+    }
   }
   new_options <- lapply(unclass(new_options), unlist)
   if (length(new_options) > 0) {
@@ -352,6 +376,7 @@ cutadapt_filter_trim <- function(
   logfile = NULL,
   ...
 ) {
+  # fmt: skip
   args <- c(
     "-g", primer,
     "-o", trim
@@ -396,7 +421,9 @@ cutadapt_filter_trim <- function(
     args = args,
     error_on_status = TRUE
   )
-  if (!is.null(logfile)) writeLines(out$stdout, logfile)
+  if (!is.null(logfile)) {
+    writeLines(out$stdout, logfile)
+  }
   trim
 }
 
@@ -437,14 +464,14 @@ trim_primer <- function(seqs, primer, ...) {
 #' @return a `character` vector with the path to the trimmed output files
 #' @export
 trim_raw_pairs <- function(
-    pairs_meta,
-    seqrun,
-    orient,
-    trim_options,
-    primer_R1,
-    primer_R2,
-    ncpu = local_cpus(),
-    ...
+  pairs_meta,
+  seqrun,
+  orient,
+  trim_options,
+  primer_R1,
+  primer_R2,
+  ncpu = local_cpus(),
+  ...
 ) {
   logfile_name <- sprintf("logs/trim_%s_%s.log", seqrun, orient)
   logfile <- withr::local_connection(file(logfile_name, "w"))

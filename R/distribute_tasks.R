@@ -1,5 +1,5 @@
 #' Distribute tasks to bins
-#' 
+#'
 #' This function distributes tasks to bins using a greedy algorithm.
 #' Each task is assigned to the first bin that has enough space;
 #' or if no such bin exists, a new bin is created. Tasks with weight

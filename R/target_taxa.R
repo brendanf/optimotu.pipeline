@@ -9,13 +9,21 @@
 #' @return `data.frame` with columns `seq_id`, `asv_seq_id`, `otu_taxon`, `rank`,
 #' `protax_taxon`, and `protax_prob`.
 #' @export
-find_target_taxa <- function(target_taxa, asv_all_tax_prob, asv_taxonomy, otu_taxonomy) {
+find_target_taxa <- function(
+  target_taxa,
+  asv_all_tax_prob,
+  asv_taxonomy,
+  otu_taxonomy
+) {
   # avoid R CMD check NOTE: no visible binding for global variable
   seq_id <- otu_taxon <- taxon <- prob <- protax_taxon <- asv_seq_id <- NULL
 
   checkmate::assert_character(target_taxa)
   checkmate::assert_data_frame(asv_all_tax_prob)
-  checkmate::assert_subset(c("seq_id", "rank", "taxon", "prob"), colnames(asv_all_tax_prob))
+  checkmate::assert_subset(
+    c("seq_id", "rank", "taxon", "prob"),
+    colnames(asv_all_tax_prob)
+  )
   checkmate::assert_data_frame(asv_taxonomy)
   checkmate::assert_subset(c("seq_id", "rank", "taxon"), colnames(asv_taxonomy))
   checkmate::assert_data_frame(otu_taxonomy)

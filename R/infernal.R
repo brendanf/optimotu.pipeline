@@ -20,12 +20,23 @@ read_sfile <- function(file) {
       \(x) {
         paste(x$text, collapse = "\n") |>
           readr::read_fwf(
-            col_positions =  stringr::str_locate_all(x$text[1], "-+")[[1]] |>
+            col_positions = stringr::str_locate_all(x$text[1], "-+")[[1]] |>
               tibble::as_tibble() |>
               tibble::add_column(
-                col_names = c("idx", "seq_id", "match_len", "cm_from", "cm_to",
-                              "trunc", "bit_sc", "avg_pp", "time_band_calc",
-                              "time_alignment", "time_total", "mem_mb")
+                col_names = c(
+                  "idx",
+                  "seq_id",
+                  "match_len",
+                  "cm_from",
+                  "cm_to",
+                  "trunc",
+                  "bit_sc",
+                  "avg_pp",
+                  "time_band_calc",
+                  "time_alignment",
+                  "time_total",
+                  "mem_mb"
+                )
               ) |>
               do.call(readr::fwf_positions, args = _),
             skip = 1,

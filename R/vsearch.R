@@ -22,8 +22,14 @@ find_vsearch <- function() {
 #' `seq_id` is the name of a sequence from `query`, `clust` is the closest match
 #' to that sequence in `ref`, and `dist` is the distance between them
 #' @export
-vsearch_usearch_global <- function(query, ref, threshold, global = TRUE,
-                                   ncpu = local_cpus(), id_is_int = FALSE) {
+vsearch_usearch_global <- function(
+  query,
+  ref,
+  threshold,
+  global = TRUE,
+  ncpu = local_cpus(),
+  id_is_int = FALSE
+) {
   checkmate::check_flag(id_is_int)
   if (is.character(query) && length(query) == 1 && file.exists(query)) {
     tquery <- query
@@ -39,6 +45,7 @@ vsearch_usearch_global <- function(query, ref, threshold, global = TRUE,
   }
   checkmate::assert_flag(global)
   gap <- if (global) "1" else "1I/0E"
+  # fmt: skip
   uc <- system(
     paste(
       find_vsearch(),
@@ -63,7 +70,7 @@ vsearch_usearch_global <- function(query, ref, threshold, global = TRUE,
       I(uc),
       col_names = c(if (id_is_int) "seq_idx" else "seq_id", "cluster", "dist"),
       delim = " ",
-      col_types = if (id_is_int) "icd" else"ccd"
+      col_types = if (id_is_int) "icd" else "ccd"
     )
   } else if (id_is_int) {
     tibble::tibble(
@@ -96,8 +103,13 @@ vsearch_usearch_global <- function(query, ref, threshold, global = TRUE,
 #' (or `integer` vector if `id_is_int` is TRUE) of the sequence IDs which are
 #' chimeras.
 #' @export
-vsearch_uchime_ref <- function(query, ref, ncpu = local_cpus(), id_only = FALSE,
-                               id_is_int = FALSE) {
+vsearch_uchime_ref <- function(
+  query,
+  ref,
+  ncpu = local_cpus(),
+  id_only = FALSE,
+  id_is_int = FALSE
+) {
   # avoid R CMD check NOTE for undeclared global variables due to NSE
   seq_id <- NULL
 
@@ -121,6 +133,7 @@ vsearch_uchime_ref <- function(query, ref, ncpu = local_cpus(), id_only = FALSE,
   tchimeras <- withr::local_tempfile(pattern = "chimeras", fileext = ".fasta")
   vs <- system2(
     find_vsearch(),
+    # fmt: skip
     args = c(
       "--uchime_ref", tquery,
       "--db", tref,
@@ -199,6 +212,7 @@ vsearch_cluster_smallmem <- function(seq, threshold = 1, ncpu = local_cpus()) {
     tout <- withr::local_tempfile(pattern = "data", fileext = ".fasta")
     write_sequence(seq, tout)
   }
+  # fmt: skip
   uc <- system(
     paste(
       find_vsearch(),
@@ -278,11 +292,14 @@ collapseNoMismatch_vsearch <- function(seqtab, ..., ncpu = local_cpus()) {
 #' the index of the sequence which is the centroid of the cluster containing
 #' `seq_idx_in`
 #' @importFrom dplyr everything
-nomismatch_hits_vsearch <- function(seqtab, seqs = NULL,
-                                    abund_col = "nread",
-                                    fastx_index = NULL,
-                                    ...,
-                                    ncpu = local_cpus()) {
+nomismatch_hits_vsearch <- function(
+  seqtab,
+  seqs = NULL,
+  abund_col = "nread",
+  fastx_index = NULL,
+  ...,
+  ncpu = local_cpus()
+) {
   if (is.null(seqs)) {
     checkmate::assert_names(
       names(seqtab),
@@ -308,7 +325,9 @@ nomismatch_hits_vsearch <- function(seqtab, seqs = NULL,
       # no easy way to re-order without reading it all into memory
       seqs <- Biostrings::readDNAStringSet(seqs)
     }
-    if (is.character(o)) o <- match(o, names(seqs))
+    if (is.character(o)) {
+      o <- match(o, names(seqs))
+    }
     seqs <- seqs[o]
     names(seqs) <- as.character(o)
   }
@@ -352,6 +371,7 @@ sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
   has_random <- version[1] > 2L || (version[1] == 2L && version[2] >= 28L)
   result <- processx::run(
     find_vsearch(),
+    # fmt: skip
     c(
       "--sintax", tout,
       if (has_random) "--sintax_random",
@@ -373,7 +393,7 @@ sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
     )
   } else {
     tibble::tibble(seq_id = character(), taxonomy = character())
-  })  |>
+  }) |>
     tidyr::separate_longer_delim(taxonomy, delim = ",") |>
     tidyr::separate_wider_regex(
       taxonomy,

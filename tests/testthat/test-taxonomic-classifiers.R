@@ -155,7 +155,11 @@ test_that("epa-ng direct IQ-TREE model-file parsing works across model matrix", 
       stdout = "|",
       error_on_status = FALSE
     )
-    testthat::expect_equal(iq$status, 0L, info = paste("IQ-TREE model", model_name))
+    testthat::expect_equal(
+      iq$status,
+      0L,
+      info = paste("IQ-TREE model", model_name)
+    )
 
     tree_file <- paste0(prefix, ".treefile")
     model_file <- paste0(prefix, ".iqtree")

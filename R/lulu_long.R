@@ -170,8 +170,14 @@ lulu_map <- function(
     )
     match_table <- dplyr::mutate(
       match_table,
-      !!id1_col_sym := ordered(!!id1_col_sym, levels = levels(otu_table[[id_col]])),
-      !!id2_col_sym := ordered(!!id2_col_sym, levels = levels(otu_table[[id_col]]))
+      !!id1_col_sym := ordered(
+        !!id1_col_sym,
+        levels = levels(otu_table[[id_col]])
+      ),
+      !!id2_col_sym := ordered(
+        !!id2_col_sym,
+        levels = levels(otu_table[[id_col]])
+      )
     )
   }
 
@@ -233,8 +239,8 @@ lulu_map <- function(
 #'
 #' @export
 lulu_table <- function(
-    lulu_map,
-    otu_table
+  lulu_map,
+  otu_table
 ) {
   # Avoid R CMD check NOTE for NSE
   nread <- NULL

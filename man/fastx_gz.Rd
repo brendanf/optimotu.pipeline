@@ -3,7 +3,6 @@
 \name{fastx_gz_index}
 \alias{fastx_gz_index}
 \alias{fastx_gz_extract}
-\alias{fastx_gz_random_access_extract}
 \title{Indexing and random access extraction of gzipped FASTA and FASTQ files}
 \usage{
 fastx_gz_index(file)
@@ -16,18 +15,6 @@ fastx_gz_extract(
   renumber = FALSE,
   append = FALSE,
   hash = NULL
-)
-
-fastx_gz_random_access_extract(
-  infile,
-  index,
-  i,
-  outfile = NULL,
-  renumber = FALSE,
-  append = FALSE,
-  hash = NULL,
-  max_gap = 100L,
-  ncpu = local_cpus()
 )
 }
 \arguments{
@@ -42,7 +29,8 @@ These functions are wrappers around the
 
 \item{i}{(\code{integer} vector) indices to extract}
 
-\item{outfile}{(\code{character} filename) file to write the extracted sequences to}
+\item{outfile}{(\code{character} filename) file to write the extracted sequences
+to. If it ends in ".gz", the output will be gzipped.}
 
 \item{renumber}{(\code{logical} flag) if \code{TRUE}, replace the sequence names with
 integers, starting at 0.}

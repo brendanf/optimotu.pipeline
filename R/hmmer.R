@@ -30,8 +30,13 @@ find_nhmmer <- function() {
 #' @param compress (`logical`) if TRUE, compress the output file with gzip
 #' @return a `character` string giving the output file
 #' @export
-hmmalign <- function(seqs, hmm, outfile, outformat = "A2M",
-                     compress = endsWith(outfile, ".gz")) {
+hmmalign <- function(
+  seqs,
+  hmm,
+  outfile,
+  outformat = "A2M",
+  compress = endsWith(outfile, ".gz")
+) {
   checkmate::assert_string(hmm)
   checkmate::assert_file_exists(hmm, access = "r")
   ensure_directory(outfile)
@@ -43,12 +48,20 @@ hmmalign <- function(seqs, hmm, outfile, outformat = "A2M",
   if (checkmate::test_file_exists(seqs, "r")) {
     tseqs <- seqs
     n <- length(seqs)
-  } else if (checkmate::test_list(seqs, types = c("character", "XStringSet", "data.frame"))) {
+  } else if (
+    checkmate::test_list(
+      seqs,
+      types = c("character", "XStringSet", "data.frame")
+    )
+  ) {
     n <- length(seqs)
     tseqs <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
     purrr::pwalk(list(seq = seqs, fname = tseqs), write_sequence)
   } else {
-    checkmate::assert_multi_class(seqs, c("data.frame", "character", "XStringSet"))
+    checkmate::assert_multi_class(
+      seqs,
+      c("data.frame", "character", "XStringSet")
+    )
     n <- 1
     tseqs <- withr::local_tempfile(fileext = ".fasta")
     write_sequence(seqs, tseqs)
@@ -72,6 +85,7 @@ hmmalign <- function(seqs, hmm, outfile, outformat = "A2M",
     processx::run("mkfifo", mout[i])
   }
 
+  # fmt: skip
   args <- data.frame(
     "--outformat", outformat,
     "--trim",
@@ -85,7 +99,7 @@ hmmalign <- function(seqs, hmm, outfile, outformat = "A2M",
   for (i in seq_len(n)) {
     hmmer[[i]] <- processx::process$new(
       command = exec,
-      args = args[i,],
+      args = args[i, ],
       supervise = TRUE
     )
     deline[[i]] <- processx::process$new(
@@ -154,7 +168,7 @@ read_hmmer_tblout <- function(file, col_names, col_types) {
       \(x) {
         paste(x$text, collapse = "\n") |>
           readr::read_fwf(
-            col_positions =  stringr::str_locate_all(x$text[1], "#?-+")[[1]] |>
+            col_positions = stringr::str_locate_all(x$text[1], "#?-+")[[1]] |>
               tibble::as_tibble() |>
               tibble::add_column(col_names = col_names) |>
               do.call(readr::fwf_positions, args = _),
@@ -163,7 +177,6 @@ read_hmmer_tblout <- function(file, col_names, col_types) {
           )
       }
     )
-
 }
 
 #' @describeIn read_hmmer_tblout Read a HMMER domain hits file
@@ -171,12 +184,31 @@ read_hmmer_tblout <- function(file, col_names, col_types) {
 read_domtblout <- function(file) {
   read_hmmer_tblout(
     file,
-    col_names = c("seq_name", "seq_accno", "seq_length", "hmm_name",
-                  "hmm_accno", "hmm_length", "Evalue", "full_score",
-                  "full_bias", "hit_num", "total_hits", "c_Evalue",
-                  "i_Evalue", "hit_score", "hit_bias", "hmm_from", "hmm_to",
-                  "seq_from", "seq_to", "env_from", "env_to", "acc",
-                  "description"),
+    col_names = c(
+      "seq_name",
+      "seq_accno",
+      "seq_length",
+      "hmm_name",
+      "hmm_accno",
+      "hmm_length",
+      "Evalue",
+      "full_score",
+      "full_bias",
+      "hit_num",
+      "total_hits",
+      "c_Evalue",
+      "i_Evalue",
+      "hit_score",
+      "hit_bias",
+      "hmm_from",
+      "hmm_to",
+      "seq_from",
+      "seq_to",
+      "env_from",
+      "env_to",
+      "acc",
+      "description"
+    ),
     col_types = "cciccidddiiddddiiiiiidc"
   )
 }
@@ -187,13 +219,25 @@ read_dna_tblout <- function(file) {
   read_hmmer_tblout(
     file,
     col_names = c(
-      "seq_name", "seq_accno", "hmm_name", "hmm_accno",
-      "hmm_from", "hmm_to", "seq_from", "seq_to", "env_from", "env_to",
-      "seq_len", "strand", "Evalue", "bit_score", "bias", "description"
+      "seq_name",
+      "seq_accno",
+      "hmm_name",
+      "hmm_accno",
+      "hmm_from",
+      "hmm_to",
+      "seq_from",
+      "seq_to",
+      "env_from",
+      "env_to",
+      "seq_len",
+      "strand",
+      "Evalue",
+      "bit_score",
+      "bias",
+      "description"
     ),
     col_types = "cccciiiiiiicdddc"
   )
-
 }
 
 #' Search for subsequences matching one or more HMMs in a set of sequences
@@ -211,17 +255,26 @@ hmmsearch <- function(seqs, hmm) {
   if (checkmate::test_file_exists(seqs, "r")) {
     tseqs <- seqs
     n <- length(seqs)
-  } else if (checkmate::test_list(seqs, types = c("character", "XStringSet", "data.frame"))) {
+  } else if (
+    checkmate::test_list(
+      seqs,
+      types = c("character", "XStringSet", "data.frame")
+    )
+  ) {
     n <- length(seqs)
     tseqs <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
     purrr::pwalk(list(seq = seqs, fname = tseqs), write_sequence)
   } else {
-    checkmate::assert_multi_class(seqs, c("data.frame", "character", "XStringSet"))
+    checkmate::assert_multi_class(
+      seqs,
+      c("data.frame", "character", "XStringSet")
+    )
     n <- 1
     tseqs <- withr::local_tempfile(fileext = ".fasta")
     write_sequence(seqs, tseqs)
   }
   outfile <- replicate(n, withr::local_tempfile(fileext = ".hmmout"))
+  # fmt: skip
   args <- data.frame(
     "--noali",
     "--notextw",
@@ -235,7 +288,7 @@ hmmsearch <- function(seqs, hmm) {
   for (i in seq_len(n)) {
     hmmer[[i]] <- processx::process$new(
       command = exec,
-      args = args[i,],
+      args = args[i, ],
       supervise = TRUE
     )
   }
@@ -266,11 +319,15 @@ nhmmer <- function(seqs, hmm, ncpu = local_cpus()) {
   if (length(seqs) == 1 && checkmate::test_file_exists(seqs, "r")) {
     tseqs <- seqs
   } else {
-    checkmate::assert_multi_class(seqs, c("data.frame", "character", "XStringSet"))
+    checkmate::assert_multi_class(
+      seqs,
+      c("data.frame", "character", "XStringSet")
+    )
     tseqs <- withr::local_tempfile(fileext = ".fasta")
     write_sequence(seqs, tseqs)
   }
   outfile <- withr::local_tempfile(fileext = ".hmmout")
+  # fmt: skip
   args <- c(
     "--noali",
     "--notextw",

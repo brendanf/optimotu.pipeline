@@ -1,4 +1,3 @@
-
 #' Drop columns from a DADA2-style sequence table
 #'
 #' @param seqtable (`integer` matrix) a DADA2-style sequence table
@@ -6,12 +5,14 @@
 #' @return a new sequence table with the specified columns removed
 #' @export
 drop_from_seqtable <- function(seqtable, which) {
-  if (is.character(which)) which <- as.integer(which)
+  if (is.character(which)) {
+    which <- as.integer(which)
+  }
   checkmate::assert_integerish(which, lower = 1, upper = ncol(seqtable))
   if (length(which) == 0) {
     seqtable
   } else {
-    seqtable[,-which,drop = FALSE]
+    seqtable[, -which, drop = FALSE]
   }
 }
 
@@ -38,11 +39,13 @@ make_long_sequence_table.data.frame <- function(x, rc = FALSE) {
   checkmate::assert_flag(rc)
   if ("accept" %in% names(x)) {
     checkmate::assert_logical(x$accept)
-    x <- x[x$accept,]
+    x <- x[x$accept, ]
   }
   out <- x[c("sequence", "abundance")]
   names(out) <- c("seq", "nread")
-  if (isTRUE(rc)) out$seq <- dada2::rc(out$seq)
+  if (isTRUE(rc)) {
+    out$seq <- dada2::rc(out$seq)
+  }
   out
 }
 
@@ -51,12 +54,21 @@ make_long_sequence_table.data.frame <- function(x, rc = FALSE) {
 make_long_sequence_table.matrix <- function(x, rc = FALSE) {
   checkmate::assert_integerish(x)
   checkmate::assert_flag(rc)
-  if (isTRUE(rc)) colnames(x) <- dada2::rc(colnames(x))
-  if (typeof(x) != "integer") mode(x) <- "integer"
-  x[x==0L] <- NA_integer_
+  if (isTRUE(rc)) {
+    colnames(x) <- dada2::rc(colnames(x))
+  }
+  if (typeof(x) != "integer") {
+    mode(x) <- "integer"
+  }
+  x[x == 0L] <- NA_integer_
   as.data.frame(x) |>
     tibble::rownames_to_column("sample") |>
-    tidyr::pivot_longer(-1, names_to = "seq", values_to = "nread", values_drop_na = TRUE)
+    tidyr::pivot_longer(
+      -1,
+      names_to = "seq",
+      values_to = "nread",
+      values_drop_na = TRUE
+    )
 }
 
 #' @rdname make_long_sequence_table
@@ -67,7 +79,12 @@ make_long_sequence_table.list <- function(x, rc = FALSE) {
 
   out <- if (checkmate::test_list(x, types = "data.frame")) {
     checkmate::assert_named(x)
-    purrr::map_dfr(x, make_long_sequence_table.data.frame, rc = rc, .id = "sample")
+    purrr::map_dfr(
+      x,
+      make_long_sequence_table.data.frame,
+      rc = rc,
+      .id = "sample"
+    )
   } else if (checkmate::test_list(x, types = "matrix")) {
     purrr::map_dfr(x, make_long_sequence_table.matrix, rc = rc)
   } else {
@@ -100,7 +117,7 @@ make_mapped_sequence_table.data.frame <- function(x, seqs, rc = FALSE) {
   checkmate::assert_flag(rc)
   if ("accept" %in% names(x)) {
     checkmate::assert_logical(x$accept)
-    x <- x[x$accept,]
+    x <- x[x$accept, ]
   }
   if (checkmate::test_file_exists(seqs, "r")) {
     seqs <- Biostrings::readDNAStringSet(seqs)
@@ -120,13 +137,17 @@ make_mapped_sequence_table.data.frame <- function(x, seqs, rc = FALSE) {
 make_mapped_sequence_table.matrix <- function(x, seqs, rc = FALSE) {
   checkmate::assert_integerish(x)
   checkmate::assert_flag(rc)
-  if (isTRUE(rc)) colnames(x) <- dada2::rc(colnames(x))
+  if (isTRUE(rc)) {
+    colnames(x) <- dada2::rc(colnames(x))
+  }
   if (checkmate::test_file_exists(seqs, "r")) {
     seqs <- Biostrings::readDNAStringSet(seqs)
   }
   colnames(x) <- BiocGenerics::match(colnames(x), seqs)
-  if (typeof(x) != "integer") mode(x) <- "integer"
-  x[x==0L] <- NA_integer_
+  if (typeof(x) != "integer") {
+    mode(x) <- "integer"
+  }
+  x[x == 0L] <- NA_integer_
   as.data.frame(x) |>
     tibble::rownames_to_column("sample") |>
     tidyr::pivot_longer(
@@ -150,9 +171,19 @@ make_mapped_sequence_table.list <- function(x, seqs, rc = FALSE) {
   out <- if (checkmate::test_list(x, types = "data.frame")) {
     checkmate::assert_named(x)
     if (length(x) == 0) {
-      tibble::tibble(sample = character(), seq_idx = integer(), nread = integer())
+      tibble::tibble(
+        sample = character(),
+        seq_idx = integer(),
+        nread = integer()
+      )
     } else {
-      purrr::map_dfr(x, make_mapped_sequence_table.data.frame, seqs = seqs, rc = rc, .id = "sample")
+      purrr::map_dfr(
+        x,
+        make_mapped_sequence_table.data.frame,
+        seqs = seqs,
+        rc = rc,
+        .id = "sample"
+      )
     }
   } else if (checkmate::test_list(x, types = "matrix")) {
     purrr::map_dfr(x, make_mapped_sequence_table.matrix, seqs = seqs, rc = rc)
@@ -176,8 +207,13 @@ make_mapped_sequence_table.list <- function(x, seqs, rc = FALSE) {
 #' @return a deduplicated sequence table
 #' @export
 #' @importFrom dplyr all_of any_of
-deduplicate_seqtable <- function(seqtable, hits, abund_col = "nread",
-                                 sample_cols = "sample", merge = TRUE) {
+deduplicate_seqtable <- function(
+  seqtable,
+  hits,
+  abund_col = "nread",
+  sample_cols = "sample",
+  merge = TRUE
+) {
   # avoid R CMD check note for undefined global variables due to NSE
   hit <- query <- seq_idx <- NULL
   checkmate::assert_character(abund_col)
@@ -214,7 +250,8 @@ deduplicate_seqtable <- function(seqtable, hits, abund_col = "nread",
       .by = any_of(c("seq_idx", sample_cols))
     )
   }
-  seqtable$seq_idx <- seqtable$seq_idx - findInterval(seqtable$seq_idx, hits$query)
+  seqtable$seq_idx <- seqtable$seq_idx -
+    findInterval(seqtable$seq_idx, hits$query)
   seqtable
 }
 
@@ -240,7 +277,12 @@ deduplicate_seqs <- function(seqs, hits, outfile) {
   if (nrow(hits) > 0) {
     out <- Biostrings::readBStringSet(seqs)[-hits$query]
     names(out) <- as.character(seq_along(out))
-    write_sequence(out, outfile, compress = endsWith(outfile, ".gz"), compression_level = 9)
+    write_sequence(
+      out,
+      outfile,
+      compress = endsWith(outfile, ".gz"),
+      compression_level = 9
+    )
   } else {
     file.copy(seqs, outfile, overwrite = TRUE)
     outfile
@@ -302,7 +344,10 @@ sort_seq_table.matrix <- function(seqtable, ...) {
   } else {
     structure(
       seqtable[order(rownames(seqtable)), colorder],
-      map = dplyr::mutate(attr(seqtable, "map"), seq_id_out = order(colorder)[seq_id_out])
+      map = dplyr::mutate(
+        attr(seqtable, "map"),
+        seq_id_out = order(colorder)[seq_id_out]
+      )
     )
   }
 }
@@ -313,7 +358,12 @@ sort_seq_table.matrix <- function(seqtable, ...) {
 #' file name, or `data.frame`) sequences, for mapped sequence tables (currently
 #' unused)
 #' @param abund_col (`character`) column name containing abundance information
-sort_seq_table.data.frame <- function(seqtable, seqs = NULL, abund_col = "nread", ...) {
+sort_seq_table.data.frame <- function(
+  seqtable,
+  seqs = NULL,
+  abund_col = "nread",
+  ...
+) {
   # avoid R CMD check note for undefined global variables due to NSE
   prevalence <- var <- NULL
 

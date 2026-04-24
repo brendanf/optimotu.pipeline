@@ -12,10 +12,15 @@ find_usearch <- function() {
 #' @param usearch (`character` string) path to the usearch executable
 #' @return (`character` string) the name of the output file
 #' @export
-build_udb <- function(infile, outfile, type = c("usearch", "sintax", "ublast"),
-                      usearch = find_usearch()) {
+build_udb <- function(
+  infile,
+  outfile,
+  type = c("usearch", "sintax", "ublast"),
+  usearch = find_usearch()
+) {
   type <- match.arg(type)
   command <- paste0("-makeudb_", type)
+  # fmt: skip
   args <- c(
     command, infile,
     "-output", outfile
@@ -33,11 +38,11 @@ build_udb <- function(infile, outfile, type = c("usearch", "sintax", "ublast"),
 #' @return (`character` string) the name of the output file
 #' @export
 build_filtered_udb <- function(
-    infile,
-    outfile,
-    type = c("usearch", "sintax", "ublast"),
-    blacklist,
-    usearch = find_usearch()
+  infile,
+  outfile,
+  type = c("usearch", "sintax", "ublast"),
+  blacklist,
+  usearch = find_usearch()
 ) {
   # make sure we have valid arguments
   type <- match.arg(type)
@@ -53,6 +58,7 @@ build_filtered_udb <- function(
   # first usearch call removes the blacklisted sequences
   system2(
     usearch,
+    # fmt: skip
     args = c(
       "--fastx_getseqs", infile,
       "--labels", blf,
@@ -64,6 +70,7 @@ build_filtered_udb <- function(
   # second usearch call creates the udb file
   result = system2(
     usearch,
+    # fmt: skip
     args = c(
       command, tf,
       "--output", outfile

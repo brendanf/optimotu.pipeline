@@ -80,6 +80,7 @@ tc_write_fasta <- function(seq, id, file) {
 }
 
 tc_sintax_header <- function(df) {
+  # fmt: skip
   paste0(
     df$seq_id,
     ";tax=k:", df$kingdom,
@@ -113,7 +114,15 @@ tc_bayesant_header <- function(df) {
 
 tc_taxonomy_path <- function(df) {
   apply(
-    df[, c("kingdom", "phylum", "class", "order", "family", "genus", "species")],
+    df[, c(
+      "kingdom",
+      "phylum",
+      "class",
+      "order",
+      "family",
+      "genus",
+      "species"
+    )],
     1L,
     paste,
     collapse = ","
@@ -160,12 +169,12 @@ tc_parse_iqtree_expected <- function(iqtree_file) {
 }
 
 tc_run_epa_capture <- function(
-    epa_exec,
-    ref_file,
-    query_file,
-    tree_file,
-    model_arg,
-    outdir
+  epa_exec,
+  ref_file,
+  query_file,
+  tree_file,
+  model_arg,
+  outdir
 ) {
   processx::run(
     command = epa_exec,

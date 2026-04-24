@@ -29,22 +29,30 @@ bayesant <- function(
       model <- readRDS(model)
     } else if (endsWith(model, ".qs")) {
       if (!requireNamespace("qs")) {
-        stop("qs package is required but not installed. Please install it",
-             " using `install.packages('qs')`.")
+        stop(
+          "qs package is required but not installed. Please install it",
+          " using `install.packages('qs')`."
+        )
       }
       model <- qs::qread(model, nthreads = ncpu)
     } else if (endsWith(model, ".qs2")) {
       if (!requireNamespace("qs2")) {
-        stop("qs2 package is required but not installed. Please install it",
-             " using `install.packages('qs2')`.")
+        stop(
+          "qs2 package is required but not installed. Please install it",
+          " using `install.packages('qs2')`."
+        )
       }
       model <- qs2::qs_read(model, nthreads = ncpu)
     } else if (endsWith(model, ".qdata")) {
       stop("Model file must be in .rds, .qs, or .qs2 format.")
     }
   } else if (is.character(model) && !file.exists(model)) {
-    stop("Model file ", model, " does not exist.",
-         " Please provide a valid file path.")
+    stop(
+      "Model file ",
+      model,
+      " does not exist.",
+      " Please provide a valid file path."
+    )
   } else if (!inherits(model, "BayesANT")) {
     stop("Model must be a BayesANT model or a valid file path.")
   }
@@ -66,8 +74,13 @@ bayesant <- function(
     names = "unique",
     any.missing = FALSE
   )
-  out <- stats::predict(model, query, return_probs = TRUE, cores = ncpu,
-                        n_top_taxa = n_top_taxa)$top_n_probs
+  out <- stats::predict(
+    model,
+    query,
+    return_probs = TRUE,
+    cores = ncpu,
+    n_top_taxa = n_top_taxa
+  )$top_n_probs
 
   # result is a list of data frames, one for each query sequence
   # each data frame has columns named after the taxonomic ranks, plus

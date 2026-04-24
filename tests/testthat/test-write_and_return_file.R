@@ -41,7 +41,11 @@ test_that("write_and_return_file.data.frame type='rds' round-trips and returns f
 })
 
 test_that("write_and_return_file.data.frame type='tsv' round-trips and returns filename", {
-  x <- data.frame(a = c(1.1, 2.2, 3.3), b = c("x", "y", "z"), stringsAsFactors = FALSE)
+  x <- data.frame(
+    a = c(1.1, 2.2, 3.3),
+    b = c("x", "y", "z"),
+    stringsAsFactors = FALSE
+  )
   file <- withr::local_tempfile(fileext = ".tsv")
 
   out <- optimotu.pipeline::write_and_return_file(x, file, type = "tsv")
@@ -116,7 +120,12 @@ test_that("write_and_return_file.ggplot returns filename and writes readable ima
     ggplot2::geom_point()
   file <- withr::local_tempfile(fileext = ".png")
 
-  out <- optimotu.pipeline::write_and_return_file(x, file, width = 4, height = 3)
+  out <- optimotu.pipeline::write_and_return_file(
+    x,
+    file,
+    width = 4,
+    height = 3
+  )
   read_back <- png::readPNG(file)
 
   expect_equal(out, file)

@@ -15,8 +15,14 @@ finalize_sample_table <- function(
   checkmate::assert_tibble(sample_table)
   checkmate::check_names(
     names(sample_table),
-    must.include = c("sample", "seqrun", "fastq_R1", "fastq_R2",
-                     "neg_control", "pos_control")
+    must.include = c(
+      "sample",
+      "seqrun",
+      "fastq_R1",
+      "fastq_R2",
+      "neg_control",
+      "pos_control"
+    )
   )
 
   n_samples <- dplyr::n_distinct(sample_table$sample, sample_table$seqrun)
@@ -29,8 +35,10 @@ finalize_sample_table <- function(
           .by = c(everything(), -fastq_R1, -fastq_R2)
         )
     } else {
-      stop("duplicate samples found in sample table; use option ",
-           "'duplicate_samples: merge' to merge them")
+      stop(
+        "duplicate samples found in sample table; use option ",
+        "'duplicate_samples: merge' to merge them"
+      )
     }
   }
 
@@ -38,17 +46,23 @@ finalize_sample_table <- function(
     read_orientation(),
     fwd = sample_table$orient <- "fwd",
     rev = sample_table$orient <- "rev",
-    mixed =
-      sample_table <- tidyr::crossing(sample_table, orient = c("fwd", "rev")),
+    mixed = sample_table <- tidyr::crossing(
+      sample_table,
+      orient = c("fwd", "rev")
+    ),
     custom = if (isFALSE(do_custom_sample_table())) {
       stop("option 'orient: custom' requires a custom sample table is given.")
     } else if (!"orient" %in% names(sample_table)) {
-      stop("option 'orient: custom' required a column named 'orient' in the",
-           " custom sample table, with values consisting of 'fwd', 'rev', and",
-           " 'mixed'")
+      stop(
+        "option 'orient: custom' required a column named 'orient' in the",
+        " custom sample table, with values consisting of 'fwd', 'rev', and",
+        " 'mixed'"
+      )
     },
-    stop("unknown value for option 'orient'; should be 'fwd', 'rev', 'mixed',",
-         " or 'custom'")
+    stop(
+      "unknown value for option 'orient'; should be 'fwd', 'rev', 'mixed',",
+      " or 'custom'"
+    )
   )
 
   if (do_rarefy()) {
@@ -118,8 +132,9 @@ finalize_sample_table <- function(
 
   # spike_strength is used along with the nonspike/spike ratio to convert from
   # read number to "weight"
-  if (!("spike_weight") %in% names(sample_table))
+  if (!("spike_weight") %in% names(sample_table)) {
     sample_table$spike_weight <- 1
+  }
 
   assertthat::assert_that(
     !any(is.na(sample_table$seqrun)),
@@ -192,8 +207,10 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
       endsWith(sample_table_file, ".xlsx")
   ) {
     if (!requireNamespace("readxl", quietly = TRUE)) {
-      stop("The 'readxl' package is required to read Excel files. Please",
-           " install it.")
+      stop(
+        "The 'readxl' package is required to read Excel files. Please",
+        " install it."
+      )
     }
     sample_table <-
       suppressWarnings(
@@ -204,8 +221,10 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
         )
       )
   } else {
-    stop("Unsupported sample table format. Please provide a .csv, .tsv, .xls,",
-         " or .xlsx file.")
+    stop(
+      "Unsupported sample table format. Please provide a .csv, .tsv, .xls,",
+      " or .xlsx file."
+    )
   }
   sample_table$fastq_R1 <- file.path(raw_path(), sample_table$fastq_R1)
   sample_table$fastq_R2 <- file.path(raw_path(), sample_table$fastq_R2)
@@ -243,9 +262,11 @@ read_sample_table <- function(sample_table_file = custom_sample_table()) {
     checkmate::assert_subset(sample_table$orient, c("fwd", "rev", "mixed"))
     if (read_orientation() != "custom") {
       warning(
-        "custom sample table '", sample_table_file,
+        "custom sample table '",
+        sample_table_file,
         "' includes an 'orient' column, but option 'orient' is '",
-        read_orientation(), "'. The 'orient' column will be ignored."
+        read_orientation(),
+        "'. The 'orient' column will be ignored."
       )
       sample_table$orient <- NULL
     } else {
@@ -411,7 +432,9 @@ path <- function() {
 #' @export
 meta_path <- function() {
   fp <- file.path(path(), "meta")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -419,7 +442,9 @@ meta_path <- function() {
 #' @export
 seq_path <- function() {
   fp <- file.path(path(), "sequences")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -427,7 +452,9 @@ seq_path <- function() {
 #' @export
 raw_path <- function() {
   fp <- file.path(seq_path(), "01_raw")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -435,7 +462,9 @@ raw_path <- function() {
 #' @export
 trim_path <- function() {
   fp <- file.path(seq_path(), "02_trimmed")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -443,7 +472,9 @@ trim_path <- function() {
 #' @export
 filt_path <- function() {
   fp <- file.path(seq_path(), "03_filtered")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -451,7 +482,9 @@ filt_path <- function() {
 #' @export
 rarefy_path <- function() {
   fp <- file.path(seq_path(), "04_rarefied")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -459,7 +492,9 @@ rarefy_path <- function() {
 #' @export
 asv_path <- function() {
   fp <- file.path(seq_path(), "05_denoised")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -467,7 +502,9 @@ asv_path <- function() {
 #' @export
 aligned_path <- function() {
   fp <- file.path(seq_path(), "06_aligned")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -475,7 +512,9 @@ aligned_path <- function() {
 #' @export
 protax_path <- function() {
   fp <- file.path(seq_path(), "07_protax")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -483,7 +522,9 @@ protax_path <- function() {
 #' @export
 output_path <- function() {
   fp <- file.path(path(), "output")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }
 
@@ -491,6 +532,8 @@ output_path <- function() {
 #' @export
 log_path <- function() {
   fp <- file.path(path(), "logs")
-  if (!dir.exists(fp)) dir.create(fp, recursive = TRUE)
+  if (!dir.exists(fp)) {
+    dir.create(fp, recursive = TRUE)
+  }
   fp
 }

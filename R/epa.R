@@ -23,15 +23,15 @@ find_epa_ng <- function() {
 #' @return (`character`) path to the output `epa_result.jplace` file
 #' @export
 epa_ng <- function(
-    ref_msa,
-    tree,
-    query,
-    outdir = tempfile(),
-    model,
-    ncpu,
-    exec = find_epa_ng(),
-    redo = TRUE,
-    strip_inserts = FALSE
+  ref_msa,
+  tree,
+  query,
+  outdir = tempfile(),
+  model,
+  ncpu,
+  exec = find_epa_ng(),
+  redo = TRUE,
+  strip_inserts = FALSE
 ) {
   checkmate::assert_flag(strip_inserts)
 
@@ -56,8 +56,10 @@ epa_ng <- function(
       }
     }
   } else {
-    stop("'ref_msa' should be an XStringSet, MultipleAlignment, character vector",
-         "of aligned sequences, or filename.")
+    stop(
+      "'ref_msa' should be an XStringSet, MultipleAlignment, character vector",
+      "of aligned sequences, or filename."
+    )
   }
   if (methods::is(ref_msa, "XStringSet")) {
     Biostrings::writeXStringSet(ref_msa, ref_msa_file)
@@ -85,8 +87,10 @@ epa_ng <- function(
       }
     }
   } else {
-    stop("'query' should be an XStringSet, MultipleAlignment, character vector",
-         "of aligned sequences, or filename.")
+    stop(
+      "'query' should be an XStringSet, MultipleAlignment, character vector",
+      "of aligned sequences, or filename."
+    )
   }
   if (methods::is(query, "XStringSet")) {
     Biostrings::writeXStringSet(query, query_file)
@@ -95,9 +99,11 @@ epa_ng <- function(
   is_gz <- endsWith(query_file, ".gz")
   if (is_gz | strip_inserts) {
     pre_file <- query_file
-    query_file <- withr::local_tempfile(fileext=".fasta")
+    query_file <- withr::local_tempfile(fileext = ".fasta")
     precommand <- paste(if (is_gz) "zcat" else "cat", pre_file)
-    if (strip_inserts) precommand <- paste(precommand, "| tr -d 'acgt'")
+    if (strip_inserts) {
+      precommand <- paste(precommand, "| tr -d 'acgt'")
+    }
     precommand <- paste(precommand, ">", query_file)
     cat("running precommand:", precommand, "\n")
     pre_status <- system(precommand)
@@ -126,6 +132,7 @@ epa_ng <- function(
   #   writeLines(model, model_file)
   # }
 
+  # fmt: skip
   args <- c(
     "--ref-msa", ref_msa_file,
     "--query", query_file,
@@ -250,7 +257,8 @@ parse_iqtree_model <- function(file = NULL, text = NULL) {
       )
       outmodel <- paste0(
         outmodel,
-        "+FU{", paste0(base_freq, collapse = "/"),
+        "+FU{",
+        paste0(base_freq, collapse = "/"),
         "}"
       )
     }
@@ -313,14 +321,14 @@ parse_iqtree_model <- function(file = NULL, text = NULL) {
 #' - `prob` (numeric) the probability of the assignment
 #' @export
 gappa_assign <- function(
-    jplace,
-    taxonomy,
-    outgroup,
-    ranks = unknown_ranks(),
-    ncpu = NULL,
-    allow_file_overwriting = TRUE,
-    verbose = FALSE,
-    id_is_int = FALSE
+  jplace,
+  taxonomy,
+  outgroup,
+  ranks = unknown_ranks(),
+  ncpu = NULL,
+  allow_file_overwriting = TRUE,
+  verbose = FALSE,
+  id_is_int = FALSE
 ) {
   gappa <- find_executable("gappa")
   args <- c("examine", "assign", "--per-query-results")
@@ -347,10 +355,18 @@ gappa_assign <- function(
   if (checkmate::test_file_exists(outgroup, access = "r")) {
     outgroup_file <- outgroup
   } else {
-    checkmate::assert_character(outgroup, any.missing = FALSE, min.chars = 1,
-                                 min.len = 1)
+    checkmate::assert_character(
+      outgroup,
+      any.missing = FALSE,
+      min.chars = 1,
+      min.len = 1
+    )
     if (!is.data.frame(taxonomy)) {
-      taxonomy <- readr::read_tsv(taxonomy_file, col_names = FALSE, col_types = "cc")
+      taxonomy <- readr::read_tsv(
+        taxonomy_file,
+        col_names = FALSE,
+        col_types = "cc"
+      )
     }
     if (!all(outgroup %in% taxonomy[[1]])) {
       outgroup <- taxonomy[[1]][grepl(
@@ -370,18 +386,25 @@ gappa_assign <- function(
   args <- c(args, "--ranks-string", paste(ranks, collapse = "|"))
 
   checkmate::assert_flag(allow_file_overwriting, null.ok = TRUE)
-  if (isTRUE(allow_file_overwriting)) args <- c(args, "--allow-file-overwriting")
+  if (isTRUE(allow_file_overwriting)) {
+    args <- c(args, "--allow-file-overwriting")
+  }
 
   checkmate::assert_flag(verbose, null.ok = TRUE)
-  if (isTRUE(verbose)) args <- c(args, "--verbose")
+  if (isTRUE(verbose)) {
+    args <- c(args, "--verbose")
+  }
 
   checkmate::assert_flag(id_is_int)
 
   checkmate::assert_count(ncpu, null.ok = TRUE)
-  if (!is.null(ncpu)) args <- c(args, "--threads", ncpu)
+  if (!is.null(ncpu)) {
+    args <- c(args, "--threads", ncpu)
+  }
 
   out_file <- withr::local_tempfile(fileext = "_per_query.tsv")
   checkmate::assert_path_for_output(out_file)
+  # fmt: skip
   args <- c(
     args,
     "--out-dir", dirname(out_file),
@@ -403,22 +426,40 @@ parse_gappa_per_query <- function(per_query, ranks, id_is_int = FALSE) {
   checkmate::assert_file(per_query, "r")
   checkmate::assert_character(ranks, any.missing = FALSE)
   checkmate::assert_flag(id_is_int)
-  pq <- readr::read_tsv(per_query, col_types = if (id_is_int) "innnnc" else "cnnnnc") |>
+  pq <- readr::read_tsv(
+    per_query,
+    col_types = if (id_is_int) "innnnc" else "cnnnnc"
+  ) |>
     dplyr::mutate(
-      rank = factor(stringr::str_count(taxopath, ";") + 1, levels = seq_along(ranks), labels = ranks, ordered = TRUE),
+      rank = factor(
+        stringr::str_count(taxopath, ";") + 1,
+        levels = seq_along(ranks),
+        labels = ranks,
+        ordered = TRUE
+      ),
       taxopath = chartr(";", ",", taxopath)
     )
   pq <- dplyr::bind_rows(
     dplyr::filter(pq, fract > 0, rank != dplyr::last(ranks)) |>
       dplyr::transmute(
         name,
-        rank = factor(ranks[as.integer(rank) + 1L], levels = ranks, ordered = TRUE),
+        rank = factor(
+          ranks[as.integer(rank) + 1L],
+          levels = ranks,
+          ordered = TRUE
+        ),
         parent_taxon = taxopath,
         taxon = NA_character_,
         prob = fract
       ) |>
       dplyr::filter(prob > 0),
-    tidyr::extract(pq, taxopath, c("parent_taxon", "taxon"), , regex = "(?:(.+),)?([^,]+)$") |>
+    tidyr::extract(
+      pq,
+      taxopath,
+      c("parent_taxon", "taxon"),
+      ,
+      regex = "(?:(.+),)?([^,]+)$"
+    ) |>
       dplyr::transmute(
         name,
         rank,

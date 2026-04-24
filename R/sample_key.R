@@ -1,4 +1,3 @@
-
 #' Convert a file name to a sample key
 #' @param filename (`character`) the name of a file, possibly including path
 #' @return (`character`) the sample key

@@ -37,11 +37,19 @@ update.dada2_filter_options <- function(object, new_options, ...) {
     checkmate::check_numeric(new_options, null.ok = TRUE)
   )
   if ("maxEE_R1" %in% names(new_options)) {
-    checkmate::assert_number(new_options[["maxEE_R1"]], lower = 0, finite = TRUE)
+    checkmate::assert_number(
+      new_options[["maxEE_R1"]],
+      lower = 0,
+      finite = TRUE
+    )
     object[["maxEE_R1"]] <- new_options[["maxEE_R1"]]
   }
   if ("maxEE_R2" %in% names(new_options)) {
-    checkmate::assert_number(new_options[["maxEE_R2"]], lower = 0, finite = TRUE)
+    checkmate::assert_number(
+      new_options[["maxEE_R2"]],
+      lower = 0,
+      finite = TRUE
+    )
     object[["maxEE_R2"]] <- new_options[["maxEE_R2"]]
   }
   object
@@ -90,12 +98,22 @@ filterAndTrim <- function(fwd, filt, rev, filt.rev, ...) {
 #' that the output is always a list, even if it contains only one element or
 #' none. It also allows the user to specify sample names for the output object.
 #' @export
-derepFastq <- function(fls, n = 1e+06, verbose = FALSE, qualityType = "Auto",
-                       names = fls) {
+derepFastq <- function(
+  fls,
+  n = 1e+06,
+  verbose = FALSE,
+  qualityType = "Auto",
+  names = fls
+) {
   if (length(fls) == 0) {
     out <- list()
   } else {
-    out <- dada2::derepFastq(fls, n = n, verbose = verbose, qualityType = qualityType)
+    out <- dada2::derepFastq(
+      fls,
+      n = n,
+      verbose = verbose,
+      qualityType = qualityType
+    )
     if (methods::is(out, "derep")) {
       out <- list(out)
     }
@@ -109,44 +127,66 @@ derepFastq <- function(fls, n = 1e+06, verbose = FALSE, qualityType = "Auto",
 #' @return A function that estimates error rates based on binned quality scores
 #' @details From dada2 commit <https://github.com/benjjneb/dada2/commit/7714487b153ca133cb6f03cb01d09fc05be60159>
 #' @export
-makeBinnedQualErrfun <- function(binnedQ=c(2, 11, 25, 37)) {
-  function(trans, binnedQuals=binnedQ) {
+makeBinnedQualErrfun <- function(binnedQ = c(2, 11, 25, 37)) {
+  function(trans, binnedQuals = binnedQ) {
     qq <- as.numeric(colnames(trans))
     # Get min and max observed quality scores
-    qmax <- max(qq[colSums(trans)>0])
-    qmin <- min(qq[colSums(trans)>0])
+    qmax <- max(qq[colSums(trans) > 0])
+    qmin <- min(qq[colSums(trans) > 0])
     # Check for data consistency with provided binned qualities
-    if(qmax > max(binnedQuals)) stop("Input data contains a higher quality score than the provided binned values.")
-    if(qmin < min(binnedQuals)) stop("Input data contains a lower quality score than the provided binned values.")
-    if(!qmax %in% binnedQuals) warning("Maximum observed quality score is not in the provided binned values.")
-    if(!qmin %in% binnedQuals) warning("Minimum observed quality score is not in the provided binned values.")
+    if (qmax > max(binnedQuals)) {
+      stop(
+        "Input data contains a higher quality score than the provided binned values."
+      )
+    }
+    if (qmin < min(binnedQuals)) {
+      stop(
+        "Input data contains a lower quality score than the provided binned values."
+      )
+    }
+    if (!qmax %in% binnedQuals) {
+      warning(
+        "Maximum observed quality score is not in the provided binned values."
+      )
+    }
+    if (!qmin %in% binnedQuals) {
+      warning(
+        "Minimum observed quality score is not in the provided binned values."
+      )
+    }
 
-    est <- matrix(0, nrow=0, ncol=length(qq))
-    for(nti in c("A","C","G","T")) {
-      for(ntj in c("A","C","G","T")) {
-        if(nti != ntj) {
-          errs <- trans[paste0(nti,"2",ntj),]
-          tot <- colSums(trans[paste0(nti,"2",c("A","C","G","T")),])
-          p <- errs/tot
-          df <- data.frame(q=qq, errs=errs, tot=tot, p=p)
+    est <- matrix(0, nrow = 0, ncol = length(qq))
+    for (nti in c("A", "C", "G", "T")) {
+      for (ntj in c("A", "C", "G", "T")) {
+        if (nti != ntj) {
+          errs <- trans[paste0(nti, "2", ntj), ]
+          tot <- colSums(trans[paste0(nti, "2", c("A", "C", "G", "T")), ])
+          p <- errs / tot
+          df <- data.frame(q = qq, errs = errs, tot = tot, p = p)
           # Check and enforce that this q scores start at zero
-          if(!all(df$q == seq(nrow(df))-1)) stop("Unexpected Q score series.") ###!
+          if (!all(df$q == seq(nrow(df)) - 1)) {
+            stop("Unexpected Q score series.")
+          } ###!
           pred <- rep(NA, nrow(df))
-          for(i in seq(length(binnedQuals)-1)) {
+          for (i in seq(length(binnedQuals) - 1)) {
             loQ <- binnedQuals[i]
-            hiQ <- binnedQuals[i+1]
-            loP <- df$p[loQ+1]
-            hiP <- df$p[hiQ+1]
+            hiQ <- binnedQuals[i + 1]
+            loP <- df$p[loQ + 1]
+            hiP <- df$p[hiQ + 1]
             # Linear interpolation between the binned Q scores observed in the data
-            if(!is.na(loP) && !is.na(hiP)) {
-              pred[(loQ+1):(hiQ+1)] <- seq(loP, hiP, length.out=(hiQ-loQ+1))
+            if (!is.na(loP) && !is.na(hiP)) {
+              pred[(loQ + 1):(hiQ + 1)] <- seq(
+                loP,
+                hiP,
+                length.out = (hiQ - loQ + 1)
+              )
             }
           }
 
           maxrli <- max(which(!is.na(pred)))
           minrli <- min(which(!is.na(pred)))
-          pred[seq_along(pred)>maxrli] <- pred[[maxrli]]
-          pred[seq_along(pred)<minrli] <- pred[[minrli]]
+          pred[seq_along(pred) > maxrli] <- pred[[maxrli]]
+          pred[seq_along(pred) < minrli] <- pred[[minrli]]
           est <- rbind(est, pred)
         } # if(nti != ntj)
       } # for(ntj in c("A","C","G","T"))
@@ -155,15 +195,27 @@ makeBinnedQualErrfun <- function(binnedQ=c(2, 11, 25, 37)) {
     # HACKY
     MAX_ERROR_RATE <- 0.25
     MIN_ERROR_RATE <- 1e-7
-    est[est>MAX_ERROR_RATE] <- MAX_ERROR_RATE
-    est[est<MIN_ERROR_RATE] <- MIN_ERROR_RATE
+    est[est > MAX_ERROR_RATE] <- MAX_ERROR_RATE
+    est[est < MIN_ERROR_RATE] <- MIN_ERROR_RATE
 
     # Expand the err matrix with the self-transition probs
-    err <- rbind(1-colSums(est[1:3,]), est[1:3,],
-                 est[4,], 1-colSums(est[4:6,]), est[5:6,],
-                 est[7:8,], 1-colSums(est[7:9,]), est[9,],
-                 est[10:12,], 1-colSums(est[10:12,]))
-    rownames(err) <- paste0(rep(c("A","C","G","T"), each=4), "2", c("A","C","G","T"))
+    err <- rbind(
+      1 - colSums(est[1:3, ]),
+      est[1:3, ],
+      est[4, ],
+      1 - colSums(est[4:6, ]),
+      est[5:6, ],
+      est[7:8, ],
+      1 - colSums(est[7:9, ]),
+      est[9, ],
+      est[10:12, ],
+      1 - colSums(est[10:12, ])
+    )
+    rownames(err) <- paste0(
+      rep(c("A", "C", "G", "T"), each = 4),
+      "2",
+      c("A", "C", "G", "T")
+    )
     colnames(err) <- colnames(trans)
     # Return
     return(err)
@@ -237,15 +289,15 @@ learnErrors <- function(
 #' be a `list`.
 #' @export
 dada <- function(
-    derep,
-    err,
-    errorEstimationFunction = choose_dada_error_function,
-    selfConsist = FALSE,
-    pool = FALSE,
-    priors = character(0),
-    multithread = FALSE,
-    verbose = TRUE,
-    ...
+  derep,
+  err,
+  errorEstimationFunction = choose_dada_error_function,
+  selfConsist = FALSE,
+  pool = FALSE,
+  priors = character(0),
+  multithread = FALSE,
+  verbose = TRUE,
+  ...
 ) {
   if (is.null(err) && isFALSE(selfConsist)) {
     NULL
@@ -281,15 +333,20 @@ dada <- function(
 #' and `derepR` are all lists, even of length 0 or 1, the output will also be a
 #' list of the same length.
 #' @export
-mergePairs <- function(dadaF, derepF, dadaR, derepR,
-                       minOverlap = 12,
-                       maxMismatch = 0,
-                       returnrejects = FALSE,
-                       propagateCol = character(0),
-                       justConcatenate = FALSE,
-                       trimOverhang = FALSE,
-                       verbose = FALSE,
-                       ...) {
+mergePairs <- function(
+  dadaF,
+  derepF,
+  dadaR,
+  derepR,
+  minOverlap = 12,
+  maxMismatch = 0,
+  returnrejects = FALSE,
+  propagateCol = character(0),
+  justConcatenate = FALSE,
+  trimOverhang = FALSE,
+  verbose = FALSE,
+  ...
+) {
   if (length(dadaF) == 0 || length(dadaR) == 0) {
     list()
   } else {

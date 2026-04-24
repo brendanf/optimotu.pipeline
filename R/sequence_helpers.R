@@ -11,13 +11,25 @@ fastq_regex <- "\\.f(ast)?q(\\.gz)?$"
 #' @export
 find_name_col <- function(d) {
   stopifnot(is.data.frame(d))
-  if ("seq_id" %in% names(d)) return("seq_id")
-  if ("name" %in% names(d)) return("name")
-  if ("ASV" %in% names(d)) return("ASV")
-  if ("OTU" %in% names(d)) return("OTU")
+  if ("seq_id" %in% names(d)) {
+    return("seq_id")
+  }
+  if ("name" %in% names(d)) {
+    return("name")
+  }
+  if ("ASV" %in% names(d)) {
+    return("ASV")
+  }
+  if ("OTU" %in% names(d)) {
+    return("OTU")
+  }
   if (ncol(d) == 2) {
-    if ("seq" %in% names(d)) return(names(d)[names(d) != "seq"])
-    if ("sequence" %in% names(d)) return(names(d)[names(d) != "sequence"])
+    if ("seq" %in% names(d)) {
+      return(names(d)[names(d) != "seq"])
+    }
+    if ("sequence" %in% names(d)) {
+      return(names(d)[names(d) != "sequence"])
+    }
     return(names(d)[1])
   }
   stop("unable to determine sequence name column:", names(d))
@@ -29,13 +41,25 @@ find_name_col <- function(d) {
 #' @export
 find_seq_col <- function(d) {
   stopifnot(is.data.frame(d))
-  if ("seq" %in% names(d)) return("seq")
-  if ("sequence" %in% names(d)) return("sequence")
+  if ("seq" %in% names(d)) {
+    return("seq")
+  }
+  if ("sequence" %in% names(d)) {
+    return("sequence")
+  }
   if (ncol(d) == 2) {
-    if ("seq_id" %in% names(d)) return(names(d)[names(d) != "seq_id"])
-    if ("name" %in% names(d)) return(names(d)[names(d) != "name"])
-    if ("ASV" %in% names(d)) return(names(d)[names(d) != "ASV"])
-    if ("OTU" %in% names(d)) return(names(d)[names(d) != "OTU"])
+    if ("seq_id" %in% names(d)) {
+      return(names(d)[names(d) != "seq_id"])
+    }
+    if ("name" %in% names(d)) {
+      return(names(d)[names(d) != "name"])
+    }
+    if ("ASV" %in% names(d)) {
+      return(names(d)[names(d) != "ASV"])
+    }
+    if ("OTU" %in% names(d)) {
+      return(names(d)[names(d) != "OTU"])
+    }
     return(names(d)[2])
   }
   stop("unable to determine sequence column:", names(d))
@@ -57,8 +81,13 @@ write_sequence <- function(seq, fname, ...) {
 #' contains the sequences
 #' @param name_col (`character` string) name of the column in `seq` which
 #' contains the sequence names
-write_sequence.data.frame <- function(seq, fname, seq_col = find_seq_col(seq),
-                                      name_col = find_name_col(seq), ...) {
+write_sequence.data.frame <- function(
+  seq,
+  fname,
+  seq_col = find_seq_col(seq),
+  name_col = find_name_col(seq),
+  ...
+) {
   dplyr::select(seq, !!name_col, !!seq_col) |>
     tibble::deframe() |>
     Biostrings::DNAStringSet() |>
@@ -95,18 +124,40 @@ select_sequence <- function(seq, which, negate = FALSE, ...) {
 #' @param name_col (`character` string) name of the column in `seq` which
 #' contains the sequence names
 #' @importFrom rlang .data
-select_sequence.data.frame <- function(seq, which, negate = FALSE, name_col = find_name_col(seq), ...) {
+select_sequence.data.frame <- function(
+  seq,
+  which,
+  negate = FALSE,
+  name_col = find_name_col(seq),
+  ...
+) {
   if (isTRUE(negate)) {
-    if (is.integer(which)  ||
-        (is.numeric(which) && all(which == round(which)))) return(seq[-which,])
-    if (is.logical(which)) return(seq[!which,])
-    if (is.character(which)) return(dplyr::filter(seq, !.data[[name_col]] %in% which))
+    if (
+      is.integer(which) ||
+        (is.numeric(which) && all(which == round(which)))
+    ) {
+      return(seq[-which, ])
+    }
+    if (is.logical(which)) {
+      return(seq[!which, ])
+    }
+    if (is.character(which)) {
+      return(dplyr::filter(seq, !.data[[name_col]] %in% which))
+    }
     stop("'which' should be integer, logical, or character")
   } else if (isFALSE(negate)) {
-    if (is.integer(which)  ||
-        (is.numeric(which) && all(which == round(which)))) return(seq[which,])
-    if (is.logical(which)) return(seq[which,])
-    if (is.character(which)) return(dplyr::filter(seq, .data[[name_col]] %in% which))
+    if (
+      is.integer(which) ||
+        (is.numeric(which) && all(which == round(which)))
+    ) {
+      return(seq[which, ])
+    }
+    if (is.logical(which)) {
+      return(seq[which, ])
+    }
+    if (is.character(which)) {
+      return(dplyr::filter(seq, .data[[name_col]] %in% which))
+    }
     stop("'which' should be integer, logical, or character")
   }
   stop("'negate' must be TRUE or FALSE")
@@ -125,9 +176,17 @@ select_sequence.character <- function(seq, which, negate = FALSE, ...) {
 #' @exportS3Method
 select_sequence.default <- function(seq, which, negate = FALSE, ...) {
   if (isTRUE(negate)) {
-    if (is.integer(which) || (is.numeric(which) && all(which == round(which)))) return(seq[-which])
-    if (is.logical(which)) return(seq[!which])
-    if (is.character(which)) return(seq[setdiff(names(seq), which)])
+    if (
+      is.integer(which) || (is.numeric(which) && all(which == round(which)))
+    ) {
+      return(seq[-which])
+    }
+    if (is.logical(which)) {
+      return(seq[!which])
+    }
+    if (is.character(which)) {
+      return(seq[setdiff(names(seq), which)])
+    }
     stop("'which' should be integer, logical, or character")
   } else if (isFALSE(negate)) {
     return(seq[which])
@@ -200,7 +259,11 @@ hash_sequences.character <- function(seq, use_names = TRUE, ...) {
     # This requires loading everything in memory; would be better to do a
     # batch thing
     if (grepl(fastq_regex, seq)) {
-      hash_sequences(Biostrings::readQualityScaledDNAStringSet(seq), use_names, ...)
+      hash_sequences(
+        Biostrings::readQualityScaledDNAStringSet(seq),
+        use_names,
+        ...
+      )
     } else if (all(grepl(fasta_regex, seq))) {
       hash_sequences(Biostrings::readBStringSet(seq), use_names, ...)
     } else {
@@ -232,11 +295,11 @@ hash_sequences.XStringSet <- function(seq, use_names = TRUE, ...) {
 #' @param name_col (`character` string) name of the column in `seq` which
 #' contains the sequence names
 hash_sequences.data.frame <- function(
-    seq,
-    use_names = TRUE,
-    seq_col = find_seq_col(seq),
-    name_col = if (isTRUE(use_names)) find_name_col(seq) else NULL,
-    ...
+  seq,
+  use_names = TRUE,
+  seq_col = find_seq_col(seq),
+  name_col = if (isTRUE(use_names)) find_name_col(seq) else NULL,
+  ...
 ) {
   out <- seqhash(seq[[seq_col]])
   if (isTRUE(use_names)) {
@@ -316,7 +379,7 @@ name_seqs.character <- function(seq, prefix, ...) {
         prefix,
         width
       )
-    } else if  (grepl(fastq_regex, seq)) {
+    } else if (grepl(fastq_regex, seq)) {
       command <- sprintf(
         "awk 'NR%4==1{printf(\"@%s%%0%ii\\n\", ++i); next}; {print}'",
         prefix,

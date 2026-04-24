@@ -21,13 +21,15 @@
 #' If the inputs were lists, then the output is a list of `data.frame`s as
 #' described above.
 dada_merge_map <- function(dadaF, derepF, dadaR, derepR, merged) {
-  if (all(
-    methods::is(dadaF, "dada"),
-    methods::is(dadaR, "dada"),
-    methods::is(derepF, "derep"),
-    methods::is(derepR, "derep"),
-    methods::is(merged, "data.frame")
-  )) {
+  if (
+    all(
+      methods::is(dadaF, "dada"),
+      methods::is(dadaR, "dada"),
+      methods::is(derepF, "derep"),
+      methods::is(derepR, "derep"),
+      methods::is(merged, "data.frame")
+    )
+  ) {
     tibble::tibble(
       fwd_idx = dadaF$map[derepF$map],
       rev_idx = dadaR$map[derepR$map]
@@ -36,13 +38,15 @@ dada_merge_map <- function(dadaF, derepF, dadaR, derepR, merged) {
         tibble::rowid_to_column(merged[c("forward", "reverse")], "merge_idx"),
         by = c("fwd_idx" = "forward", "rev_idx" = "reverse")
       )
-  } else if (all(
-    rlang::is_bare_list(dadaF),
-    rlang::is_bare_list(dadaR),
-    rlang::is_bare_list(derepF),
-    rlang::is_bare_list(derepR),
-    rlang::is_bare_list(merged)
-  )) {
+  } else if (
+    all(
+      rlang::is_bare_list(dadaF),
+      rlang::is_bare_list(dadaR),
+      rlang::is_bare_list(derepF),
+      rlang::is_bare_list(derepR),
+      rlang::is_bare_list(merged)
+    )
+  ) {
     purrr::pmap(list(dadaF, derepF, dadaR, derepR, merged), dada_merge_map)
   }
 }
@@ -72,15 +76,28 @@ dada_merge_map <- function(dadaF, derepF, dadaR, derepR, merged) {
 #'    0x02 = filtered
 #'    0x04 = denoised & merged
 #' @export
-seq_map <- function(sample, fq_raw, fq_trim, fq_filt, dadaF, derepF, dadaR,
-                    derepR, merged, seq_all, rc = FALSE) {
+seq_map <- function(
+  sample,
+  fq_raw,
+  fq_trim,
+  fq_filt,
+  dadaF,
+  derepF,
+  dadaR,
+  derepR,
+  merged,
+  seq_all,
+  rc = FALSE
+) {
   # avoid R CMD check NOTE: no visible binding for global variable
   raw_idx <- seq_idx <- trim_idx <- filt_idx <- dada_idx <- NULL
 
   seq_map <- fastq_seq_map(fq_raw, fq_trim, fq_filt)
   dada_map <- dada_merge_map(dadaF, derepF, dadaR, derepR, merged)
   seq_map$dada_idx <-
-    seq_map$seq_idx <- match(merged$sequence, seq_all)[dada_map$merge_idx[seq_map$filt_idx]]
+    seq_map$seq_idx <- match(merged$sequence, seq_all)[dada_map$merge_idx[
+      seq_map$filt_idx
+    ]]
   dplyr::transmute(
     seq_map,
     sample = sample,

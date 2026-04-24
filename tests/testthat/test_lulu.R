@@ -19,10 +19,18 @@ comm_matrix <- matrix(
   dimnames = list(
     1:1000,
     c(
-      "p1", "p2", "p3",
-      "c1.1", "c2.1", "c3.1",
-      "c1.2", "c2.2", "c3.2",
-      "c1.3", "c2.3", "c3.3"
+      "p1",
+      "p2",
+      "p3",
+      "c1.1",
+      "c2.1",
+      "c3.1",
+      "c1.2",
+      "c2.2",
+      "c3.2",
+      "c1.3",
+      "c2.3",
+      "c3.3"
     )
   )
 )
@@ -123,14 +131,30 @@ download.file(
 #        -qcov_hsp_perc 80\
 #        -perc_identity 84
 
-lulu_otutab <- read.csv("otutable_test.txt", sep = "\t", header = TRUE, as.is = TRUE, row.names = 1)
-lulu_matchlist <- read.table("blast_output.txt", header = FALSE, as.is = TRUE, stringsAsFactors = FALSE)
+lulu_otutab <- read.csv(
+  "otutable_test.txt",
+  sep = "\t",
+  header = TRUE,
+  as.is = TRUE,
+  row.names = 1
+)
+lulu_matchlist <- read.table(
+  "blast_output.txt",
+  header = FALSE,
+  as.is = TRUE,
+  stringsAsFactors = FALSE
+)
 
 # run lulu to get reference result
 # lulu is very verbose...
 sink("/dev/null")
 # use minimum_relative_cooccurrence = 1.0 to avoid LULU bug
-lulu_result <- lulu::lulu(lulu_otutab, lulu_matchlist, minimum_ratio_type = "min", minimum_relative_cooccurence = 1.0)
+lulu_result <- lulu::lulu(
+  lulu_otutab,
+  lulu_matchlist,
+  minimum_ratio_type = "min",
+  minimum_relative_cooccurence = 1.0
+)
 sink()
 
 # convert lulu OTU table to long format
@@ -156,7 +180,12 @@ long_matchlist <-
   # subject are swapped.  Take the larger similarity/smaller distance.
   dplyr::summarize(V3 = max(V3), .by = c(V1, V2)) |>
   # join with long OTU table to get read counts for each sample for seq1
-  dplyr::left_join(long_otutab, y = _, by = c("seq_id" = "V1"), relationship = "many-to-many") |>
+  dplyr::left_join(
+    long_otutab,
+    y = _,
+    by = c("seq_id" = "V1"),
+    relationship = "many-to-many"
+  ) |>
   dplyr::rename(seq_id1 = seq_id, seq_id2 = V2) |>
   # join again to get read counts for seq2
   dplyr::inner_join(long_otutab, by = c("sample_key", "seq_id2" = "seq_id")) |>
@@ -202,14 +231,27 @@ wide_lulu_otutab <- tidyr::pivot_wider(
 
 # LULU keeps empty rows (OTUs). optimotu does not.  Check that this is accurate
 testthat::test_that("lulu_table does not include rows which are empty in lulu", {
-  testthat::expect_length(intersect(rownames(wide_lulu_otutab), rownames(lulu_result$curated_table)[rowSums(lulu_result$curated_table) == 0]), 0)
+  testthat::expect_length(
+    intersect(
+      rownames(wide_lulu_otutab),
+      rownames(lulu_result$curated_table)[
+        rowSums(lulu_result$curated_table) == 0
+      ]
+    ),
+    0
+  )
 })
 
 # Add these rows
-wide_lulu_otutab[rownames(lulu_result$curated_table)[rowSums(lulu_result$curated_table) == 0], ] <- 0L
+wide_lulu_otutab[
+  rownames(lulu_result$curated_table)[rowSums(lulu_result$curated_table) == 0],
+] <- 0L
 
 # reorder the table to match the LULU result
-wide_lulu_otutab <- wide_lulu_otutab[rownames(lulu_result$curated_table), colnames(lulu_result$curated_table)]
+wide_lulu_otutab <- wide_lulu_otutab[
+  rownames(lulu_result$curated_table),
+  colnames(lulu_result$curated_table)
+]
 
 testthat::test_that("lulu_table and lulu give same result", {
   testthat::expect_equal(

@@ -19,7 +19,7 @@ fastx_gz_index <- function(file) {
     sprintf("-i=%s", index),
     "-w"
   )
-  out = system2(fastqindex, args)
+  out <- system2(fastqindex, args)
   stopifnot(out == 0)
   checkmate::assert_file_exists(index, "r")
   index
@@ -28,16 +28,27 @@ fastx_gz_index <- function(file) {
 #' @param infile (`character` filename) gzipped fasta or fastq file
 #' @param index (`character` filename) index file for `infile`
 #' @param i (`integer` vector) indices to extract
-#' @param outfile (`character` filename) file to write the extracted sequences to
+#' @param outfile (`character` filename) file to write the extracted sequences
+#'   to. If it ends in ".gz", the output will be gzipped.
 #' @param renumber (`logical` flag) if `TRUE`, replace the sequence names with
 #'   integers, starting at 0.
 #' @param append (`logical` flag) if `TRUE`, append to `outfile` if it already
 #'   exists, rather than overwriting.
+#' @param hash (`character` scalar) md5 hash of the infile; ignored but included
+#'   as a parameter for dependency tracking
 #'
 #' @return filename of the output file
 #' @describeIn fastx_gz Extract sequences from a gzipped FASTA or FASTQ file
 #' @export
-fastx_gz_extract <- function(infile, index, i, outfile, renumber = FALSE, append = FALSE, hash = NULL) {
+fastx_gz_extract <- function(
+  infile,
+  index,
+  i,
+  outfile,
+  renumber = FALSE,
+  append = FALSE,
+  hash = NULL
+) {
   checkmate::assert_file_exists(infile, "r")
   checkmate::assert_file_exists(index, "r")
   checkmate::assert_integerish(i, lower = 1)
@@ -46,9 +57,13 @@ fastx_gz_extract <- function(infile, index, i, outfile, renumber = FALSE, append
   checkmate::assert_flag(append)
   fastqindex <- find_executable("fastqindex")
   checkmate::assert_file_exists(fastqindex, access = "x")
-  if (file.exists(outfile) && !append) unlink(outfile)
+  if (file.exists(outfile) && !append) {
+    unlink(outfile)
+  }
   ensure_directory(outfile)
-  if (!file.exists(outfile)) file.create(outfile)
+  if (!file.exists(outfile)) {
+    file.create(outfile)
+  }
   start <- which(i != dplyr::lag(i, 1, -1) + 1L)
   end <- c(start[-1] - 1L, length(i))
   is_fastq <- endsWith(infile, "fastq.gz") || endsWith(infile, "fq.gz")
@@ -62,7 +77,7 @@ fastx_gz_extract <- function(infile, index, i, outfile, renumber = FALSE, append
     index
   )
   if (renumber) {
-    command = paste(
+    command <- paste(
       command,
       sprintf(
         "| awk -v n=%i 'NR%%%i==1{print \"%c\" n; n++; next}; {print}'",
@@ -73,9 +88,9 @@ fastx_gz_extract <- function(infile, index, i, outfile, renumber = FALSE, append
     )
   }
   if (endsWith(outfile, ".gz")) {
-    command = paste(command, "| gzip -c -")
+    command <- paste(command, "| gzip -c -")
   }
-  command = paste(command, ">>", outfile)
+  command <- paste(command, ">>", outfile)
   result <- vapply(command, system, 0L)
   stopifnot(all(result == 0))
   outfile
@@ -99,15 +114,15 @@ fastx_gz_extract <- function(infile, index, i, outfile, renumber = FALSE, append
 #' @describeIn fastx_gz Extract sequences from a gzipped FASTA or FASTQ file
 #' @export
 fastx_gz_random_access_extract <- function(
-    infile,
-    index,
-    i,
-    outfile = NULL,
-    renumber = FALSE,
-    append = FALSE,
-    hash = NULL,
-    max_gap = 100L,
-    ncpu = local_cpus()
+  infile,
+  index,
+  i,
+  outfile = NULL,
+  renumber = FALSE,
+  append = FALSE,
+  hash = NULL,
+  max_gap = 100L,
+  ncpu = local_cpus()
 ) {
   checkmate::assert_file_exists(infile, "r")
   checkmate::assert_file_exists(index, "r")
@@ -119,7 +134,9 @@ fastx_gz_random_access_extract <- function(
   fastqindex <- find_executable("fastqindex")
   checkmate::assert_file_exists(fastqindex, access = "x")
   isort <- sort(unique(as.integer(i)))
-  start <- which(isort > dplyr::lag(isort, 1, -as.integer(max_gap)) + as.integer(max_gap))
+  start <- which(
+    isort > dplyr::lag(isort, 1, -as.integer(max_gap)) + as.integer(max_gap)
+  )
   end <- c(start[-1] - 1L, length(isort))
   is_fastq <- endsWith(infile, "fastq.gz") || endsWith(infile, "fq.gz")
   tmpfile <- replicate(length(start), withr::local_tempfile(fileext = ".fasta"))
@@ -142,7 +159,8 @@ fastx_gz_random_access_extract <- function(
   j <- 1L
   fastqindex_return <- 0
   while (j <= length(start) && !is.null(processes[[j]])) {
-    fastqindex_return <- fastqindex_return + processes[[j]]$wait()$get_exit_status()
+    fastqindex_return <- fastqindex_return +
+      processes[[j]]$wait()$get_exit_status()
     if (fastqindex_return == 0 && (k <- j + ncpu) <= length(start)) {
       processes[[k]] <- processx::process$new(
         command = fastqindex,

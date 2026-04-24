@@ -4,8 +4,10 @@
 #' @return a `character` vector of taxonomic ranks
 #' @export
 tax_ranks <- function() {
-  getOption("optimotu.pipeline.tax_ranks",
-            c("kingdom", "phylum", "class", "order", "family", "genus", "species"))
+  getOption(
+    "optimotu.pipeline.tax_ranks",
+    c("kingdom", "phylum", "class", "order", "family", "genus", "species")
+  )
 }
 
 #' @rdname tax_ranks
@@ -21,7 +23,9 @@ tax_rank_vars <- function() {
 #' @return the previously set taxonomic ranks
 #' @export
 set_tax_ranks <- function(value) {
-  options("optimotu.pipeline.tax_ranks" = value)[["optimotu.pipeline.tax_ranks"]]
+  options("optimotu.pipeline.tax_ranks" = value)[[
+    "optimotu.pipeline.tax_ranks"
+  ]]
 }
 
 #' Get or set the offset to use when converting between integers and taxonomic
@@ -38,7 +42,9 @@ rank_offset <- function() {
 #' @return the previously set offset
 #' @export
 set_rank_offset <- function(value) {
-  options("optimotu.pipeline.rank_offset" = value)[["optimotu.pipeline.rank_offset"]]
+  options("optimotu.pipeline.rank_offset" = value)[[
+    "optimotu.pipeline.rank_offset"
+  ]]
 }
 
 #' Get or set the taxonomic ranks which are assumed to be "known"
@@ -60,7 +66,9 @@ known_rank_vars <- function() {
 #' @return the previously set known ranks
 #' @export
 set_known_ranks <- function(value) {
-  options("optimotu.pipeline.known_ranks" = value)[["optimotu.pipeline.known_ranks"]]
+  options("optimotu.pipeline.known_ranks" = value)[[
+    "optimotu.pipeline.known_ranks"
+  ]]
 }
 
 #' Get or set the taxa which are assumed to be "known"
@@ -75,7 +83,9 @@ known_taxa <- function() {
 #' @return the previously set known taxa
 #' @export
 set_known_taxa <- function(value) {
-  options("optimotu.pipeline.known_taxa" = value)[["optimotu.pipeline.known_taxa"]]
+  options("optimotu.pipeline.known_taxa" = value)[[
+    "optimotu.pipeline.known_taxa"
+  ]]
 }
 
 #' @rdname known_ranks
@@ -237,7 +247,7 @@ build_taxonomy <- function(...) {
 
   for (r in length(tax):3L) {
     if (r == length(tax)) {
-      tax[[r]]$prior <- 0.99/nrow(tax[[r]])
+      tax[[r]]$prior <- 0.99 / nrow(tax[[r]])
     } else {
       tax[[r]]$prior <- NULL
       tax[[r]] <- dplyr::left_join(
@@ -324,7 +334,7 @@ build_taxonomy_new <- function(...) {
   for (i in seq_along(tax_ranks())) {
     rankname <- tax_rank_vars()[i]
     tax_i <- dplyr::select(tax, one_of(tax_ranks()[1:i]), n)
-    tax_i <- tax_i[!is.na(tax_i[[tax_ranks()[i]]]),]
+    tax_i <- tax_i[!is.na(tax_i[[tax_ranks()[i]]]), ]
     tax_i <- dplyr::summarize(tax_i, n = sum(n), .by = one_of(tax_ranks()[1:i]))
     if (i == 1) {
       tax_i$parent_classification <- "root"
@@ -348,12 +358,12 @@ build_taxonomy_new <- function(...) {
     if (i > 1L) {
       tax_i <- dplyr::mutate(
         tax_i,
-        classification = paste(parent_classification, {{rankname}}, sep = ",")
+        classification = paste(parent_classification, {{ rankname }}, sep = ",")
       )
     } else {
       tax_i <- dplyr::mutate(
         tax_i,
-        classification = {{rankname}}
+        classification = {{ rankname }}
       ) |>
         dplyr::arrange(classification == "nonFungi")
     }

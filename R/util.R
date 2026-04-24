@@ -33,13 +33,14 @@ local_cpus <- function() {
     out <- as.integer(Sys.getenv("SLURM_JOB_CPUS_PER_NODE"))
     # if slurm doesn't know how many cores, that means we're probably on the
     # login node, so we should only use 1 core.
-    if (!checkmate::test_count(out, positive = TRUE)) out <- 1L
+    if (!checkmate::test_count(out, positive = TRUE)) {
+      out <- 1L
+    }
     out
   } else {
     getOption("optimotu_num_threads", max(parallel::detectCores() - 1L, 1L))
   }
 }
-
 
 
 #' Ensure that a table has at least one row

@@ -272,7 +272,7 @@ do_closed_ref_cluster <- function(
   }
   qfile <- withr::local_tempfile(fileext = ".fasta")
   rfile <- withr::local_tempfile(fileext = ".fasta")
-  optimotu::closed_ref_cluster(
+  closed_ref_out <- optimotu::closed_ref_cluster(
     query = optimotu.pipeline::fastx_gz_random_access_extract(
       infile = seq_file,
       index = seq_file_index,
@@ -289,6 +289,7 @@ do_closed_ref_cluster <- function(
     dist_config = dist_config,
     parallel_config = parallel_config
   )
+  closed_ref_out
 }
 
 #' Calculate a full pre-denovo taxon table
@@ -334,8 +335,10 @@ full_predenovo_taxon_table <- function(
     ),
     combine = "or"
   )
-  checkmate::assert_integerish(closedref_taxon_table[["seq_idx"]],
-                               null.ok = TRUE)
+  checkmate::assert_integerish(
+    closedref_taxon_table[["seq_idx"]],
+    null.ok = TRUE
+  )
   checkmate::assert_character(closedref_taxon_table[["seq_id"]], null.ok = TRUE)
 
   rank_sym <- rlang::sym(rank)
@@ -523,10 +526,10 @@ do_denovo_cluster <- function(
       c(
         c("seq_id", super_ranks) |>
           (\(x) `names<-`(x, x))() |>
-          purrr::map(~character(0)),
+          purrr::map(~ character(0)),
         c(rank, sub_ranks) |>
           (\(x) `names<-`(x, x))() |>
-          purrr::map(~integer(0))
+          purrr::map(~ integer(0))
       ) |>
         tibble::as_tibble()
     )

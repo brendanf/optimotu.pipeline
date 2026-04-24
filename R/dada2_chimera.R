@@ -32,15 +32,15 @@
 #' flagged as a bimera.
 #' @export
 bimera_denovo_table <- function(
-    seqtab,
-    seqs = NULL,
-    minFoldParentOverAbundance = 1.5,
-    minParentAbundance = 2,
-    allowOneOff = FALSE,
-    minOneOffParentDistance = 4,
-    maxShift = 16,
-    multithread = FALSE,
-    ...
+  seqtab,
+  seqs = NULL,
+  minFoldParentOverAbundance = 1.5,
+  minParentAbundance = 2,
+  allowOneOff = FALSE,
+  minOneOffParentDistance = 4,
+  maxShift = 16,
+  multithread = FALSE,
+  ...
 ) {
   UseMethod("bimera_denovo_table", seqtab)
 }
@@ -66,7 +66,9 @@ bimera_denovo_table.matrix <- function(
     stop("RcppParallel package must be installed to run bimera_denovo_table()")
   }
 
-  if (is.null(seqs)) seqs <- colnames(seqtab)
+  if (is.null(seqs)) {
+    seqs <- colnames(seqtab)
+  }
   if (isTRUE(multithread)) {
     RcppParallel::setThreadOptions(numThreads = "auto")
   } else if (isFALSE(multithread)) {
@@ -94,34 +96,42 @@ bimera_denovo_table.matrix <- function(
 #' @rdname bimera_denovo_table
 #' @exportS3Method bimera_denovo_table data.frame
 bimera_denovo_table.data.frame <- function(
-    seqtab,
-    seqs = NULL,
-    minFoldParentOverAbundance = 1.5,
-    minParentAbundance = 2,
-    allowOneOff = FALSE,
-    minOneOffParentDistance = 4,
-    maxShift = 16,
-    multithread = FALSE,
-    ...
+  seqtab,
+  seqs = NULL,
+  minFoldParentOverAbundance = 1.5,
+  minParentAbundance = 2,
+  allowOneOff = FALSE,
+  minOneOffParentDistance = 4,
+  maxShift = 16,
+  multithread = FALSE,
+  ...
 ) {
   # avoid R CMD check NOTE about undeclared global variables
   nread <- nflag <- nsam <- NULL
 
   seq_col <- intersect(c("seq", "seq_id", "seq_idx"), names(seqtab))
   if (length(seq_col) == 0) {
-    stop("seqtab must have at least one of columns 'seq', 'seq_id', or 'seq_idx'")
+    stop(
+      "seqtab must have at least one of columns 'seq', 'seq_id', or 'seq_idx'"
+    )
   }
   seq_col <- seq_col[1]
   if (seq_col != "seq") {
     if (length(seqs) == 1 && file.exists(seqs)) {
       seqs <- Biostrings::readDNAStringSet(seqs)
     }
-    if (methods::is(seqs, "XStringSet")) seqs <- as.character(seqs)
+    if (methods::is(seqs, "XStringSet")) {
+      seqs <- as.character(seqs)
+    }
     if (!is.character(seqs)) {
-      stop("'seqs' must be a filename of a fasta file, an XStringSet, or a character")
+      stop(
+        "'seqs' must be a filename of a fasta file, an XStringSet, or a character"
+      )
     }
     if (identical(seq_col, "seq_id") && !rlang::is_named(seqs)) {
-      stop("'seqs' must be named if sequences are identified by 'seq_id' in 'seqtab'")
+      stop(
+        "'seqs' must be named if sequences are identified by 'seq_id' in 'seqtab'"
+      )
       checkmate::assert_subset(names(seqs), seqtab$seq_id)
     }
   }
@@ -144,9 +154,12 @@ bimera_denovo_table.data.frame <- function(
   # R integers are 32 bit (== 4 bytes)
   # If there are more than 250M ASVs in a single sample, then the matrix ends
   # up larger (but at that point the size of the sequences themselves is a bigger problem!)
-  n_partition <- ceiling(n_asv*n_sample*4/2^30)
+  n_partition <- ceiling(n_asv * n_sample * 4 / 2^30)
   sample_splits <-
-    split(unique(seqtab$sample), rep(seq_len(n_partition), length.out = n_sample))
+    split(
+      unique(seqtab$sample),
+      rep(seq_len(n_partition), length.out = n_sample)
+    )
   out <- list()
   for (s in sample_splits) {
     m <- dplyr::filter(seqtab, sample %in% s) |>
@@ -158,7 +171,8 @@ bimera_denovo_table.data.frame <- function(
       tibble::column_to_rownames("sample") |>
       as.matrix()
 
-    switch(seq_col,
+    switch(
+      seq_col,
       seq_id = colnames(m) <- seqs[colnames(m)],
       seq_idx = colnames(m) <- seqs[as.integer(colnames(m))]
     )
@@ -186,7 +200,11 @@ bimera_denovo_table.data.frame <- function(
   }
 
   dplyr::bind_rows(out) |>
-    dplyr::summarize(nflag = sum(nflag), nsam = sum(nsam), .by = all_of(seq_col))
+    dplyr::summarize(
+      nflag = sum(nflag),
+      nsam = sum(nsam),
+      .by = all_of(seq_col)
+    )
 }
 
 #' Combine bimera tables from `bimera_denovo_table()`
@@ -211,7 +229,9 @@ combine_bimera_denovo_tables <- function(
 ) {
   seq_col <- intersect(c("seq", "seq_id", "seq_idx"), names(bimdf))
   if (length(seq_col) == 0) {
-    stop("bimdf must have at least one of columns 'seq', 'seq_id', or 'seq_idx'")
+    stop(
+      "bimdf must have at least one of columns 'seq', 'seq_id', or 'seq_idx'"
+    )
   }
   seq_col <- seq_col[1]
 
@@ -223,11 +243,18 @@ combine_bimera_denovo_tables <- function(
   ## This snippet modified from DADA2
   bims.out <- with(
     bimdf,
-    nflag >= nsam | (nflag > 0 & nflag >= (nsam - ignoreNNegatives) * minSampleFraction)
+    nflag >= nsam |
+      (nflag > 0 & nflag >= (nsam - ignoreNNegatives) * minSampleFraction)
   )
-  if (verbose)
-    message("Identified ", sum(bims.out), " bimeras out of ",
-            length(bims.out), " input sequences.")
+  if (verbose) {
+    message(
+      "Identified ",
+      sum(bims.out),
+      " bimeras out of ",
+      length(bims.out),
+      " input sequences."
+    )
+  }
   ## end snippet from DADA2
   bimdf[[seq_col]][bims.out]
 }

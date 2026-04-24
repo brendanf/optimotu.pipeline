@@ -1,4 +1,3 @@
-
 testthat::test_that("fastq_sample_fraction works", {
   subsamp1_fastq_gz <- withr::local_tempfile(fileext = ".fastq.gz")
   testthat::expect_equal(
@@ -11,7 +10,9 @@ testthat::test_that("fastq_sample_fraction works", {
     subsamp1_fastq_gz
   )
   testthat::expect_no_error(
-    subsamp_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp1_fastq_gz)
+    subsamp_qsdss <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp1_fastq_gz
+    )
   )
   testthat::expect_true(all(
     test_qsdss1[names(subsamp_qsdss)] == subsamp_qsdss
@@ -33,11 +34,16 @@ testthat::test_that("fastq_sample with rename works", {
   )
 
   testthat::expect_no_error(
-    subsamp2_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp2_fastq_gz)
+    subsamp2_qsdss <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp2_fastq_gz
+    )
   )
 
   testthat::expect_equal(
-    as.character(test_qsdss1[strtoi(names(subsamp2_qsdss), 16)], use.names = FALSE),
+    as.character(
+      test_qsdss1[strtoi(names(subsamp2_qsdss), 16)],
+      use.names = FALSE
+    ),
     as.character(subsamp2_qsdss, use.names = FALSE)
   )
 })
@@ -53,7 +59,9 @@ testthat::test_that("fastq_sample_number works", {
     subsamp5_fastq_gz
   )
   testthat::expect_no_error(
-    subsamp5_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp5_fastq_gz)
+    subsamp5_qsdss <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp5_fastq_gz
+    )
   )
   testthat::expect_true(all(
     test_qsdss1[names(subsamp5_qsdss)] == subsamp5_qsdss
@@ -75,11 +83,16 @@ testthat::test_that("fastq_sample_number with rename works", {
   )
 
   testthat::expect_no_error(
-    subsamp6_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp6_fastq_gz)
+    subsamp6_qsdss <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp6_fastq_gz
+    )
   )
 
   testthat::expect_equal(
-    as.character(test_qsdss1[strtoi(names(subsamp6_qsdss), 16)], use.names = FALSE),
+    as.character(
+      test_qsdss1[strtoi(names(subsamp6_qsdss), 16)],
+      use.names = FALSE
+    ),
     as.character(subsamp6_qsdss, use.names = FALSE)
   )
   testthat::expect_length(subsamp6_qsdss, 61)
@@ -98,10 +111,14 @@ testthat::test_that("fastq_sample_multiple works", {
     c(subsamp3_fastq_gz, subsamp4_fastq_gz)
   )
   testthat::expect_no_error(
-    subsamp3_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp3_fastq_gz)
+    subsamp3_qsdss <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp3_fastq_gz
+    )
   )
   testthat::expect_no_error(
-    subsamp4_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp4_fastq_gz)
+    subsamp4_qsdss <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp4_fastq_gz
+    )
   )
   testthat::expect_true(all(
     test_qsdss1[names(subsamp3_qsdss)] == subsamp3_qsdss
@@ -124,10 +141,14 @@ testthat::test_that("fastq_sample_number_multiple works", {
     c(subsamp7_fastq_gz, subsamp8_fastq_gz)
   )
   testthat::expect_no_error(
-    subsamp7_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp7_fastq_gz)
+    subsamp7_qsdss <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp7_fastq_gz
+    )
   )
   testthat::expect_no_error(
-    subsamp8_qsdss <- Biostrings::readQualityScaledDNAStringSet(subsamp8_fastq_gz)
+    subsamp8_qsdss <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp8_fastq_gz
+    )
   )
   testthat::expect_true(all(
     test_qsdss1[names(subsamp7_qsdss)] == subsamp7_qsdss
@@ -154,11 +175,14 @@ testthat::test_that("fastq_pair_sample_fraction works", {
     c(subsamp9_R1_fastq_gz, subsamp9_R2_fastq_gz)
   )
   testthat::expect_no_error(
-    subsamp9_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(subsamp9_R1_fastq_gz)
+    subsamp9_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp9_R1_fastq_gz
+    )
   )
   testthat::expect_no_error(
-
-    subsamp9_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(subsamp9_R2_fastq_gz)
+    subsamp9_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp9_R2_fastq_gz
+    )
   )
   testthat::expect_true(all(
     test_qsdss1[names(subsamp9_qsdss_R1)] == subsamp9_qsdss_R1
@@ -186,18 +210,28 @@ testthat::test_that("fastq_pair_sample_fraction with rename works", {
   )
 
   testthat::expect_no_error(
-    subsamp10_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(subsamp10_fastq_gz_R1)
+    subsamp10_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp10_fastq_gz_R1
+    )
   )
   testthat::expect_no_error(
-    subsamp10_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(subsamp10_fastq_gz_R2)
+    subsamp10_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp10_fastq_gz_R2
+    )
   )
 
   testthat::expect_equal(
-    as.character(test_qsdss1[strtoi(names(subsamp10_qsdss_R1), 16)], use.names = FALSE),
+    as.character(
+      test_qsdss1[strtoi(names(subsamp10_qsdss_R1), 16)],
+      use.names = FALSE
+    ),
     as.character(subsamp10_qsdss_R1, use.names = FALSE)
   )
   testthat::expect_equal(
-    as.character(test_qsdss1_R2[strtoi(names(subsamp10_qsdss_R2), 16)], use.names = FALSE),
+    as.character(
+      test_qsdss1_R2[strtoi(names(subsamp10_qsdss_R2), 16)],
+      use.names = FALSE
+    ),
     as.character(subsamp10_qsdss_R2, use.names = FALSE)
   )
   testthat::expect_identical(
@@ -221,10 +255,14 @@ testthat::test_that("fastq_pair_sample_number works", {
     c(subsamp11_fastq_gz_R1, subsamp11_fastq_gz_R2)
   )
   testthat::expect_no_error(
-    subsamp11_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(subsamp11_fastq_gz_R1)
+    subsamp11_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp11_fastq_gz_R1
+    )
   )
   testthat::expect_no_error(
-    subsamp11_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(subsamp11_fastq_gz_R2)
+    subsamp11_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp11_fastq_gz_R2
+    )
   )
   testthat::expect_true(all(
     test_qsdss1[names(subsamp11_qsdss_R1)] == subsamp11_qsdss_R1
@@ -256,10 +294,14 @@ testthat::test_that("fastq_pair_sample_number with rename works", {
     c(subsamp12_fastq_gz_R1, subsamp12_fastq_gz_R2)
   )
   testthat::expect_no_error(
-    subsamp12_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(subsamp12_fastq_gz_R1)
+    subsamp12_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp12_fastq_gz_R1
+    )
   )
   testthat::expect_no_error(
-    subsamp12_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(subsamp12_fastq_gz_R2)
+    subsamp12_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp12_fastq_gz_R2
+    )
   )
   testthat::expect_true(all(
     test_qsdss1[strtoi(names(subsamp12_qsdss_R1), 16)] == subsamp12_qsdss_R1
@@ -289,24 +331,43 @@ testthat::test_that("fastq_pair_sample_number_multiple works", {
       output_R1 = c(subsamp13_fastq_gz_R1, subsamp14_fastq_gz_R1),
       output_R2 = c(subsamp13_fastq_gz_R2, subsamp14_fastq_gz_R2)
     ),
-    list(R1 = c(subsamp13_fastq_gz_R1, subsamp14_fastq_gz_R1), R2 = c(subsamp13_fastq_gz_R2, subsamp14_fastq_gz_R2))
+    list(
+      R1 = c(subsamp13_fastq_gz_R1, subsamp14_fastq_gz_R1),
+      R2 = c(subsamp13_fastq_gz_R2, subsamp14_fastq_gz_R2)
+    )
   )
   testthat::expect_no_error(
-    subsamp13_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(subsamp13_fastq_gz_R1)
+    subsamp13_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp13_fastq_gz_R1
+    )
   )
   testthat::expect_no_error(
-    subsamp13_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(subsamp13_fastq_gz_R2)
+    subsamp13_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp13_fastq_gz_R2
+    )
   )
   testthat::expect_no_error(
-    subsamp14_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(subsamp14_fastq_gz_R1)
+    subsamp14_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp14_fastq_gz_R1
+    )
   )
   testthat::expect_no_error(
-    subsamp14_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(subsamp14_fastq_gz_R2)
+    subsamp14_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp14_fastq_gz_R2
+    )
   )
-  testthat::expect_true(all(test_qsdss1[names(subsamp13_qsdss_R1)] == subsamp13_qsdss_R1))
-  testthat::expect_true(all(test_qsdss1_R2[names(subsamp13_qsdss_R2)] == subsamp13_qsdss_R2))
-  testthat::expect_true(all(test_qsdss1[names(subsamp14_qsdss_R1)] == subsamp14_qsdss_R1))
-  testthat::expect_true(all(test_qsdss1_R2[names(subsamp14_qsdss_R2)] == subsamp14_qsdss_R2))
+  testthat::expect_true(all(
+    test_qsdss1[names(subsamp13_qsdss_R1)] == subsamp13_qsdss_R1
+  ))
+  testthat::expect_true(all(
+    test_qsdss1_R2[names(subsamp13_qsdss_R2)] == subsamp13_qsdss_R2
+  ))
+  testthat::expect_true(all(
+    test_qsdss1[names(subsamp14_qsdss_R1)] == subsamp14_qsdss_R1
+  ))
+  testthat::expect_true(all(
+    test_qsdss1_R2[names(subsamp14_qsdss_R2)] == subsamp14_qsdss_R2
+  ))
   testthat::expect_identical(
     names(subsamp13_qsdss_R1),
     names(subsamp13_qsdss_R2)
@@ -344,24 +405,43 @@ testthat::test_that("fastq_pair_sample_number_multiple with rename works", {
       output_R2 = c(subsamp15_fastq_gz_R2, subsamp16_fastq_gz_R2),
       rename = TRUE
     ),
-    list(R1 = c(subsamp15_fastq_gz_R1, subsamp16_fastq_gz_R1), R2 = c(subsamp15_fastq_gz_R2, subsamp16_fastq_gz_R2))
+    list(
+      R1 = c(subsamp15_fastq_gz_R1, subsamp16_fastq_gz_R1),
+      R2 = c(subsamp15_fastq_gz_R2, subsamp16_fastq_gz_R2)
+    )
   )
   testthat::expect_no_error(
-    subsamp15_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(subsamp15_fastq_gz_R1)
+    subsamp15_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp15_fastq_gz_R1
+    )
   )
   testthat::expect_no_error(
-    subsamp15_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(subsamp15_fastq_gz_R2)
+    subsamp15_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp15_fastq_gz_R2
+    )
   )
   testthat::expect_no_error(
-    subsamp16_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(subsamp16_fastq_gz_R1)
+    subsamp16_qsdss_R1 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp16_fastq_gz_R1
+    )
   )
   testthat::expect_no_error(
-    subsamp16_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(subsamp16_fastq_gz_R2)
+    subsamp16_qsdss_R2 <- Biostrings::readQualityScaledDNAStringSet(
+      subsamp16_fastq_gz_R2
+    )
   )
-  testthat::expect_true(all(test_qsdss1[strtoi(names(subsamp15_qsdss_R1), 16)] == subsamp15_qsdss_R1))
-  testthat::expect_true(all(test_qsdss1_R2[strtoi(names(subsamp15_qsdss_R2), 16)] == subsamp15_qsdss_R2))
-  testthat::expect_true(all(test_qsdss1[strtoi(names(subsamp16_qsdss_R1), 16)] == subsamp16_qsdss_R1))
-  testthat::expect_true(all(test_qsdss1_R2[strtoi(names(subsamp16_qsdss_R2), 16)] == subsamp16_qsdss_R2))
+  testthat::expect_true(all(
+    test_qsdss1[strtoi(names(subsamp15_qsdss_R1), 16)] == subsamp15_qsdss_R1
+  ))
+  testthat::expect_true(all(
+    test_qsdss1_R2[strtoi(names(subsamp15_qsdss_R2), 16)] == subsamp15_qsdss_R2
+  ))
+  testthat::expect_true(all(
+    test_qsdss1[strtoi(names(subsamp16_qsdss_R1), 16)] == subsamp16_qsdss_R1
+  ))
+  testthat::expect_true(all(
+    test_qsdss1_R2[strtoi(names(subsamp16_qsdss_R2), 16)] == subsamp16_qsdss_R2
+  ))
   testthat::expect_identical(
     names(subsamp15_qsdss_R1),
     names(subsamp15_qsdss_R2)
@@ -432,7 +512,8 @@ testthat::test_that("fastq_sample with multiple files works", {
     c(
       as.character(test_qsdss1),
       as.character(test_qsdss2_R2)
-    )[which(shuf <= 77L)] |> unname(),
+    )[which(shuf <= 77L)] |>
+      unname(),
     as.character(subsamp18_qsdss, use.names = FALSE)
   )
   testthat::expect_identical(
