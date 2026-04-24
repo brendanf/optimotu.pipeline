@@ -1,6 +1,9 @@
 # optimotu.pipeline (development version)
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from
   fasta/fastq headers used by common reference databases as well as TSV files.
+* Broadened IQ-TREE model parsing for EPA-ng to cover time-reversible models
+  with fitted parameterization (rates, frequencies, and heterogeneity),
+  with explicit failure when parsing is not possible.
 * Fixed parsing of options for BayesANT taxonomic classifier.
 * Added options for optimizing cluster thresholds in `pipeline_options.yaml`.
 * Added new formats "qs", "qs2", "qdata" for `write_and_return_file.default()`.

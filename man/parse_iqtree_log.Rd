@@ -13,5 +13,6 @@ parse_iqtree_log(model)
 Parse IQ-TREE model specification
 }
 \details{
-The current implementation can only parse a GTR+FU model.
+Parses IQ-TREE output into an EPA-ng compatible model string including fitted
+substitution rates, frequencies, and heterogeneity parameters when available.
 }

@@ -163,37 +163,16 @@ is_jplace <- function(jplace) {
 
 #' Parse IQ-TREE model specification
 #'
-#' @details The current implementation can only parse a GTR+FU model.
+#' @details
+#' Parses IQ-TREE output into an EPA-ng compatible model string including fitted
+#' substitution rates, frequencies, and heterogeneity parameters when available.
 #' @param model (`character`) model specification or a file name
 parse_iqtree_log <- function(model) {
   checkmate::assert_character(model)
   if (checkmate::test_file_exists(model, access = "r")) {
-    model = readLines(model)
+    model <- readLines(model)
   }
-  model <- model[cumsum(grepl("FINALIZING TREE SEARCH", model)) == 1]
-  rates <- model[grepl("Rate parameters:", model)]
-  outmodel <- ""
-  if (length(rates) == 1) {
-    rates <- regmatches(rates, regexec("A-C: *([0-9.]+) +A-G: *([0-9.]+) +A-T: *([0-9.]+) +C-G: *([0-9.]+) +C-T: *([0-9.]+) +G-T: *([0-9.]+)", rates))[[1]][-1]
-    rates <- as.numeric(rates)
-    checkmate::assert_numeric(rates, lower = 0, finite = TRUE, len = 6, any.missing = FALSE)
-    outmodel <- paste0(outmodel, "GTR{", paste0(rates, collapse = "/"), "}")
-  }
-  base_freq <- model[grepl("Base frequencies:", model)]
-  if (length(base_freq) == 1) {
-    base_freq <- regmatches(
-      base_freq,
-      regexec(
-        pattern = "A: *([0-9.]+) +C: *([0-9.]+) +G: *([0-9.]+) +T: *([0-9.]+)",
-        text = base_freq
-      )
-    )[[1]][-1]
-    base_freq <- as.numeric(base_freq)
-    checkmate::assert_numeric(base_freq, lower = 0, upper = 1, len = 4, any.missing = FALSE)
-    outmodel <- paste0(outmodel, "+FU{", paste0(base_freq, collapse = "/"), "}")
-  }
-  alpha <- model[grepl("Gamma shape parameter:", model)]
-  outmodel
+  parse_iqtree_model(text = model)
 }
 
 parse_iqtree_model <- function(file = NULL, text = NULL) {
@@ -204,7 +183,9 @@ parse_iqtree_model <- function(file = NULL, text = NULL) {
     stop("Cannot provide both 'file' and 'text'.")
   }
   checkmate::assert_character(text, any.missing = FALSE)
-  if (length(text) == 1) text <- unlist(strsplit(text, "\n"))
+  if (length(text) == 1) {
+    text <- unlist(strsplit(text, "\n"))
+  }
   checkmate::assert_character(text[1], pattern = "^IQ-TREE")
 
   input_data_regex <-
@@ -218,35 +199,93 @@ parse_iqtree_model <- function(file = NULL, text = NULL) {
   checkmate::assert_character(model_line, len = 1)
   model <- sub(model_regex, "\\1", model_line)
 
-  model <- strsplit(model, split = "+", fixed = TRUE)
+  model <- strsplit(model, split = "+", fixed = TRUE)[[1]]
+  if (length(model) == 0) {
+    stop("No model found in the log file.")
+  }
 
+  base_model <- model[[1]]
+  checkmate::assert_character(base_model, min.chars = 1)
 
   rates <- text[grepl("Rate parameters:", text)]
-  outmodel <- ""
+  outmodel <- base_model
   if (length(rates) == 1) {
-    rates <- regmatches(rates, regexec("A-C: *([0-9.]+) +A-G: *([0-9.]+) +A-T: *([0-9.]+) +C-G: *([0-9.]+) +C-T: *([0-9.]+) +G-T: *([0-9.]+)", rates))[[1]][-1]
+    rates <- regmatches(
+      rates,
+      regexec(
+        "A-C: *([0-9.]+) +A-G: *([0-9.]+) +A-T: *([0-9.]+) +C-G: *([0-9.]+) +C-T: *([0-9.]+) +G-T: *([0-9.]+)",
+        rates
+      )
+    )[[1]][-1]
     rates <- as.numeric(rates)
-    checkmate::assert_numeric(rates, lower = 0, finite = TRUE, len = 6, any.missing = FALSE)
-    outmodel <- paste0(outmodel, "GTR{", paste0(rates, collapse = "/"), "}")
+    checkmate::assert_numeric(
+      rates,
+      lower = 0,
+      finite = TRUE,
+      len = 6,
+      any.missing = FALSE
+    )
+    # Even if the original model was not GTR, we can still use GTR with
+    # specified rates, because the other models are subsets of the GTR model.
+    outmodel <- paste0("GTR{", paste0(rates, collapse = "/"), "}")
   }
+
   base_freq <- text[grepl("Base frequencies:", text)]
   if (length(base_freq) == 1) {
-    base_freq <- regmatches(
+    base_freq_match <- regmatches(
       base_freq,
       regexec(
         pattern = "A: *([0-9.]+) +C: *([0-9.]+) +G: *([0-9.]+) +T: *([0-9.]+)",
         text = base_freq
       )
-    )[[1]][-1]
-    base_freq <- as.numeric(base_freq)
-    checkmate::assert_numeric(base_freq, lower = 0, upper = 1, len = 4, any.missing = FALSE)
-    outmodel <- paste0(outmodel, "+FU{", paste0(base_freq, collapse = "/"), "}")
+    )[[1]]
+    if (length(base_freq_match) > 1) {
+      base_freq <- as.numeric(base_freq_match[-1])
+      checkmate::assert_numeric(
+        base_freq,
+        lower = 0,
+        upper = 1,
+        len = 4,
+        any.missing = FALSE
+      )
+      outmodel <- paste0(
+        outmodel,
+        "+FU{", paste0(base_freq, collapse = "/"),
+        "}"
+      )
+    }
   }
+
   alpha <- text[grepl("Gamma shape parameter:", text)]
-  if (length(model) == 0) {
-    stop("No model found in the log file.")
+  if (length(alpha) == 1) {
+    alpha <- as.numeric(sub("^.*: *", "", alpha))
+    checkmate::assert_numeric(
+      alpha,
+      lower = 0,
+      finite = TRUE,
+      any.missing = FALSE
+    )
+    outmodel <- paste0(outmodel, "+G{", alpha, "}")
   }
-  model
+
+  inv <- text[grepl("Proportion of invariable sites:", text)]
+  if (length(inv) == 1) {
+    inv <- as.numeric(sub("^.*: *", "", inv))
+    checkmate::assert_numeric(
+      inv,
+      lower = 0,
+      upper = 1,
+      finite = TRUE,
+      any.missing = FALSE
+    )
+    outmodel <- paste0(outmodel, "+I{", inv, "}")
+  }
+
+  if (nchar(outmodel) == 0) {
+    stop("Failed to parse IQ-TREE model parameters.")
+  }
+
+  outmodel
 }
 
 #' Run Gappa
@@ -313,8 +352,11 @@ gappa_assign <- function(
     if (!is.data.frame(taxonomy)) {
       taxonomy <- readr::read_tsv(taxonomy_file, col_names = FALSE, col_types = "cc")
     }
-    if (!all(outgroup) %in% taxonomy[[1]]) {
-      outgroup <- taxonomy[[1]][grepl(paste(outgroup, collapse = "|"), taxonomy[[2]])]
+    if (!all(outgroup %in% taxonomy[[1]])) {
+      outgroup <- taxonomy[[1]][grepl(
+        paste(outgroup, collapse = "|"),
+        taxonomy[[2]]
+      )]
       if (length(outgroup) == 0) {
         stop("Outgroup not found in the taxonomy file.")
       }
