@@ -4,3 +4,8 @@
 .Ruserdata
 .Rprofile
 air.toml
+renv.lock
+renv
+*.Rproj
+.vscode
+.cursor
