@@ -213,6 +213,42 @@ subrank_vars <- function(x = ingroup_rank(), ranks = tax_ranks()) {
   rlang::syms(subranks(x, ranks))
 }
 
+#' Convert wide taxonomy/probability tables to long format
+#'
+#' @param taxonomy (`data.frame`) wide table with one taxon column per rank and
+#' a `seq_id` column.
+#' @param probability (`data.frame`) wide table with one probability column per
+#' rank and a `seq_id` column.
+#' @param ranks (`character` vector) taxonomic ranks to pivot.
+#' @return `tibble` with columns `seq_id`, `rank`, `parent_taxonomy`, `taxon`,
+#' and `prob`.
+#' @export
+tax_table_wide_to_long <- function(taxonomy, probability, ranks = tax_ranks()) {
+  checkmate::assert_data_frame(taxonomy)
+  checkmate::assert_data_frame(probability)
+  checkmate::assert_character(ranks, min.len = 1)
+  dplyr::full_join(
+    tidyr::pivot_longer(
+      taxonomy,
+      dplyr::all_of(ranks),
+      names_to = "rank",
+      values_to = "taxon"
+    ),
+    tidyr::pivot_longer(
+      probability,
+      dplyr::all_of(ranks),
+      names_to = "rank",
+      values_to = "prob"
+    ),
+    by = c("seq_id", "rank")
+  ) |>
+    dplyr::mutate(
+      rank = factor(rank, levels = ranks, ordered = TRUE),
+      parent_taxonomy = NA_character_
+    ) |>
+    dplyr::select(seq_id, rank, parent_taxonomy, taxon, prob)
+}
+
 #' Combine tip classifications to build a full PROTAX taxonomy
 #' @param ... (`character` vectors) the classifications to combine; these should
 #' be comma-delimited classifications from most inclusive rank to least

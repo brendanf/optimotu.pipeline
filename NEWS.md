@@ -25,6 +25,7 @@
 * Improved robustness against 0-length and gzipped input files
 * New helper function `read_long_sequence_table()` reads an OptimOTU-style long
   sequence table from a tsv file.
+* New helper function `tax_table_wide_to_long()`.
 # optimotu.pipeline 0.6.2
 * Add option `force_denovo` in `pipeline_options.yaml` to force de novo
   clustering at some or all taxonomic ranks, i.e., to ignore taxonomic
