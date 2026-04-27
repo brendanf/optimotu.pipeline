@@ -320,11 +320,11 @@ lulu_distmx <- function(
   seq_id1 <- seq_id2 <- dist2 <- align_length <- n_insert <- n_delete <-
     max_insert <- max_delete <- seq_idx <- nread <- NULL
   if (length(seqall_file) == 1L && !is.null(seqall_index)) {
-    seqs <- fastx_gz_random_access_extract(
-      infile = seqall_file,
+    seqs <- fastqindexr::extract_sequences(
       index = seqall_index,
-      i = seqtable$seq_idx,
-      outfile = withr::local_tempfile(fileext = ".fasta")
+      seq_idx = seqtable$seq_idx,
+      file = seqall_file,
+      return = "seq"
     )
   } else {
     seqs <- lapply(

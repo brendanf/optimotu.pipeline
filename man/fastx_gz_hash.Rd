@@ -9,7 +9,8 @@ fastx_gz_hash(infile, index, start, n)
 \arguments{
 \item{infile}{(\code{character} filename) gzipped fasta or fastq file}
 
-\item{index}{(\code{character} filename) index file for \code{infile}}
+\item{index}{(\code{character} filename(s) or \code{fastqindexr_index} object) index
+for \code{infile}}
 
 \item{start}{(\code{integer} scalar) one-based index to start hashing}
 

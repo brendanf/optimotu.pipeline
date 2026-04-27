@@ -3,6 +3,7 @@
 \name{fastx_gz_index}
 \alias{fastx_gz_index}
 \alias{fastx_gz_extract}
+\alias{fastx_gz_random_access_extract}
 \title{Indexing and random access extraction of gzipped FASTA and FASTQ files}
 \usage{
 fastx_gz_index(file)
@@ -16,6 +17,18 @@ fastx_gz_extract(
   append = FALSE,
   hash = NULL
 )
+
+fastx_gz_random_access_extract(
+  infile,
+  index,
+  i,
+  outfile = NULL,
+  renumber = FALSE,
+  append = FALSE,
+  hash = NULL,
+  max_gap = 100L,
+  ncpu = local_cpus()
+)
 }
 \arguments{
 \item{file}{(\code{character} filename) file to create an index for
@@ -25,7 +38,8 @@ These functions are wrappers around the
 
 \item{infile}{(\code{character} filename) gzipped fasta or fastq file}
 
-\item{index}{(\code{character} filename) index file for \code{infile}}
+\item{index}{(\code{character} filename(s) or \code{fastqindexr_index} object) index
+for \code{infile}}
 
 \item{i}{(\code{integer} vector) indices to extract}
 
@@ -40,16 +54,9 @@ exists, rather than overwriting.}
 
 \item{hash}{(\code{character} scalar) md5 hash of the infile; ignored but included
 as a parameter for dependency tracking}
-
-\item{max_gap}{(\code{integer} scalar) maximum gap between consecutive indices for
-a single extraction process}
-
-\item{ncpu}{(\code{integer} scalar) number of processes to use}
 }
 \value{
 file name of the created index
-
-filename of the output file
 
 filename of the output file
 }

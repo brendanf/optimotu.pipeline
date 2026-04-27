@@ -270,21 +270,21 @@ do_closed_ref_cluster <- function(
       )
     )
   }
-  qfile <- withr::local_tempfile(fileext = ".fasta")
-  rfile <- withr::local_tempfile(fileext = ".fasta")
+  query_seq <- fastqindexr::extract_sequences(
+    index = seq_file_index,
+    seq_idx = preclosed_taxon_table$seq_idx[unknowns],
+    file = seq_file,
+    return = "seq"
+  )
+  ref_seq <- fastqindexr::extract_sequences(
+    index = seq_file_index,
+    seq_idx = preclosed_taxon_table$seq_idx[!unknowns],
+    file = seq_file,
+    return = "seq"
+  )
   closed_ref_out <- optimotu::closed_ref_cluster(
-    query = optimotu.pipeline::fastx_gz_random_access_extract(
-      infile = seq_file,
-      index = seq_file_index,
-      i = preclosed_taxon_table$seq_idx[unknowns],
-      outfile = qfile
-    ),
-    ref = optimotu.pipeline::fastx_gz_random_access_extract(
-      infile = seq_file,
-      index = seq_file_index,
-      i = preclosed_taxon_table$seq_idx[!unknowns],
-      outfile = rfile
-    ),
+    query = query_seq,
+    ref = ref_seq,
     threshold = optimotu::threshold_as_dist(thresholds[taxon]),
     dist_config = dist_config,
     parallel_config = parallel_config
@@ -560,14 +560,14 @@ do_denovo_cluster <- function(
     return(out)
   }
 
-  tempout <- withr::local_tempfile(fileext = ".fasta")
-  optimotu::seq_cluster(
-    seq = optimotu.pipeline::fastx_gz_extract(
-      infile = seq_file,
-      index = seq_file_index,
-      i = predenovo_taxon_table$seq_idx,
-      outfile = tempout
-    ),
+  denovo_seq <- fastqindexr::extract_sequences(
+    index = seq_file_index,
+    seq_idx = predenovo_taxon_table$seq_idx,
+    file = seq_file,
+    return = "seq"
+  )
+  denovo_sc <- optimotu::seq_cluster(
+    seq = denovo_seq,
     dist_config = dist_config,
     threshold_config = optimotu::threshold_set(
       tryCatch(
@@ -578,7 +578,8 @@ do_denovo_cluster <- function(
     ),
     clust_config = optimotu::clust_tree(),
     parallel_config = parallel_config
-  ) |>
+  )
+  denovo_sc |>
     t() |>
     tibble::as_tibble() |>
     dplyr::bind_cols(

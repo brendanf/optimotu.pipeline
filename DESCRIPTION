@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for environmental DNA metabarcoding
-Version: 0.6.2.9007
+Version: 0.6.2.9008
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -29,6 +29,7 @@ Imports:
     checkmate,
     digest,
     dplyr,
+    fastqindexr (>= 0.0.2),
     glue,
     IRanges,
     jsonlite,
@@ -65,6 +66,7 @@ Remotes:
     alessandrozito/BayesANT,
     tobiasgf/lulu,
     brendanf/optimotu,
+    brendanf/fastqindexr,
     bioc::BiocGenerics,
     bioc::Biostrings,
     bioc::dada2,
