@@ -5,6 +5,14 @@
 \alias{duplicate_samples}
 \alias{custom_sample_table}
 \alias{do_custom_sample_table}
+\alias{do_supp_asv}
+\alias{supp_asv_sets}
+\alias{supp_asv_set_names}
+\alias{supp_asv_set}
+\alias{supp_asv_sequences}
+\alias{supp_asv_sample_table}
+\alias{supp_asv_taxonomy_mode}
+\alias{supp_asv_taxonomy_file}
 \alias{do_added_reference}
 \alias{added_reference_fasta}
 \alias{added_reference_table}
@@ -95,6 +103,22 @@ duplicate_samples()
 custom_sample_table()
 
 do_custom_sample_table()
+
+do_supp_asv()
+
+supp_asv_sets(enabled_only = TRUE)
+
+supp_asv_set_names(enabled_only = TRUE)
+
+supp_asv_set(set_name)
+
+supp_asv_sequences(set_name)
+
+supp_asv_sample_table(set_name)
+
+supp_asv_taxonomy_mode(set_name)
+
+supp_asv_taxonomy_file(set_name)
 
 do_added_reference()
 
@@ -257,6 +281,12 @@ rarefy_denominator()
 do_rarefy()
 
 did_pipeline_options()
+}
+\arguments{
+\item{enabled_only}{(\code{logical} flag) if TRUE, only return enabled sets}
+
+\item{set_name}{(\code{character} vector) name(s) of the supplemental ASV set(s)
+to access}
 }
 \value{
 (\code{character} string) the forward primer

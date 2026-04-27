@@ -169,6 +169,238 @@ do_custom_sample_table <- function() {
   is.character(custom_sample_table())
 }
 
+#### supplemental_asv ####
+#' @rdname parse_pipeline_options
+#' @param set_name (`character` scalar) name of the supplemental ASV set
+#' @keywords internal
+assert_supplemental_header_ids <- function(path, set_name) {
+  con <- if (grepl("\\.gz$", path, ignore.case = TRUE)) {
+    gzfile(path, open = "rt")
+  } else {
+    file(path, open = "rt")
+  }
+  on.exit(close(con), add = TRUE)
+  repeat {
+    chunk <- readLines(con, n = 10000L, warn = FALSE)
+    if (length(chunk) == 0L) {
+      break
+    }
+    header_idx <- startsWith(chunk, ">")
+    if (!any(header_idx)) {
+      next
+    }
+    headers <- sub("^>", "", chunk[header_idx])
+    bad <- grepl("[[:space:];]", headers)
+    if (any(bad)) {
+      bad_header <- headers[which(bad)[1]]
+      stop(
+        "Invalid FASTA header in supplemental ASV set '",
+        set_name,
+        "'. ",
+        "Sequence IDs must not contain whitespace or semicolons. ",
+        "First invalid header: '",
+        bad_header,
+        "'."
+      )
+    }
+  }
+  invisible(NULL)
+}
+
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_supplemental_asv_options <- function(pipeline_options) {
+  options(
+    optimotu.pipeline.do_supplemental_asv = FALSE,
+    optimotu.pipeline.supplemental_asv = list()
+  )
+  if (is.null(pipeline_options$supplemental_asv)) {
+    return(invisible(NULL))
+  }
+  checkmate::assert_list(pipeline_options$supplemental_asv)
+  supplemental_opts <- unnest_yaml_list(pipeline_options$supplemental_asv)
+  if (
+    is.null(names(supplemental_opts)) || any(names(supplemental_opts) == "")
+  ) {
+    stop("'supplemental_asv' must be a named list of sets.")
+  }
+  duplicate_set_names <- unique(names(supplemental_opts)[duplicated(names(
+    supplemental_opts
+  ))])
+  if (length(duplicate_set_names) > 0L) {
+    stop(
+      "Duplicate supplemental ASV set name(s): ",
+      paste(sprintf("'%s'", duplicate_set_names), collapse = ", "),
+      ". Set names must be unique."
+    )
+  }
+
+  parsed <- lapply(names(supplemental_opts), function(set_name) {
+    set_opts <- supplemental_opts[[set_name]]
+    checkmate::assert_list(set_opts, names = "named")
+    checkmate::assert_names(
+      names(set_opts),
+      subset.of = c("sequences", "sample_table", "taxonomy", "enabled")
+    )
+    set_opts <- unnest_yaml_list(set_opts)
+
+    checkmate::assert_string(set_opts$sequences)
+    checkmate::assert_file_exists(set_opts$sequences, access = "r")
+
+    if (!is.null(set_opts$sample_table) && !isFALSE(set_opts$sample_table)) {
+      checkmate::assert_string(set_opts$sample_table)
+      checkmate::assert_file_exists(set_opts$sample_table, access = "r")
+    }
+
+    checkmate::assert(
+      checkmate::check_null(set_opts$taxonomy),
+      checkmate::check_false(set_opts$taxonomy),
+      checkmate::check_flag(set_opts$taxonomy),
+      checkmate::check_string(set_opts$taxonomy)
+    )
+
+    taxonomy_mode <- "none"
+    taxonomy_file <- NULL
+    if (isTRUE(set_opts$taxonomy)) {
+      taxonomy_mode <- "header"
+    } else if (is.character(set_opts$taxonomy)) {
+      taxonomy_mode <- "file"
+      taxonomy_file <- set_opts$taxonomy
+      checkmate::assert_file_exists(taxonomy_file, access = "r")
+    }
+    if (!identical(taxonomy_mode, "header")) {
+      assert_supplemental_header_ids(set_opts$sequences, set_name)
+    }
+
+    enabled <- if (is.null(set_opts$enabled)) TRUE else set_opts$enabled
+    checkmate::assert_flag(enabled)
+
+    list(
+      name = set_name,
+      sequences = set_opts$sequences,
+      sample_table = if (is.character(set_opts$sample_table)) {
+        set_opts$sample_table
+      } else {
+        NULL
+      },
+      taxonomy_mode = taxonomy_mode,
+      taxonomy_file = taxonomy_file,
+      enabled = enabled
+    )
+  })
+  names(parsed) <- names(supplemental_opts)
+
+  active <- parsed[vapply(parsed, `[[`, logical(1), "enabled")]
+
+  options(
+    optimotu.pipeline.do_supplemental_asv = length(active) > 0L,
+    optimotu.pipeline.supplemental_asv = parsed
+  )
+}
+
+#' @rdname pipeline_options
+#' @export
+do_supp_asv <- function() {
+  getOption("optimotu.pipeline.do_supplemental_asv", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @param enabled_only (`logical` flag) if TRUE, only return enabled sets
+#' @export
+supp_asv_sets <- function(enabled_only = TRUE) {
+  checkmate::assert_flag(enabled_only)
+  sets <- getOption("optimotu.pipeline.supplemental_asv", list())
+  if (isTRUE(enabled_only)) {
+    sets <- sets[vapply(sets, `[[`, logical(1), "enabled")]
+  }
+  sets
+}
+
+#' @rdname pipeline_options
+#' @export
+supp_asv_set_names <- function(enabled_only = TRUE) {
+  names(supp_asv_sets(enabled_only = enabled_only))
+}
+
+#' @rdname pipeline_options
+#' @param set_name (`character` vector) name(s) of the supplemental ASV set(s)
+#'   to access
+#' @export
+supp_asv_set <- function(set_name) {
+  checkmate::assert_character(set_name, min.len = 1, any.missing = FALSE)
+  sets <- supp_asv_sets(enabled_only = FALSE)
+  unknown <- setdiff(unique(set_name), names(sets))
+  if (length(unknown) > 0) {
+    stop(
+      "Unknown supplemental ASV set(s): ",
+      paste(sprintf("'%s'", unknown), collapse = ", "),
+      "."
+    )
+  }
+  out <- sets[set_name]
+  if (length(set_name) == 1L) {
+    out[[1]]
+  } else {
+    out
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+supp_asv_sequences <- function(set_name) {
+  out <- supp_asv_set(set_name)
+  if (length(set_name) == 1L) {
+    out$sequences
+  } else {
+    vapply(out, `[[`, character(1), "sequences")
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+supp_asv_sample_table <- function(set_name) {
+  out <- supp_asv_set(set_name)
+  if (length(set_name) == 1L) {
+    out$sample_table
+  } else {
+    vapply(
+      out,
+      function(x) {
+        if (is.null(x$sample_table)) NA_character_ else x$sample_table
+      },
+      character(1)
+    )
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+supp_asv_taxonomy_mode <- function(set_name) {
+  out <- supp_asv_set(set_name)
+  if (length(set_name) == 1L) {
+    out$taxonomy_mode
+  } else {
+    vapply(out, `[[`, character(1), "taxonomy_mode")
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+supp_asv_taxonomy_file <- function(set_name) {
+  out <- supp_asv_set(set_name)
+  if (length(set_name) == 1L) {
+    out$taxonomy_file
+  } else {
+    vapply(
+      out,
+      function(x) {
+        if (is.null(x$taxonomy_file)) NA_character_ else x$taxonomy_file
+      },
+      character(1)
+    )
+  }
+}
+
 #### added_reference ####
 #' @rdname parse_pipeline_options
 #' @keywords internal
@@ -1759,6 +1991,7 @@ parse_pipeline_options <- function() {
   parse_orient(pipeline_options)
   parse_duplicate_policy(pipeline_options)
   parse_custom_sample_table(pipeline_options)
+  parse_supplemental_asv_options(pipeline_options)
   parse_added_reference(pipeline_options) #TODO: this should go to taxonomy?
   parse_parallel_options(pipeline_options)
   parse_forward_primer(pipeline_options)

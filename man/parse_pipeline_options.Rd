@@ -6,6 +6,8 @@
 \alias{parse_orient}
 \alias{parse_duplicate_policy}
 \alias{parse_custom_sample_table}
+\alias{assert_supplemental_header_ids}
+\alias{parse_supplemental_asv_options}
 \alias{parse_added_reference}
 \alias{parse_parallel_options}
 \alias{parse_forward_primer}
@@ -41,6 +43,10 @@ parse_orient(pipeline_options)
 parse_duplicate_policy(pipeline_options)
 
 parse_custom_sample_table(pipeline_options)
+
+assert_supplemental_header_ids(path, set_name)
+
+parse_supplemental_asv_options(pipeline_options)
 
 parse_added_reference(pipeline_options)
 
@@ -92,6 +98,8 @@ parse_pipeline_options()
 }
 \arguments{
 \item{pipeline_options}{(\code{list}) the pipeline options to parse}
+
+\item{set_name}{(\code{character} scalar) name of the supplemental ASV set}
 
 \item{rank_options}{(\code{list} or \code{character} vector) the taxonomic ranks to
 use in the pipeline, in order from most inclusive (e.g., kingdom) to least

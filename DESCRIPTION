@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for environmental DNA metabarcoding
-Version: 0.6.2.9011
+Version: 0.6.2.9012
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -14,7 +14,7 @@ Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 SystemRequirements: zlib
 Requires:
     R (>= 4.2.0)
@@ -34,7 +34,7 @@ Imports:
     IRanges,
     jsonlite,
     methods,
-    optimotu (>= 0.9.4),
+    optimotu (>= 0.9.6),
     processx,
     purrr,
     readr,
@@ -55,6 +55,7 @@ Suggests:
     dada2,
     ggplot2,
     lulu,
+    png,
     qs,
     qs2,
     readxl,

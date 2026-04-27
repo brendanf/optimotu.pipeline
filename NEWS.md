@@ -26,6 +26,10 @@
 * New helper function `read_long_sequence_table()` reads an OptimOTU-style long
   sequence table from a tsv file.
 * New helper function `tax_table_wide_to_long()`.
+* Add option group `supplemental_asv` in `pipeline_options.yaml`, which allow
+  ASVs from an external source (i.e., another study or reference data) to be
+  included in the clustering and (optionally) taxonomy stages of the pipeline.
+
 # optimotu.pipeline 0.6.2
 * Add option `force_denovo` in `pipeline_options.yaml` to force de novo
   clustering at some or all taxonomic ranks, i.e., to ignore taxonomic
