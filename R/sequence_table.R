@@ -31,6 +31,59 @@ make_long_sequence_table <- function(x, rc = FALSE) {
   UseMethod("make_long_sequence_table", x)
 }
 
+#' Read a sparse long sequence table from a file
+#'
+#' @param path (`character` scalar) path to a tab-separated table (plain or
+#' gzipped) containing at least `sample`, `seq_id`, and `nread` columns.
+#' @param default_seqrun (`character` scalar) value to use for `seqrun` when
+#' that column is missing from the input table.
+#' @param seq_id_col (`character` scalar) column name containing sequence IDs.
+#' @return `tibble` with columns `sample`, `seq_id`, `nread`, and `seqrun`.
+#' Zero-byte inputs return an empty tibble with that schema.
+#' @export
+read_long_sequence_table <- function(
+  path,
+  default_seqrun = "supplemental",
+  seq_id_col = "seq_id"
+) {
+  # avoid R CMD check note for undefined global variables due to NSE
+  nread <- seqrun <- NULL
+  checkmate::assert_string(path)
+  checkmate::assert_file_exists(path, access = "r")
+  checkmate::assert_string(default_seqrun)
+  checkmate::assert_string(seq_id_col)
+  if (isTRUE(file.info(path)$size == 0)) {
+    return(
+      tibble::tibble(
+        sample = character(),
+        seq_id = character(),
+        nread = integer(),
+        seqrun = character()
+      )
+    )
+  }
+  tab <- readr::read_delim(path, delim = "\t", show_col_types = FALSE)
+  required <- c("sample", seq_id_col, "nread")
+  if (!all(required %in% names(tab))) {
+    stop(
+      "Long sequence table '",
+      path,
+      "' must contain columns: ",
+      paste(required, collapse = ", ")
+    )
+  }
+  if (!("seqrun" %in% names(tab))) {
+    tab$seqrun <- default_seqrun
+  }
+  tab |>
+    dplyr::transmute(
+      sample = as.character(sample),
+      seq_id = as.character(.data[[seq_id_col]]),
+      nread = as.integer(nread),
+      seqrun = as.character(seqrun)
+    )
+}
+
 #' @rdname make_long_sequence_table
 #' @exportS3Method
 make_long_sequence_table.data.frame <- function(x, rc = FALSE) {
