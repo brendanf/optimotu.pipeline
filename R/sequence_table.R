@@ -20,9 +20,11 @@ drop_from_seqtable <- function(seqtable, which) {
 
 #' Convert an object into a long (i.e. sparse) sequence occurrence table
 #'
-#' @param x (`data.frame` as returned by `dada2::mergePairs()`, or integer matrix
-#'  as returned by `dada2::makeSequenceTable()`, or a list of one of these.)
-#' @param rc (logical flag) if TRUE, sequences in `x` will be reverse complemented.
+#' @param x (`data.frame` as returned by `dada2::mergePairs()`, or integer
+#' matrix as returned by `dada2::makeSequenceTable()`, or a list of one of
+#' these.)
+#' @param rc (logical flag) if TRUE, sequences in `x` will be reverse
+#' complemented.
 #'
 #' @return a `data.frame` with columns `sample`, `seq`, and `nread`
 #' @export
@@ -150,10 +152,12 @@ make_long_sequence_table.list <- function(x, rc = FALSE) {
 #' sequences are stored as integer indices to a master list
 #'
 #' @param x (`data.frame` as returned by `dada2::mergePairs()`, or integer
-#' matrix as returned by `dada2::makeSequenceTable()`, or a list of one of these.)
+#' matrix as returned by `dada2::makeSequenceTable()`, or a list of one of
+#' these.)
 #' @param seqs (`character` vector, file name, or `Biostrings::XStringSet`)
 #' master list of sequences
-#' @param rc (logical flag) if TRUE, sequences in `x` will be reverse complemented.
+#' @param rc (logical flag) if TRUE, sequences in `x` will be reverse
+#' complemented.
 #'
 #' @return a `data.frame` with columns `sample`, `seq_idx`, and `nread`
 #' @export
@@ -371,10 +375,10 @@ deduplicate_seq_idx <- function(seq_idx, hits, merge = TRUE) {
 #' `dada2::makeSequenceTable()`, `make_long_sequence_table()`, or
 #' `make_mapped_sequence_table()`
 #' @param ... additional arguments passed to methods, currently ignored
-#' @return for the `matrix` method, a sorted sequence table; for the `data.frame`
-#' method, appropriate identifiers for the sequences, sorted.  These will be
-#' either the sequences themselves, `seq_id`, or `seq_idx`, depending on the
-#' input.
+#' @return for the `matrix` method, a sorted sequence table; for the
+#' `data.frame` method, appropriate identifiers for the sequences, sorted.
+#' These will be either the sequences themselves, `seq_id`, or `seq_idx`,
+#' depending on the input.
 #' @export
 sort_seq_table <- function(seqtable, ...) {
   UseMethod("sort_seq_table", seqtable)

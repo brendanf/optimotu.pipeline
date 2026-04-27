@@ -149,7 +149,11 @@ fastx_gz_extract <- function(
 #' @param i (`integer` vector) indices to extract
 #' @param outfile (`character` filename) file to write the extracted sequences
 #'   to. If it ends in ".gz", the output will be gzipped.
-#' @inheritParams fastx_gz_extract
+#' @param max_gap (`integer` scalar) maximum number of consecutive missing
+#'   sequences to allow in an extraction batch. This parameter is for
+#'   performance tuning and does not affect the results.
+#' @param ncpu (`integer` scalar) number of threads to use.  Ignored in current
+#'   implementation, but included for backwards compatibility.
 #' @describeIn fastx_gz Extract sequences from a gzipped FASTA or FASTQ file
 #' @export
 fastx_gz_random_access_extract <- function(

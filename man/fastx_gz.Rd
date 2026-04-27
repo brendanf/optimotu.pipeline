@@ -54,6 +54,13 @@ exists, rather than overwriting.}
 
 \item{hash}{(\code{character} scalar) md5 hash of the infile; ignored but included
 as a parameter for dependency tracking}
+
+\item{max_gap}{(\code{integer} scalar) maximum number of consecutive missing
+sequences to allow in an extraction batch. This parameter is for
+performance tuning and does not affect the results.}
+
+\item{ncpu}{(\code{integer} scalar) number of threads to use.  Ignored in current
+implementation, but included for backwards compatibility.}
 }
 \value{
 file name of the created index

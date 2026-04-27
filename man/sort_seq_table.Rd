@@ -26,10 +26,10 @@ unused)}
 \item{abund_col}{(\code{character}) column name containing abundance information}
 }
 \value{
-for the \code{matrix} method, a sorted sequence table; for the \code{data.frame}
-method, appropriate identifiers for the sequences, sorted.  These will be
-either the sequences themselves, \code{seq_id}, or \code{seq_idx}, depending on the
-input.
+for the \code{matrix} method, a sorted sequence table; for the
+\code{data.frame} method, appropriate identifiers for the sequences, sorted.
+These will be either the sequences themselves, \code{seq_id}, or \code{seq_idx},
+depending on the input.
 }
 \description{
 Sort a sequence table

@@ -224,6 +224,8 @@ subrank_vars <- function(x = ingroup_rank(), ranks = tax_ranks()) {
 #' and `prob`.
 #' @export
 tax_table_wide_to_long <- function(taxonomy, probability, ranks = tax_ranks()) {
+  # avoid R CMD check note for undefined global variables due to NSE
+  seq_id <- parent_taxonomy <- taxon <- prob <- NULL
   checkmate::assert_data_frame(taxonomy)
   checkmate::assert_data_frame(probability)
   checkmate::assert_character(ranks, min.len = 1)

@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for environmental DNA metabarcoding
-Version: 0.6.2.9012
+Version: 0.6.3
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -10,8 +10,10 @@ Authors@R:
            comment = c(ORCID = "0000-0003-3522-7363"))
 Author: Brendan Furneaux [aut, cre]
 Maintainer: Brendan Furneaux <brendan.furneaux@gmail.com>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: Provides tools to configure and run reproducible environmental
+    DNA metabarcoding analyses with the 'targets' workflow framework.
+    Includes helpers for option parsing, FASTQ indexing, taxonomy handling,
+    and orchestration of downstream pipeline steps.
 License: MIT + file LICENSE
 Encoding: UTF-8
 RoxygenNote: 7.3.3

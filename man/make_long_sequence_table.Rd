@@ -16,10 +16,12 @@ make_long_sequence_table(x, rc = FALSE)
 \method{make_long_sequence_table}{list}(x, rc = FALSE)
 }
 \arguments{
-\item{x}{(\code{data.frame} as returned by \code{dada2::mergePairs()}, or integer matrix
-as returned by \code{dada2::makeSequenceTable()}, or a list of one of these.)}
+\item{x}{(\code{data.frame} as returned by \code{dada2::mergePairs()}, or integer
+matrix as returned by \code{dada2::makeSequenceTable()}, or a list of one of
+these.)}
 
-\item{rc}{(logical flag) if TRUE, sequences in \code{x} will be reverse complemented.}
+\item{rc}{(logical flag) if TRUE, sequences in \code{x} will be reverse
+complemented.}
 }
 \value{
 a \code{data.frame} with columns \code{sample}, \code{seq}, and \code{nread}

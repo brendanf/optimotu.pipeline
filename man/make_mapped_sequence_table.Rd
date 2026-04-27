@@ -18,12 +18,14 @@ make_mapped_sequence_table(x, seqs, rc = FALSE)
 }
 \arguments{
 \item{x}{(\code{data.frame} as returned by \code{dada2::mergePairs()}, or integer
-matrix as returned by \code{dada2::makeSequenceTable()}, or a list of one of these.)}
+matrix as returned by \code{dada2::makeSequenceTable()}, or a list of one of
+these.)}
 
 \item{seqs}{(\code{character} vector, file name, or \code{Biostrings::XStringSet})
 master list of sequences}
 
-\item{rc}{(logical flag) if TRUE, sequences in \code{x} will be reverse complemented.}
+\item{rc}{(logical flag) if TRUE, sequences in \code{x} will be reverse
+complemented.}
 }
 \value{
 a \code{data.frame} with columns \code{sample}, \code{seq_idx}, and \code{nread}
