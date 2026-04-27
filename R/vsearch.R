@@ -280,7 +280,7 @@ collapseNoMismatch_vsearch <- function(seqtab, ..., ncpu = local_cpus()) {
 #' @param seqs (`NULL`, `data.frame`,
 #' [`DNAStringSet`][Biostrings::XStringSet-class], `character` vector, or
 #' file name) if seqtab is a mapped sequence table, then the master sequence
-#' list, otherwise should be `NULL`.
+#' list (plain or gzipped FASTA), otherwise should be `NULL`.
 #' @param abund_col (`character` string) name of the column in `seqtab` which
 #' contains the abundance of each sequence
 #' @param fastx_index (`NULL` of file name) if `seqs` is a file name pointing to
@@ -290,7 +290,7 @@ collapseNoMismatch_vsearch <- function(seqtab, ..., ncpu = local_cpus()) {
 #' @return `data.frame` with columns `seq_idx_in` and `seq_idx_out`, where
 #' `seq_idx_in` is the index of a sequence in `seqtab`, and `seq_idx_out` is
 #' the index of the sequence which is the centroid of the cluster containing
-#' `seq_idx_in`
+#' `seq_idx_in`. Empty sequence inputs return an empty two-column mapping table.
 #' @importFrom dplyr everything
 nomismatch_hits_vsearch <- function(
   seqtab,
@@ -300,6 +300,10 @@ nomismatch_hits_vsearch <- function(
   ...,
   ncpu = local_cpus()
 ) {
+  empty_hits <- tibble::tibble(
+    query = integer(),
+    hit = integer()
+  )
   if (is.null(seqs)) {
     checkmate::assert_names(
       names(seqtab),
@@ -322,6 +326,9 @@ nomismatch_hits_vsearch <- function(
     )
     o <- sort_seq_table(seqtab, seqs = seqs, abund_col = abund_col, ...)
     if (checkmate::check_file_exists(seqs)) {
+      if (length(Biostrings::fasta.seqlengths(seqs)) == 0L) {
+        return(empty_hits)
+      }
       # no easy way to re-order without reading it all into memory
       seqs <- Biostrings::readDNAStringSet(seqs)
     }
@@ -331,13 +338,17 @@ nomismatch_hits_vsearch <- function(
     seqs <- seqs[o]
     names(seqs) <- as.character(o)
   }
+  if (length(seqs) == 0L) {
+    return(empty_hits)
+  }
   vsearch_cluster_smallmem(seqs, ncpu = ncpu) |>
     dplyr::mutate(dplyr::across(everything(), as.integer))
 }
 
 #' Perform taxonomic classification using SINTAX in VSEARCH
 #' @param query (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
-#' `character` vector, or file name) query sequences
+#' `character` vector, or file name) query sequences. File inputs may be plain
+#' FASTA or gzipped FASTA.
 #' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
 #' `character` vector, or file name) reference sequences
 #' @param ncpu (`integer` count) number of threads to use
@@ -350,11 +361,27 @@ nomismatch_hits_vsearch <- function(
 #' (`seq_idx`) is the ID of a sequence from `query`, `rank` is the taxonomic
 #' rank of the taxon, `parent_taxonomy` is the parent taxonomic unit of the
 #' taxon, `taxon` is the taxon name, and `prob` is the probability of the
-#' taxon being the correct classification of the sequence
+#' taxon being the correct classification of the sequence. Empty query inputs
+#' return an empty tibble with the same schema.
 #' @export
 sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
   # avoid R CMD check NOTE about global variables due to NSE
   seq_id <- taxonomy <- taxon <- NULL
+  empty_out <- tibble::tibble(
+    seq_id = character(),
+    rank = rank2factor(character()),
+    parent_taxonomy = character(),
+    taxon = character(),
+    prob = numeric()
+  )
+  if (is.character(query) && length(query) == 1 && file.exists(query)) {
+    if (length(Biostrings::fasta.seqlengths(query)) == 0L) {
+      if (id_is_int) {
+        return(tibble::add_column(empty_out, seq_idx = integer(), .before = 1))
+      }
+      return(empty_out)
+    }
+  }
   checkmate::assert_file_exists(ref, access = "r")
   checkmate::assert_count(ncpu, null.ok = TRUE)
   if (is.character(query) && length(query) == 1 && file.exists(query)) {

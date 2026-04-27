@@ -26,7 +26,7 @@ file name of a tree in Newick format}
 
 \item{query}{(\code{\link[Biostrings:XStringSet-class]{XStringSet}},
 \code{\link[Biostrings:MultipleAlignment-class]{MultipleAlignment}},
-or \code{character}) query alignment, or a file name}
+or \code{character}) query alignment, or a file name (possibly gzipped)}
 
 \item{outdir}{(\code{character}) output directory}
 
@@ -44,7 +44,8 @@ various programs, including IQ-TREE, RAxML, and FastTree.}
 characters) from the query sequences before running EPA-ng}
 }
 \value{
-(\code{character}) path to the output \code{epa_result.jplace} file
+(\code{character}) path to the output \code{epa_result.jplace} file. For empty
+query inputs, returns a valid jplace file with no placements.
 }
 \description{
 Run EPA-ng

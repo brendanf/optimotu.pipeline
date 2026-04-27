@@ -14,7 +14,9 @@ bayesant(
 )
 }
 \arguments{
-\item{query}{(\code{character} vector) the sequences to identify}
+\item{query}{(\code{character} vector, \code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
+or \code{character} file name) the sequences to identify. If a file name, it
+should point to a FASTA file (possibly gzipped).}
 
 \item{model}{(\code{character} file name or \code{BayesANT} model) the BayesANT model
 to use.  If a file name, it must be in .rds, .qs, or .qs2 format.}
@@ -35,6 +37,7 @@ rank at which the prediction is being made, \code{parent_taxonomy} is the parent
 taxonomic unit of the taxon at the previous rank, \code{taxon} is the name of the
 predicted taxon, and \code{prob} is the probability of the predicted taxon being
 the correct classification of the sequence from \code{query} at the current rank.
+If \code{query} is empty, returns an empty table with the same column schema.
 }
 \description{
 Identify sequences using BayesANT

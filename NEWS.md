@@ -21,7 +21,8 @@
   prevent failures due to too many open file handles. The old wrappers
   `fastq_gz_extract()` and `fastq_gz_random_access_extract()` have been modified
   to use the new interface internally, so existing workflows should not break,
-  but these are likely to be deprecated in the future. 
+  but these are likely to be deprecated in the future.
+* Improved robustness against 0-length and gzipped input files
 # optimotu.pipeline 0.6.2
 * Add option `force_denovo` in `pipeline_options.yaml` to force de novo
   clustering at some or all taxonomic ranks, i.e., to ignore taxonomic

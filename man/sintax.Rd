@@ -8,7 +8,8 @@ sintax(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL)
 }
 \arguments{
 \item{query}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
-\code{character} vector, or file name) query sequences}
+\code{character} vector, or file name) query sequences. File inputs may be plain
+FASTA or gzipped FASTA.}
 
 \item{ref}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
 \code{character} vector, or file name) reference sequences}
@@ -27,7 +28,8 @@ is TRUE), \code{rank}, \code{parent_taxonomy}, \code{taxon}, and \code{prob}, wh
 (\code{seq_idx}) is the ID of a sequence from \code{query}, \code{rank} is the taxonomic
 rank of the taxon, \code{parent_taxonomy} is the parent taxonomic unit of the
 taxon, \code{taxon} is the taxon name, and \code{prob} is the probability of the
-taxon being the correct classification of the sequence
+taxon being the correct classification of the sequence. Empty query inputs
+return an empty tibble with the same schema.
 }
 \description{
 Perform taxonomic classification using SINTAX in VSEARCH

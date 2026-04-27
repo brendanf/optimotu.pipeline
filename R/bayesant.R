@@ -1,5 +1,7 @@
 #' Identify sequences using BayesANT
-#' @param query (`character` vector) the sequences to identify
+#' @param query (`character` vector, `data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
+#' or `character` file name) the sequences to identify. If a file name, it
+#' should point to a FASTA file (possibly gzipped).
 #' @param model (`character` file name or `BayesANT` model) the BayesANT model
 #' to use.  If a file name, it must be in .rds, .qs, or .qs2 format.
 #' @param ncpu (`integer`) the number of CPU cores to use
@@ -13,6 +15,7 @@
 #' taxonomic unit of the taxon at the previous rank, `taxon` is the name of the
 #' predicted taxon, and `prob` is the probability of the predicted taxon being
 #' the correct classification of the sequence from `query` at the current rank.
+#' If `query` is empty, returns an empty table with the same column schema.
 #' @export
 bayesant <- function(
   query,
@@ -57,6 +60,11 @@ bayesant <- function(
     stop("Model must be a BayesANT model or a valid file path.")
   }
   if (checkmate::test_file_exists(query, access = "r")) {
+    if (endsWith(query, ".gz")) {
+      query_decompressed <- withr::local_tempfile(fileext = ".fasta")
+      write_sequence(Biostrings::readDNAStringSet(query), query_decompressed)
+      query <- query_decompressed
+    }
     query <- BayesANT::read.BayesANT.testDNA(query)
   }
   if (methods::is(query, "DNAStringSet")) {
@@ -67,6 +75,20 @@ bayesant <- function(
       query[[find_seq_col(query)]],
       query[[find_name_col(query)]]
     )
+  }
+  if (length(query) == 0L) {
+    out <- tibble::tibble(
+      seq_id = character(),
+      rank = rank2factor(character()),
+      parent_taxonomy = character(),
+      taxon = character(),
+      prob = numeric()
+    )
+    if (id_is_int) {
+      out <- tibble::add_column(out, seq_idx = integer(), .before = 1)
+      out <- dplyr::select(out, -seq_id)
+    }
+    return(out)
   }
   checkmate::assert_character(
     query,

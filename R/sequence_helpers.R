@@ -336,6 +336,11 @@ ascii_clean <- function(s) {
 #' @export
 
 make_seq_names <- function(n, prefix) {
+  checkmate::assert_integerish(n, lower = 0, len = 1)
+  checkmate::assert_string(prefix, min.chars = 1)
+  if (n == 0L) {
+    return(character())
+  }
   sprintf(
     sprintf("%s%%0%dd", prefix, max(floor(log10(n)) + 1L, 0L)),
     seq_len(n)
@@ -346,13 +351,15 @@ make_seq_names <- function(n, prefix) {
 #'
 #' Sequences are named using `make_seq_names()`.
 #'
-#' If the input is a file name, the file will be modified.
+#' If the input is a file name (plain or gzipped FASTA/FASTQ), the file is
+#' modified in place.
 #'
 #' @param seq (`data.frame`, `character`, or `Biostrings::XStringSet`) sequences
 #' to name
 #' @param ... additional arguments to pass to methods
 #' @inheritParams make_seq_names
-#' @return (same type of object as `seq`) named sequences
+#' @return (same type of object as `seq`) named sequences. Empty inputs are
+#' returned unchanged.
 #' @export
 name_seqs <- function(seq, prefix, ...) {
   UseMethod("name_seqs", seq)
@@ -369,7 +376,11 @@ name_seqs.XStringSet <- function(seq, prefix, ...) {
 #' @exportS3Method
 name_seqs.character <- function(seq, prefix, ...) {
   if (length(seq) == 1 && file.exists(seq)) {
-    width <- floor(log10(sequence_size(seq))) + 1
+    nseq <- sequence_size(seq)
+    if (nseq == 0L) {
+      return(seq)
+    }
+    width <- as.integer(floor(log10(nseq)) + 1L)
     tf <- withr::local_tempfile()
     file.copy(seq, tf)
     if (grepl(fasta_regex, seq)) {

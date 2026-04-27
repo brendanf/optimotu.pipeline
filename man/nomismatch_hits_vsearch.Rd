@@ -20,7 +20,7 @@ nomismatch_hits_vsearch(
 \item{seqs}{(\code{NULL}, \code{data.frame},
 \code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{character} vector, or
 file name) if seqtab is a mapped sequence table, then the master sequence
-list, otherwise should be \code{NULL}.}
+list (plain or gzipped FASTA), otherwise should be \code{NULL}.}
 
 \item{abund_col}{(\code{character} string) name of the column in \code{seqtab} which
 contains the abundance of each sequence}
@@ -36,7 +36,7 @@ a gzipped FASTA file, then the (optional) index file for that file}
 \code{data.frame} with columns \code{seq_idx_in} and \code{seq_idx_out}, where
 \code{seq_idx_in} is the index of a sequence in \code{seqtab}, and \code{seq_idx_out} is
 the index of the sequence which is the centroid of the cluster containing
-\code{seq_idx_in}
+\code{seq_idx_in}. Empty sequence inputs return an empty two-column mapping table.
 }
 \description{
 Collapse ASVs which are identical in their overlaps using VSEARCH

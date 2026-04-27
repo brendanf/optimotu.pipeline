@@ -21,14 +21,15 @@ find_nhmmer <- function() {
 
 #' Align query sequences to an HMM
 #' @param seqs ([`XStringSet`][Biostrings::XStringSet-class], `character`
-#' string giving a FASTA file name, `character` vector, or `data.frame`)
-#' sequences to align
+#' string giving a FASTA file name (possibly gzipped), `character` vector, or
+#' `data.frame`) sequences to align
 #' @param hmm (`character` string giving a file name) HMM for alignment
 #' @param outfile (`character` string) file name for output
 #' @param outformat (`character` string) output format for alignment; options
 #' are `"A2M"` and `"AFA"`, and lower-case versions of these.
 #' @param compress (`logical`) if TRUE, compress the output file with gzip
-#' @return a `character` string giving the output file
+#' @return a `character` string giving the output file. Empty sequence inputs
+#' produce empty alignment output files with matching format/compression.
 #' @export
 hmmalign <- function(
   seqs,
@@ -48,6 +49,23 @@ hmmalign <- function(
   if (checkmate::test_file_exists(seqs, "r")) {
     tseqs <- seqs
     n <- length(seqs)
+    is_gz <- endsWith(tseqs, ".gz")
+    if (any(is_gz)) {
+      tseqs_gz <- tseqs[is_gz]
+      tseqs_ungz <- replicate(
+        length(tseqs_gz),
+        withr::local_tempfile(
+          fileext = ".fasta"
+        )
+      )
+      for (i in seq_along(tseqs_gz)) {
+        write_sequence(
+          Biostrings::readDNAStringSet(tseqs_gz[[i]]),
+          tseqs_ungz[[i]]
+        )
+      }
+      tseqs[is_gz] <- tseqs_ungz
+    }
   } else if (
     checkmate::test_list(
       seqs,
@@ -80,44 +98,61 @@ hmmalign <- function(
       tout <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
     }
   }
-  mout <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
-  for (i in seq_len(n)) {
-    processx::run("mkfifo", mout[i])
-  }
-
-  # fmt: skip
-  args <- data.frame(
-    "--outformat", outformat,
-    "--trim",
-    "-o", mout,
-    hmm,
-    tseqs
+  is_empty <- vapply(
+    tseqs,
+    function(x) length(Biostrings::fasta.seqlengths(x)) == 0L,
+    logical(1)
   )
-  args <- as.matrix(args)
-  hmmer <- vector("list", n)
-  deline <- vector("list", n)
-  for (i in seq_len(n)) {
-    hmmer[[i]] <- processx::process$new(
-      command = exec,
-      args = args[i, ],
-      supervise = TRUE
-    )
-    deline[[i]] <- processx::process$new(
-      command = "awk",
-      args = 'BEGIN{ORS=""};NR>1&&/^>/{print "\\n"};{print};/^>/{print "\\n"};END{print "\\n"}',
-      stdin = mout[i],
-      stdout = tout[i],
-      supervise = TRUE
+  if (any(is_empty)) {
+    purrr::walk(
+      tout[is_empty],
+      function(x) write_sequence(Biostrings::DNAStringSet(), x)
     )
   }
-  hmmer_return <- integer()
-  for (i in seq_len(n)) {
-    hmmer[[i]]$wait()
-    hmmer_return <- union(hmmer[[i]]$get_exit_status(), hmmer_return)
-  }
-  stopifnot(identical(hmmer_return, 0L))
-  for (i in seq_len(n)) {
-    deline[[i]]$wait()
+  run_idx <- which(!is_empty)
+  if (length(run_idx) > 0L) {
+    mout <- replicate(
+      length(run_idx),
+      withr::local_tempfile(fileext = ".fasta")
+    )
+    for (i in seq_along(run_idx)) {
+      processx::run("mkfifo", mout[i])
+    }
+
+    # fmt: skip
+    args <- data.frame(
+      "--outformat", outformat,
+      "--trim",
+      "-o", mout,
+      hmm,
+      tseqs[run_idx]
+    )
+    args <- as.matrix(args)
+    hmmer <- vector("list", length(run_idx))
+    deline <- vector("list", length(run_idx))
+    for (i in seq_along(run_idx)) {
+      hmmer[[i]] <- processx::process$new(
+        command = exec,
+        args = args[i, ],
+        supervise = TRUE
+      )
+      deline[[i]] <- processx::process$new(
+        command = "awk",
+        args = 'BEGIN{ORS=""};NR>1&&/^>/{print "\\n"};{print};/^>/{print "\\n"};END{print "\\n"}',
+        stdin = mout[i],
+        stdout = tout[run_idx[i]],
+        supervise = TRUE
+      )
+    }
+    hmmer_return <- integer()
+    for (i in seq_along(run_idx)) {
+      hmmer[[i]]$wait()
+      hmmer_return <- union(hmmer[[i]]$get_exit_status(), hmmer_return)
+    }
+    stopifnot(identical(hmmer_return, 0L))
+    for (i in seq_along(run_idx)) {
+      deline[[i]]$wait()
+    }
   }
 
   if (compress && length(outfile) == n) {
@@ -240,12 +275,63 @@ read_dna_tblout <- function(file) {
   )
 }
 
+empty_domtblout <- function() {
+  tibble::tibble(
+    seq_name = character(),
+    seq_accno = character(),
+    seq_length = integer(),
+    hmm_name = character(),
+    hmm_accno = character(),
+    hmm_length = integer(),
+    Evalue = numeric(),
+    full_score = numeric(),
+    full_bias = numeric(),
+    hit_num = integer(),
+    total_hits = integer(),
+    c_Evalue = numeric(),
+    i_Evalue = numeric(),
+    hit_score = numeric(),
+    hit_bias = numeric(),
+    hmm_from = integer(),
+    hmm_to = integer(),
+    seq_from = integer(),
+    seq_to = integer(),
+    env_from = integer(),
+    env_to = integer(),
+    acc = numeric(),
+    description = character()
+  )
+}
+
+empty_dna_tblout <- function() {
+  tibble::tibble(
+    seq_name = character(),
+    seq_accno = character(),
+    hmm_name = character(),
+    hmm_accno = character(),
+    hmm_from = integer(),
+    hmm_to = integer(),
+    seq_from = integer(),
+    seq_to = integer(),
+    env_from = integer(),
+    env_to = integer(),
+    seq_len = integer(),
+    strand = character(),
+    Evalue = numeric(),
+    bit_score = numeric(),
+    bias = numeric(),
+    description = character()
+  )
+}
+
 #' Search for subsequences matching one or more HMMs in a set of sequences
 #'
 #' @param seqs ([`XStringSet`][Biostrings::XStringSet-class], `character`
-#' file name of a FASTA file, `character` vector, or `data.frame`) sequences to search
+#' file name of a FASTA file (possibly gzipped), `character` vector, or
+#' `data.frame`) sequences to search
 #' @param hmm (`character` file name) path to HMM(s) to search for
-#' @return a [`tibble`][tibble::tibble()] listing the HMM hits
+#' @return a [`tibble`][tibble::tibble()] listing the HMM hits. Empty sequence
+#' inputs return an empty tibble with the standard HMMER columns.
 #' @export
 hmmsearch <- function(seqs, hmm) {
   checkmate::assert_string(hmm)
@@ -273,19 +359,28 @@ hmmsearch <- function(seqs, hmm) {
     tseqs <- withr::local_tempfile(fileext = ".fasta")
     write_sequence(seqs, tseqs)
   }
+  is_empty <- vapply(
+    tseqs,
+    function(x) length(Biostrings::fasta.seqlengths(x)) == 0L,
+    logical(1)
+  )
+  run_idx <- which(!is_empty)
+  if (length(run_idx) == 0L) {
+    return(empty_domtblout())
+  }
   outfile <- replicate(n, withr::local_tempfile(fileext = ".hmmout"))
   # fmt: skip
   args <- data.frame(
     "--noali",
     "--notextw",
-    "--domtblout", outfile,
+      "--domtblout", outfile[run_idx],
     hmm,
-    tseqs
+      tseqs[run_idx]
   )
   args <- as.matrix(args)
 
-  hmmer <- vector("list", n)
-  for (i in seq_len(n)) {
+  hmmer <- vector("list", length(run_idx))
+  for (i in seq_along(run_idx)) {
     hmmer[[i]] <- processx::process$new(
       command = exec,
       args = args[i, ],
@@ -293,13 +388,13 @@ hmmsearch <- function(seqs, hmm) {
     )
   }
   hmmer_return <- integer()
-  for (i in seq_len(n)) {
+  for (i in seq_along(run_idx)) {
     hmmer[[i]]$wait()
     hmmer_return <- union(hmmer[[i]]$get_exit_status(), hmmer_return)
     stopifnot(identical(hmmer_return, 0L))
   }
   purrr::map_dfr(
-    outfile,
+    outfile[run_idx],
     read_domtblout
   )
 }
@@ -325,6 +420,9 @@ nhmmer <- function(seqs, hmm, ncpu = local_cpus()) {
     )
     tseqs <- withr::local_tempfile(fileext = ".fasta")
     write_sequence(seqs, tseqs)
+  }
+  if (length(Biostrings::fasta.seqlengths(tseqs)) == 0L) {
+    return(empty_dna_tblout())
   }
   outfile <- withr::local_tempfile(fileext = ".hmmout")
   # fmt: skip

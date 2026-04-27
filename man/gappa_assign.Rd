@@ -16,7 +16,7 @@ gappa_assign(
 )
 }
 \arguments{
-\item{jplace}{(\code{character}) path to the jplace file or a list containing
+\item{jplace}{(\code{character}) path to the jplace file, or a list containing
 jplace data}
 
 \item{taxonomy}{(\code{character}) path to the taxonomy file or a data frame
@@ -49,6 +49,9 @@ output files}
 \item \code{taxon} (character) the taxon
 \item \code{prob} (numeric) the probability of the assignment
 }
+
+If \code{jplace} contains no placements, returns an empty table with the same
+schema.
 }
 \description{
 Run Gappa

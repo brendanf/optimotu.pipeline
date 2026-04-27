@@ -14,8 +14,8 @@ hmmalign(
 }
 \arguments{
 \item{seqs}{(\code{\link[Biostrings:XStringSet-class]{XStringSet}}, \code{character}
-string giving a FASTA file name, \code{character} vector, or \code{data.frame})
-sequences to align}
+string giving a FASTA file name (possibly gzipped), \code{character} vector, or
+\code{data.frame}) sequences to align}
 
 \item{hmm}{(\code{character} string giving a file name) HMM for alignment}
 
@@ -27,7 +27,8 @@ are \code{"A2M"} and \code{"AFA"}, and lower-case versions of these.}
 \item{compress}{(\code{logical}) if TRUE, compress the output file with gzip}
 }
 \value{
-a \code{character} string giving the output file
+a \code{character} string giving the output file. Empty sequence inputs
+produce empty alignment output files with matching format/compression.
 }
 \description{
 Align query sequences to an HMM

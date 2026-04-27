@@ -10,7 +10,7 @@ find_epa_ng <- function() {
 #' file name of a tree in Newick format
 #' @param query ([`XStringSet`][Biostrings::XStringSet-class],
 #' [`MultipleAlignment`][Biostrings::MultipleAlignment-class],
-#' or `character`) query alignment, or a file name
+#' or `character`) query alignment, or a file name (possibly gzipped)
 #' @param outdir (`character`) output directory
 #' @param model (`character`) substitution model specification, or a file name
 #' containing the model specification.  EPA-ng can parse output files from
@@ -20,7 +20,8 @@ find_epa_ng <- function() {
 #' @param redo (`logical`) whether to overwrite existing output files
 #' @param strip_inserts (`logical`) whether to strip insertions (lower-case
 #' characters) from the query sequences before running EPA-ng
-#' @return (`character`) path to the output `epa_result.jplace` file
+#' @return (`character`) path to the output `epa_result.jplace` file. For empty
+#' query inputs, returns a valid jplace file with no placements.
 #' @export
 epa_ng <- function(
   ref_msa,
@@ -108,6 +109,24 @@ epa_ng <- function(
     cat("running precommand:", precommand, "\n")
     pre_status <- system(precommand)
     stopifnot(pre_status == 0)
+  }
+  if (length(Biostrings::fasta.seqlengths(query_file)) == 0L) {
+    if (!dir.exists(outdir)) {
+      dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+    }
+    outfile <- file.path(outdir, "epa_result.jplace")
+    jsonlite::write_json(
+      list(
+        tree = "();",
+        placements = list(),
+        metadata = list(),
+        version = 3L,
+        fields = character()
+      ),
+      outfile,
+      auto_unbox = TRUE
+    )
+    return(outfile)
   }
 
   if (methods::is(tree, "phylo")) {
@@ -297,7 +316,7 @@ parse_iqtree_model <- function(file = NULL, text = NULL) {
 }
 
 #' Run Gappa
-#' @param jplace (`character`) path to the jplace file or a list containing
+#' @param jplace (`character`) path to the jplace file, or a list containing
 #' jplace data
 #' @param taxonomy (`character`) path to the taxonomy file or a data frame
 #' with two columns containing the taxonomy data; the first column contains
@@ -319,6 +338,9 @@ parse_iqtree_model <- function(file = NULL, text = NULL) {
 #' - `parent_taxon` (character) the parent taxon
 #' - `taxon` (character) the taxon
 #' - `prob` (numeric) the probability of the assignment
+#'
+#' If `jplace` contains no placements, returns an empty table with the same
+#' schema.
 #' @export
 gappa_assign <- function(
   jplace,
@@ -332,14 +354,31 @@ gappa_assign <- function(
 ) {
   gappa <- find_executable("gappa")
   args <- c("examine", "assign", "--per-query-results")
+  checkmate::assert_flag(id_is_int)
 
   if (checkmate::test_file_exists(jplace, access = "r")) {
     jplace_file <- jplace
+    jplace_obj <- jsonlite::read_json(jplace_file, simplifyVector = FALSE)
   } else if (is_jplace(jplace)) {
     jplace_file <- withr::local_tempfile(fileext = ".jplace")
     jsonlite::write_json(jplace, jplace_file, auto_unbox = TRUE)
+    jplace_obj <- jplace
   } else {
     stop("'jplace' should be a filename or a list containing jplace data")
+  }
+  if (length(jplace_obj$placements) == 0L) {
+    out <- tibble::tibble(
+      rank = factor(character(), levels = ranks, ordered = TRUE),
+      parent_taxon = character(),
+      taxon = character(),
+      prob = numeric()
+    )
+    if (id_is_int) {
+      out <- tibble::add_column(out, seq_idx = integer(), .before = 1)
+    } else {
+      out <- tibble::add_column(out, seq_id = character(), .before = 1)
+    }
+    return(out)
   }
   args <- c(args, "--jplace-path", jplace_file)
 
@@ -394,8 +433,6 @@ gappa_assign <- function(
   if (isTRUE(verbose)) {
     args <- c(args, "--verbose")
   }
-
-  checkmate::assert_flag(id_is_int)
 
   checkmate::assert_count(ncpu, null.ok = TRUE)
   if (!is.null(ncpu)) {

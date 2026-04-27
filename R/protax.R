@@ -26,12 +26,18 @@ run_protax <- function(
     unlink(outdir, recursive = TRUE)
   }
   dir.create(outdir)
+  protax_infile <- file.path(outdir, "all.fa")
   if (length(seqs) == 1 && file.exists(seqs)) {
-    if (seqs != file.path(outdir, "all.fa")) {
-      file.copy(seqs, file.path(outdir, "all.fa"))
+    if (endsWith(seqs, ".gz")) {
+      write_sequence(Biostrings::readDNAStringSet(seqs), protax_infile)
+    } else if (seqs != protax_infile) {
+      file.copy(seqs, protax_infile)
     }
   } else {
-    write_sequence(seqs, file.path(outdir, "all.fa"))
+    write_sequence(seqs, protax_infile)
+  }
+  if (length(Biostrings::fasta.seqlengths(protax_infile)) == 0L) {
+    return(character())
   }
   status <- system2(
     script,
@@ -165,6 +171,43 @@ run_protax_animal <- function(
   is_gz <- all(is_gz)
 
   n <- length(aln_seqs)
+  if (
+    all(vapply(
+      aln_seqs,
+      function(x) length(Biostrings::fasta.seqlengths(x)) == 0L,
+      logical(1)
+    ))
+  ) {
+    empty_output <- tibble::tibble(
+      rank = integer(),
+      taxonomy = character(),
+      prob = numeric()
+    )
+    if (id_is_int) {
+      empty_output <- tibble::add_column(
+        empty_output,
+        seq_idx = integer(),
+        .before = 1
+      )
+    } else {
+      empty_output <- tibble::add_column(
+        empty_output,
+        seq_id = character(),
+        .before = 1
+      )
+    }
+    if (info) {
+      empty_output <- tibble::add_column(
+        empty_output,
+        best_id = integer(),
+        best_dist = numeric(),
+        second_id = integer(),
+        second_dist = numeric(),
+        .after = "prob"
+      )
+    }
+    return(empty_output)
+  }
   if (strip_inserts | is_gz) {
     prepipe <- vector("list", n)
     protax_in <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
@@ -409,13 +452,15 @@ protax_besthit_closedref <- function(
   checkmate::assert_integer(ncpu, lower = 1)
   checkmate::assert_integer(max_gap, lower = 1)
 
-  seqs <- fastx_gz_random_access_extract(
-    infile = infile,
+  seqs <- fastqindexr::extract_sequences(
     index = index,
-    i = i,
-    ncpu = ncpu,
-    max_gap = max_gap
+    seq_idx = i,
+    file = infile,
+    return = "seq"
   )
+  seq_names <- names(seqs)
+  seqs <- Biostrings::DNAStringSet(unname(seqs))
+  names(seqs) <- seq_names
 
   queries <- names(seqs)[unknowns]
   refs <- names(seqs)[!unknowns]
@@ -480,11 +525,13 @@ protax_besthit_closedref <- function(
 #' @export
 seq_cluster_protax <- function(aln_seq, aln_index, which, thresh, aln_len) {
   nslice <- floor(sqrt(local_cpus() - 1))
-  allseq <- fastx_gz_random_access_extract(
-    infile = aln_seq,
+  allseq <- fastqindexr::extract_sequences(
     index = aln_index,
-    i = which
+    seq_idx = which,
+    file = aln_seq,
+    return = "seq"
   )
+  allseq <- Biostrings::DNAStringSet(unname(allseq))
   names(allseq) <- as.character(seq_along(allseq) - 1L)
   if (length(which) > 1000) {
     seq <- character(nslice)

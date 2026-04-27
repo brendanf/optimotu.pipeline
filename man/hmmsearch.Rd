@@ -8,12 +8,14 @@ hmmsearch(seqs, hmm)
 }
 \arguments{
 \item{seqs}{(\code{\link[Biostrings:XStringSet-class]{XStringSet}}, \code{character}
-file name of a FASTA file, \code{character} vector, or \code{data.frame}) sequences to search}
+file name of a FASTA file (possibly gzipped), \code{character} vector, or
+\code{data.frame}) sequences to search}
 
 \item{hmm}{(\code{character} file name) path to HMM(s) to search for}
 }
 \value{
-a \code{\link[tibble:tibble]{tibble}} listing the HMM hits
+a \code{\link[tibble:tibble]{tibble}} listing the HMM hits. Empty sequence
+inputs return an empty tibble with the standard HMMER columns.
 }
 \description{
 Search for subsequences matching one or more HMMs in a set of sequences

@@ -30,11 +30,13 @@ to name}
 contains the sequence IDs}
 }
 \value{
-(same type of object as \code{seq}) named sequences
+(same type of object as \code{seq}) named sequences. Empty inputs are
+returned unchanged.
 }
 \description{
 Sequences are named using \code{make_seq_names()}.
 }
 \details{
-If the input is a file name, the file will be modified.
+If the input is a file name (plain or gzipped FASTA/FASTQ), the file is
+modified in place.
 }
