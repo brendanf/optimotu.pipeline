@@ -160,14 +160,13 @@ hmmalign <- function(
     for (i in seq_len(n)) {
       gzip[[i]] <- processx::process$new(
         command = "gzip",
-        error_on_status = TRUE,
         args = c("-c", tout[i]),
         stdout = outfile[i]
       )
     }
     gzip_return <- integer()
     for (i in seq_len(n)) {
-      gzip_return <- union(gzip[[i]]$wait()$status, gzip_return)
+      gzip_return <- union(gzip[[i]]$wait()$get_exit_status(), gzip_return)
     }
     stopifnot(identical(gzip_return, 0L))
   } else if (length(outfile) < n) {

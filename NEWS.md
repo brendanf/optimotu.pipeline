@@ -1,4 +1,7 @@
 # optimotu.pipeline (development version)
+* Fix `hmmalign()` bugs when running with a single input sequence.
+
+# optimotu.pipeline 0.6.3
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from
   fasta/fastq headers used by common reference databases as well as TSV files.
 * Broadened IQ-TREE model parsing for EPA-ng to cover time-reversible models
