@@ -2,16 +2,17 @@
 % Please edit documentation in R/write_and_return_file.R
 \name{ensure_directory}
 \alias{ensure_directory}
-\title{Create the parent directory of a file if it does not exist}
+\title{Create the parent directory of one or more files if they do not exist}
 \usage{
 ensure_directory(file)
 }
 \arguments{
-\item{file}{(\code{character} string) file path to create the parent directory for}
+\item{file}{(\code{character} vector) file paths to create the parent
+directories for}
 }
 \value{
-the input file path (invisibly)
+the input file path(s) (invisibly)
 }
 \description{
-Create the parent directory of a file if it does not exist
+Create the parent directory of one or more files if they do not exist
 }

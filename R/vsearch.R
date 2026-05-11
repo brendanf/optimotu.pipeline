@@ -92,7 +92,8 @@ vsearch_usearch_global <- function(
 #' `character` vector, or file name) query sequences
 #' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
 #' `character` vector, or file name) reference sequences
-#' @param ncpu (`integer` count) number of threads to use
+#' @param ncpu (`integer` count) number of threads passed to vsearch
+#'   (`--threads`).
 #' @param id_only (`logical` flag) if `TRUE`, return only the sequence IDs
 #' @param id_is_int (`logical` flag) if `TRUE`, return the sequence IDs as
 #' integers
@@ -108,7 +109,10 @@ vsearch_uchime_ref <- function(
   ref,
   ncpu = local_cpus(),
   id_only = FALSE,
-  id_is_int = FALSE
+  id_is_int = FALSE,
+  files = NULL,
+  seq_idx = NULL,
+  ...
 ) {
   # avoid R CMD check NOTE for undeclared global variables due to NSE
   seq_id <- NULL
@@ -118,12 +122,42 @@ vsearch_uchime_ref <- function(
   checkmate::assert_flag(id_only)
   checkmate::assert_flag(id_is_int)
 
-  if (checkmate::test_file_exists(query, "r")) {
-    tquery <- query
-  } else {
-    tquery <- withr::local_tempfile(pattern = "query", fileext = ".fasta")
-    write_sequence(query, tquery)
+  if (is.list(seq_idx) && length(seq_idx) > 1L) {
+    stop(
+      "`seq_idx` must not be a list with more than one partition.",
+      call. = FALSE
+    )
   }
+
+  indexed_like <- inherits(query, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(query)
+  if (!is.null(files) && !indexed_like) {
+    stop(
+      "`files` is only valid when `query` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
+  tmp_parent <- environment()
+  qfiles <- seq_batch_make_chunk_files(
+    seqs = query,
+    files = files,
+    seq_idx = seq_idx,
+    ncpu = 1L,
+    local_envir = tmp_parent
+  )
+  if (length(qfiles) == 0L) {
+    if (id_only) {
+      if (id_is_int) {
+        return(integer())
+      }
+      return(character())
+    }
+    if (id_is_int) {
+      return(tibble::tibble(seq_idx = integer(), seq = character()))
+    }
+    return(tibble::tibble(seq_id = character(), seq = character()))
+  }
+  tquery <- qfiles[[1L]]
   if (checkmate::test_file_exists(ref, "r")) {
     tref <- ref
   } else {
@@ -351,7 +385,8 @@ nomismatch_hits_vsearch <- function(
 #' FASTA or gzipped FASTA.
 #' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
 #' `character` vector, or file name) reference sequences
-#' @param ncpu (`integer` count) number of threads to use
+#' @param ncpu (`integer` count) number of threads passed to vsearch
+#'   (`--threads`), or `NULL` to omit the flag.
 #' @param id_is_int (`logical` flag) if `TRUE`, return the sequence IDs as
 #' integers
 #' @param hash (`character` string) hash value for the queries; ignored (but
@@ -364,7 +399,16 @@ nomismatch_hits_vsearch <- function(
 #' taxon being the correct classification of the sequence. Empty query inputs
 #' return an empty tibble with the same schema.
 #' @export
-sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
+sintax <- function(
+  query,
+  ref,
+  ncpu = NULL,
+  id_is_int = FALSE,
+  hash = NULL,
+  files = NULL,
+  seq_idx = NULL,
+  ...
+) {
   # avoid R CMD check NOTE about global variables due to NSE
   seq_id <- taxonomy <- taxon <- NULL
   empty_out <- tibble::tibble(
@@ -374,21 +418,42 @@ sintax <- function(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL) {
     taxon = character(),
     prob = numeric()
   )
-  if (is.character(query) && length(query) == 1 && file.exists(query)) {
-    if (length(Biostrings::fasta.seqlengths(query)) == 0L) {
-      if (id_is_int) {
-        return(tibble::add_column(empty_out, seq_idx = integer(), .before = 1))
-      }
-      return(empty_out)
-    }
-  }
   checkmate::assert_file_exists(ref, access = "r")
   checkmate::assert_count(ncpu, null.ok = TRUE)
-  if (is.character(query) && length(query) == 1 && file.exists(query)) {
-    tout <- query
-  } else {
-    tout <- withr::local_tempfile(pattern = "data", fileext = ".fasta")
-    write_sequence(query, tout)
+  if (is.list(seq_idx) && length(seq_idx) > 1L) {
+    stop(
+      "`seq_idx` must not be a list with more than one partition.",
+      call. = FALSE
+    )
+  }
+  indexed_like <- inherits(query, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(query)
+  if (!is.null(files) && !indexed_like) {
+    stop(
+      "`files` is only valid when `query` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
+  tmp_parent <- environment()
+  qfiles <- seq_batch_make_chunk_files(
+    seqs = query,
+    files = files,
+    seq_idx = seq_idx,
+    ncpu = 1L,
+    local_envir = tmp_parent
+  )
+  if (length(qfiles) == 0L) {
+    if (id_is_int) {
+      return(tibble::add_column(empty_out, seq_idx = integer(), .before = 1))
+    }
+    return(empty_out)
+  }
+  tout <- qfiles[[1L]]
+  if (length(Biostrings::fasta.seqlengths(tout)) == 0L) {
+    if (id_is_int) {
+      return(tibble::add_column(empty_out, seq_idx = integer(), .before = 1))
+    }
+    return(empty_out)
   }
   version <- processx::run(find_vsearch(), "--version")$stderr |>
     sub("vsearch v([0-9.]+).+", "\\1", x = _) |>

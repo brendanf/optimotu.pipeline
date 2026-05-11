@@ -4,7 +4,7 @@
 \alias{detect_numts}
 \title{Detect Nuclear Mitochondrial Paralogs (NUMTs)}
 \usage{
-detect_numts(a2m, id_is_int = FALSE)
+detect_numts(a2m, id_is_int = FALSE, files = NULL, seq_idx = NULL, ...)
 }
 \arguments{
 \item{a2m}{(\code{character}) name of an A2M file containing a multiple sequence

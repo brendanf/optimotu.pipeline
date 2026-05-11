@@ -9,26 +9,61 @@ hmmalign(
   hmm,
   outfile,
   outformat = "A2M",
-  compress = endsWith(outfile, ".gz")
+  compress = unique(endsWith(outfile, ".gz")),
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  ...
 )
 }
 \arguments{
 \item{seqs}{(\code{\link[Biostrings:XStringSet-class]{XStringSet}}, \code{character}
-string giving a FASTA file name (possibly gzipped), \code{character} vector, or
-\code{data.frame}) sequences to align}
+vector, \code{data.frame}, or
+\code{\link[fastqindexr:create_index]{fastqindexr_index}} object) query sequences.
+A \code{character} vector may contain literal sequences (in which case it should
+be named) or file paths to one or more FASTA files (possibly gzipped) or
+\code{.fqi} files for \code{\link[fastqindexr:read_fqi_index]{fastqindexr::read_fqi_index()}}.}
 
 \item{hmm}{(\code{character} string giving a file name) HMM for alignment}
 
-\item{outfile}{(\code{character} string) file name for output}
+\item{outfile}{(\code{character} string or vector) output path(s). Normally a
+single file; if one path is given, chunk outputs are combined in order.
+If more than one path is given, its length must equal \code{ncpu} (one slot per
+potential worker); if fewer chunks are needed (typically because of very
+small or empty inputs), only the necessary number of paths are written
+When there are no input sequences, an empty alignment is written to the
+\strong{first} path in \code{outfile} (additional paths are ignored).}
 
 \item{outformat}{(\code{character} string) output format for alignment; options
 are \code{"A2M"} and \code{"AFA"}, and lower-case versions of these.}
 
 \item{compress}{(\code{logical}) if TRUE, compress the output file with gzip}
+
+\item{files}{(\code{NULL} or \code{character}) when \code{seqs} is a \code{fastqindexr_index} or
+\code{.fqi} paths, optional per-file paths overriding those stored in the index
+(same length as the index file list). Useful after moving inputs or for
+\code{targets} dependency tracking.}
+
+\item{seq_idx}{(\code{NULL} or \code{integer}) optional 1-based indices into the
+logical sequence stream (\code{NULL} means all sequences in order). Applies
+after concatenating multiple FASTA inputs, and supports duplicates and
+request order. Indexed inputs use
+\code{fastqindexr::extract_sequences_to_file()}
+with a live index; plain FASTA paths (no index object) use the same
+function with \code{mode = "sequential"} so records are streamed without
+building an index.}
+
+\item{ncpu}{(\code{integer}) maximum number of parallel \code{hmmalign} processes.
+The selected sequences are split into up to \code{ncpu} contiguous chunks of
+nearly equal size (fewer when there are fewer sequences than \code{ncpu}).}
+
+\item{...}{ignored; reserved for \code{targets} dependency tracking (e.g. file
+hashes) without changing behavior.}
 }
 \value{
-a \code{character} string giving the output file. Empty sequence inputs
-produce empty alignment output files with matching format/compression.
+\code{character} vector of output file path(s) actually written: length
+1 when \code{outfile} has length 1, otherwise length equal to the number of
+materialized input chunks (at least 1, at most \code{ncpu}).
 }
 \description{
 Align query sequences to an HMM

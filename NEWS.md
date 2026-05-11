@@ -1,5 +1,13 @@
 # optimotu.pipeline (development version)
 * Fix `hmmalign()` bugs when running with a single input sequence.
+* Require `fastqindexr` (>= 0.1.0).
+* Wrapper functions for many external tools (`hmmalign()`, `hmmsearch()`,
+  `nhmmer()`, `run_protax_animal()`, `run_protax_besthit()`, `detect_numts()`,
+  `sintax()`, `vsearch_uchime_ref()`) now use a more unified API which allow
+  them to extract a subset of sequences from input filves via `fastqindexr`.
+  `fastq_gz_index_extract()` and `fastq_gz_random_access_extract()` have been
+  refactored to also use `fastqindexr` internally for better performance.
+* `ensure_directory()` is now vectorized over multiple inputs.
 
 # optimotu.pipeline 0.6.3
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from

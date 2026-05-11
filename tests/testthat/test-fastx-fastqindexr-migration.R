@@ -6,6 +6,20 @@ make_oneline_fasta_gz <- function(seq, ids) {
   path
 }
 
+local_dna_hmm <- function(seed = "ACGTACGT") {
+  fa <- tempfile(fileext = ".fasta")
+  hmm <- tempfile(fileext = ".hmm")
+  writeLines(c(">seed", seed), fa)
+  processx::run(
+    "hmmbuild",
+    c("--dna", hmm, fa),
+    error_on_status = TRUE
+  )
+  unlink(fa)
+  withr::defer(unlink(hmm), envir = parent.frame())
+  hmm
+}
+
 test_that("fastx wrappers accept fastqindexr index objects", {
   seq <- c("ACGT", "TGCA", "GGGG", "CCCC")
   ids <- c("s1", "s2", "s3", "s4")
@@ -125,7 +139,24 @@ test_that("fastx_gz_random_access_extract renumber and append work", {
     append = TRUE
   )
   got <- Biostrings::readDNAStringSet(out)
-  expect_equal(names(got), c("1", "2", "1"))
+  expect_equal(names(got), c("0", "1", "0"))
+})
+
+test_that("fastx_gz_random_access_extract in-memory renumber is zero_based", {
+  seq <- c("AA", "TT", "GG")
+  ids <- c("a", "b", "c")
+  infile <- make_oneline_fasta_gz(seq, ids)
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  got <- fastx_gz_random_access_extract(
+    infile = infile,
+    index = idx,
+    i = c(3L, 1L),
+    outfile = NULL,
+    renumber = TRUE
+  )
+  expect_s4_class(got, "DNAStringSet")
+  expect_equal(unname(as.character(got)), c(seq[3], seq[1]))
+  expect_equal(names(got), c("0", "1"))
 })
 
 test_that("empty extraction requests keep wrapper edge behavior", {
@@ -153,6 +184,210 @@ test_that("empty extraction requests keep wrapper edge behavior", {
   )
   expect_s4_class(got, "DNAStringSet")
   expect_length(got, 0L)
+})
+
+test_that("hmmalign indexed extraction matches legacy extract-then-align", {
+  skip_if_not(nzchar(Sys.which("hmmalign")), "hmmalign not on PATH")
+  skip_if_not(nzchar(Sys.which("hmmbuild")), "hmmbuild not on PATH")
+  seq <- c("ACGTACGT", "AAAATTTT", "GGGGCCCC")
+  ids <- as.character(seq_along(seq))
+  infile <- make_oneline_fasta_gz(seq, ids)
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  req <- c(3L, 1L, 3L)
+  sub <- withr::local_tempfile(fileext = ".fasta")
+  fastqindexr::extract_sequences_to_file(
+    index = idx,
+    seq_idx = req,
+    file = infile,
+    outfile = sub,
+    type = "fasta",
+    compress = FALSE
+  )
+  hmm <- local_dna_hmm()
+  out_legacy <- withr::local_tempfile(fileext = ".a2m")
+  out_idx <- withr::local_tempfile(fileext = ".a2m")
+  optimotu.pipeline::hmmalign(
+    sub,
+    hmm,
+    out_legacy,
+    outformat = "A2M",
+    compress = FALSE
+  )
+  optimotu.pipeline::hmmalign(
+    idx,
+    hmm,
+    out_idx,
+    outformat = "A2M",
+    compress = FALSE,
+    files = infile,
+    seq_idx = req
+  )
+  expect_equal(
+    digest::digest(file = out_legacy, algo = "md5"),
+    digest::digest(file = out_idx, algo = "md5")
+  )
+})
+
+test_that("hmmalign with index uses full file when seq_idx is NULL", {
+  skip_if_not(nzchar(Sys.which("hmmalign")), "hmmalign not on PATH")
+  skip_if_not(nzchar(Sys.which("hmmbuild")), "hmmbuild not on PATH")
+  seq <- c("ACGTACGT", "TTTTAAAA")
+  ids <- as.character(seq_along(seq))
+  infile <- make_oneline_fasta_gz(seq, ids)
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  sub <- withr::local_tempfile(fileext = ".fasta")
+  fastqindexr::extract_sequences_to_file(
+    index = idx,
+    seq_idx = seq_along(seq),
+    file = infile,
+    outfile = sub,
+    type = "fasta",
+    compress = FALSE
+  )
+  hmm <- local_dna_hmm()
+  out_full <- withr::local_tempfile(fileext = ".a2m")
+  out_null <- withr::local_tempfile(fileext = ".a2m")
+  optimotu.pipeline::hmmalign(
+    sub,
+    hmm,
+    out_full,
+    outformat = "A2M",
+    compress = FALSE
+  )
+  optimotu.pipeline::hmmalign(
+    idx,
+    hmm,
+    out_null,
+    outformat = "A2M",
+    compress = FALSE,
+    files = infile,
+    seq_idx = NULL
+  )
+  expect_equal(
+    digest::digest(file = out_full, algo = "md5"),
+    digest::digest(file = out_null, algo = "md5")
+  )
+})
+
+test_that("hmmalign indexed path matches legacy for multi-file logical concat", {
+  skip_if_not(nzchar(Sys.which("hmmalign")), "hmmalign not on PATH")
+  skip_if_not(nzchar(Sys.which("hmmbuild")), "hmmbuild not on PATH")
+  seq1 <- c("ACGTACGT", "AAAATTTT")
+  seq2 <- c("GGGGGGGG", "CTCTCTCT")
+  f1 <- make_oneline_fasta_gz(seq1, c("a1", "a2"))
+  f2 <- make_oneline_fasta_gz(seq2, c("b1", "b2"))
+  idx <- fastqindexr::create_index(files = c(f1, f2), type = "fasta")
+  req <- c(4L, 1L, 4L)
+  sub <- withr::local_tempfile(fileext = ".fasta")
+  fastqindexr::extract_sequences_to_file(
+    index = idx,
+    seq_idx = req,
+    file = c(f1, f2),
+    outfile = sub,
+    type = "fasta",
+    compress = FALSE
+  )
+  hmm <- local_dna_hmm()
+  out_legacy <- withr::local_tempfile(fileext = ".a2m")
+  out_idx <- withr::local_tempfile(fileext = ".a2m")
+  optimotu.pipeline::hmmalign(
+    sub,
+    hmm,
+    out_legacy,
+    outformat = "A2M",
+    compress = FALSE
+  )
+  optimotu.pipeline::hmmalign(
+    idx,
+    hmm,
+    out_idx,
+    outformat = "A2M",
+    compress = FALSE,
+    files = c(f1, f2),
+    seq_idx = req
+  )
+  expect_equal(
+    digest::digest(file = out_legacy, algo = "md5"),
+    digest::digest(file = out_idx, algo = "md5")
+  )
+})
+
+test_that("hmmalign ncpu chunking matches single-process alignment", {
+  skip_if_not(nzchar(Sys.which("hmmalign")), "hmmalign not on PATH")
+  skip_if_not(nzchar(Sys.which("hmmbuild")), "hmmbuild not on PATH")
+  seq <- c(
+    "ACGTACGT",
+    "AAAATTTT",
+    "GGGGCCCC",
+    "CTCTCTCT",
+    "TTTTAAAA",
+    "GCGCGCGC"
+  )
+  ids <- as.character(seq_along(seq))
+  infile <- make_oneline_fasta_gz(seq, ids)
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  hmm <- local_dna_hmm()
+  out_one <- withr::local_tempfile(fileext = ".a2m")
+  out_many <- withr::local_tempfile(fileext = ".a2m")
+  optimotu.pipeline::hmmalign(
+    idx,
+    hmm,
+    out_one,
+    outformat = "A2M",
+    compress = FALSE,
+    files = infile,
+    seq_idx = NULL,
+    ncpu = 1L
+  )
+  optimotu.pipeline::hmmalign(
+    idx,
+    hmm,
+    out_many,
+    outformat = "A2M",
+    compress = FALSE,
+    files = infile,
+    seq_idx = NULL,
+    ncpu = 4L
+  )
+  aln_one <- Biostrings::readBStringSet(out_one)
+  aln_many <- Biostrings::readBStringSet(out_many)
+  expect_setequal(names(aln_many), names(aln_one))
+  aln_one <- aln_one[order(names(aln_one))]
+  aln_many <- aln_many[order(names(aln_many))]
+  expect_equal(names(aln_many), names(aln_one))
+  expect_equal(as.character(aln_many), as.character(aln_one))
+})
+
+test_that("hmmalign forwards dots without error (targets tracking)", {
+  skip_if_not(nzchar(Sys.which("hmmalign")), "hmmalign not on PATH")
+  skip_if_not(nzchar(Sys.which("hmmbuild")), "hmmbuild not on PATH")
+  seq <- c("ACGTACGT")
+  infile <- make_oneline_fasta_gz(seq, "1")
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  hmm <- local_dna_hmm()
+  out <- withr::local_tempfile(fileext = ".a2m")
+  expect_no_error(
+    optimotu.pipeline::hmmalign(
+      idx,
+      hmm,
+      out,
+      outformat = "A2M",
+      compress = FALSE,
+      files = infile,
+      hash = "not_used"
+    )
+  )
+})
+
+test_that("partition_vector_equal_ncpu splits as expected", {
+  expect_equal(
+    optimotu.pipeline:::partition_vector_equal_ncpu(1:10, 3L),
+    list(1:4, 5:7, 8:10)
+  )
+  expect_equal(
+    optimotu.pipeline:::partition_vector_equal_ncpu(1:3, 8L),
+    list(1L, 2L, 3L)
+  )
 })
 
 test_that("lulu_distmx works with fastqindexr index object input", {

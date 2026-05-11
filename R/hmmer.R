@@ -21,141 +21,153 @@ find_nhmmer <- function() {
 
 #' Align query sequences to an HMM
 #' @param seqs ([`XStringSet`][Biostrings::XStringSet-class], `character`
-#' string giving a FASTA file name (possibly gzipped), `character` vector, or
-#' `data.frame`) sequences to align
+#'   vector, `data.frame`, or
+#'   [`fastqindexr_index`][fastqindexr::create_index()] object) query sequences.
+#'   A `character` vector may contain literal sequences (in which case it should
+#'   be named) or file paths to one or more FASTA files (possibly gzipped) or
+#'   `.fqi` files for [fastqindexr::read_fqi_index()].
 #' @param hmm (`character` string giving a file name) HMM for alignment
-#' @param outfile (`character` string) file name for output
+#' @param outfile (`character` string or vector) output path(s). Normally a
+#'   single file; if one path is given, chunk outputs are combined in order.
+#'   If more than one path is given, its length must equal `ncpu` (one slot per
+#'   potential worker); if fewer chunks are needed (typically because of very
+#'   small or empty inputs), only the necessary number of paths are written
+#'   When there are no input sequences, an empty alignment is written to the
+#'   **first** path in `outfile` (additional paths are ignored).
 #' @param outformat (`character` string) output format for alignment; options
 #' are `"A2M"` and `"AFA"`, and lower-case versions of these.
 #' @param compress (`logical`) if TRUE, compress the output file with gzip
-#' @return a `character` string giving the output file. Empty sequence inputs
-#' produce empty alignment output files with matching format/compression.
+#' @param files (`NULL` or `character`) when `seqs` is a `fastqindexr_index` or
+#'   `.fqi` paths, optional per-file paths overriding those stored in the index
+#'   (same length as the index file list). Useful after moving inputs or for
+#'   `targets` dependency tracking.
+#' @param seq_idx (`NULL` or `integer`) optional 1-based indices into the
+#'   logical sequence stream (`NULL` means all sequences in order). Applies
+#'   after concatenating multiple FASTA inputs, and supports duplicates and
+#'   request order. Indexed inputs use
+#'   `fastqindexr::extract_sequences_to_file()`
+#'   with a live index; plain FASTA paths (no index object) use the same
+#'   function with `mode = "sequential"` so records are streamed without
+#'   building an index.
+#' @param ncpu (`integer`) maximum number of parallel `hmmalign` processes.
+#'   The selected sequences are split into up to `ncpu` contiguous chunks of
+#'   nearly equal size (fewer when there are fewer sequences than `ncpu`).
+#' @param ... ignored; reserved for `targets` dependency tracking (e.g. file
+#'   hashes) without changing behavior.
+#' @return `character` vector of output file path(s) actually written: length
+#'   1 when `outfile` has length 1, otherwise length equal to the number of
+#'   materialized input chunks (at least 1, at most `ncpu`).
 #' @export
 hmmalign <- function(
   seqs,
   hmm,
   outfile,
   outformat = "A2M",
-  compress = endsWith(outfile, ".gz")
+  compress = unique(endsWith(outfile, ".gz")),
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  ...
 ) {
   checkmate::assert_string(hmm)
   checkmate::assert_file_exists(hmm, access = "r")
-  ensure_directory(outfile)
-  checkmate::assert_path_for_output(outfile, overwrite = TRUE)
+  checkmate::assert_character(
+    outfile,
+    min.len = 1L,
+    unique = TRUE,
+    any.missing = FALSE
+  )
+  checkmate::assert_count(ncpu, positive = TRUE)
+  checkmate::assert(
+    checkmate::test_character(outfile, len = 1L),
+    checkmate::test_character(outfile, len = ncpu)
+  )
   checkmate::assert_choice(outformat, c("A2M", "a2m", "afa", "AFA"))
   checkmate::assert_flag(compress)
+  checkmate::assert_count(ncpu)
+  indexed_like <- inherits(seqs, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(seqs)
+  if (!is.null(files) && !indexed_like) {
+    stop(
+      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
   exec <- find_hmmalign()
   checkmate::assert_file_exists(exec, access = "x")
-  if (checkmate::test_file_exists(seqs, "r")) {
-    tseqs <- seqs
-    n <- length(seqs)
-    is_gz <- endsWith(tseqs, ".gz")
-    if (any(is_gz)) {
-      tseqs_gz <- tseqs[is_gz]
-      tseqs_ungz <- replicate(
-        length(tseqs_gz),
-        withr::local_tempfile(
-          fileext = ".fasta"
-        )
-      )
-      for (i in seq_along(tseqs_gz)) {
-        write_sequence(
-          Biostrings::readDNAStringSet(tseqs_gz[[i]]),
-          tseqs_ungz[[i]]
-        )
-      }
-      tseqs[is_gz] <- tseqs_ungz
-    }
-  } else if (
-    checkmate::test_list(
-      seqs,
-      types = c("character", "XStringSet", "data.frame")
-    )
-  ) {
-    n <- length(seqs)
-    tseqs <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
-    purrr::pwalk(list(seq = seqs, fname = tseqs), write_sequence)
-  } else {
-    checkmate::assert_multi_class(
-      seqs,
-      c("data.frame", "character", "XStringSet")
-    )
-    n <- 1
-    tseqs <- withr::local_tempfile(fileext = ".fasta")
-    write_sequence(seqs, tseqs)
-  }
-  checkmate::assert(
-    length(outfile) == 1,
-    length(outfile) == n
+  tmp_parent <- environment()
+  tseqs <- seq_batch_make_chunk_files(
+    seqs = seqs,
+    files = files,
+    seq_idx = seq_idx,
+    ncpu = ncpu,
+    local_envir = tmp_parent
   )
-  if (length(outfile) == 1 && n > 1) {
-    tout <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
+  n <- length(tseqs)
+  if (n == 0L) {
+    outfile <- outfile[1L]
+    ensure_directory(outfile)
+    checkmate::assert_path_for_output(outfile, overwrite = TRUE)
+    write_sequence(Biostrings::DNAStringSet(), outfile, compress = compress)
+    return(outfile)
+  }
+  if (length(outfile) > n) {
+    outfile <- outfile[seq_len(n)]
+  }
+  ensure_directory(outfile)
+  checkmate::assert_path_for_output(outfile, overwrite = TRUE)
+  tout <- if (length(outfile) == n && isFALSE(compress)) {
+    outfile
   } else {
-    tout <- outfile
+    replicate(
+      n,
+      withr::local_tempfile(fileext = ".fasta", .local_envir = tmp_parent)
+    )
   }
-  if (compress) {
-    if (identical(tout, outfile)) {
-      tout <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
-    }
-  }
-  is_empty <- vapply(
-    tseqs,
-    function(x) length(Biostrings::fasta.seqlengths(x)) == 0L,
-    logical(1)
+  mout <- replicate(
+    n,
+    withr::local_tempfile(fileext = ".fasta", .local_envir = tmp_parent)
   )
-  if (any(is_empty)) {
-    purrr::walk(
-      tout[is_empty],
-      function(x) write_sequence(Biostrings::DNAStringSet(), x)
-    )
+  for (i in seq_len(n)) {
+    processx::run("mkfifo", mout[i])
   }
-  run_idx <- which(!is_empty)
-  if (length(run_idx) > 0L) {
-    mout <- replicate(
-      length(run_idx),
-      withr::local_tempfile(fileext = ".fasta")
-    )
-    for (i in seq_along(run_idx)) {
-      processx::run("mkfifo", mout[i])
-    }
 
-    # fmt: skip
-    args <- data.frame(
+  # fmt: skip
+  args <- data.frame(
       "--outformat", outformat,
       "--trim",
       "-o", mout,
       hmm,
-      tseqs[run_idx]
+      tseqs
     )
-    args <- as.matrix(args)
-    hmmer <- vector("list", length(run_idx))
-    deline <- vector("list", length(run_idx))
-    for (i in seq_along(run_idx)) {
-      hmmer[[i]] <- processx::process$new(
-        command = exec,
-        args = args[i, ],
-        supervise = TRUE
-      )
-      deline[[i]] <- processx::process$new(
-        command = "awk",
-        args = 'BEGIN{ORS=""};NR>1&&/^>/{print "\\n"};{print};/^>/{print "\\n"};END{print "\\n"}',
-        stdin = mout[i],
-        stdout = tout[run_idx[i]],
-        supervise = TRUE
-      )
-    }
-    hmmer_return <- integer()
-    for (i in seq_along(run_idx)) {
-      hmmer[[i]]$wait()
-      hmmer_return <- union(hmmer[[i]]$get_exit_status(), hmmer_return)
-    }
-    stopifnot(identical(hmmer_return, 0L))
-    for (i in seq_along(run_idx)) {
-      deline[[i]]$wait()
-    }
+  args <- as.matrix(args)
+  hmmer <- vector("list", n)
+  deline <- vector("list", n)
+  for (i in seq_len(n)) {
+    hmmer[[i]] <- processx::process$new(
+      command = exec,
+      args = args[i, ],
+      supervise = TRUE
+    )
+    deline[[i]] <- processx::process$new(
+      command = "awk",
+      args = 'BEGIN{ORS=""};NR>1&&/^>/{print "\\n"};{print};/^>/{print "\\n"};END{print "\\n"}',
+      stdin = mout[i],
+      stdout = tout[i],
+      supervise = TRUE
+    )
+  }
+  hmmer_return <- integer()
+  for (i in seq_len(n)) {
+    hmmer[[i]]$wait()
+    hmmer_return <- union(hmmer[[i]]$get_exit_status(), hmmer_return)
+  }
+  stopifnot(identical(hmmer_return, 0L))
+  for (i in seq_len(n)) {
+    deline[[i]]$wait()
   }
 
-  if (compress && length(outfile) == n) {
+  if (isTRUE(compress) && length(outfile) == n) {
     gzip <- vector("list", n)
     for (i in seq_len(n)) {
       gzip[[i]] <- processx::process$new(
@@ -169,7 +181,7 @@ hmmalign <- function(
       gzip_return <- union(gzip[[i]]$wait()$get_exit_status(), gzip_return)
     }
     stopifnot(identical(gzip_return, 0L))
-  } else if (length(outfile) < n) {
+  } else if (length(outfile) == 1L && n > 1L) {
     fastx_combine(tout, outfile)
   }
   outfile
@@ -326,60 +338,77 @@ empty_dna_tblout <- function() {
 #' Search for subsequences matching one or more HMMs in a set of sequences
 #'
 #' @param seqs ([`XStringSet`][Biostrings::XStringSet-class], `character`
-#' file name of a FASTA file (possibly gzipped), `character` vector, or
-#' `data.frame`) sequences to search
+#'   vector, `data.frame`, or
+#'   [`fastqindexr_index`][fastqindexr::create_index()] object) query sequences.
+#'   A `character` vector may contain literal sequences (in which case it should
+#'   be named) or file paths to one or more FASTA files (possibly gzipped) or
+#'   `.fqi` files for [fastqindexr::read_fqi_index()].
 #' @param hmm (`character` file name) path to HMM(s) to search for
+#' @param files (`NULL` or `character`) when `seqs` is a `fastqindexr_index` or
+#'   `.fqi` paths, optional per-file paths overriding those stored in the index
+#'   (same length as the index file list). Useful after moving inputs or for
+#'   `targets` dependency tracking.
+#' @param seq_idx (`NULL` or `integer`) optional 1-based indices into the
+#'   logical sequence stream (`NULL` means all sequences in order). Applies
+#'   after concatenating multiple FASTA inputs, and supports duplicates and
+#'   request order.
+#' @param ncpu (`integer`) maximum number of parallel `hmmsearch` processes.
+#'   The selected sequences are split into up to `ncpu` contiguous chunks of
+#'   nearly equal size (fewer when there are fewer sequences than `ncpu`).
+#' @param ... ignored; reserved for `targets` dependency tracking (e.g. file
+#'   hashes) without changing behavior.
 #' @return a [`tibble`][tibble::tibble()] listing the HMM hits. Empty sequence
 #' inputs return an empty tibble with the standard HMMER columns.
 #' @export
-hmmsearch <- function(seqs, hmm) {
+hmmsearch <- function(
+  seqs,
+  hmm,
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  ...
+) {
   checkmate::assert_string(hmm)
   checkmate::assert_file_exists(hmm, access = "r")
+  checkmate::assert_count(ncpu)
+  indexed_like <- inherits(seqs, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(seqs)
+  if (!is.null(files) && !indexed_like) {
+    stop(
+      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
   exec <- find_hmmsearch()
   checkmate::assert_file_exists(exec, access = "x")
-  if (checkmate::test_file_exists(seqs, "r")) {
-    tseqs <- seqs
-    n <- length(seqs)
-  } else if (
-    checkmate::test_list(
-      seqs,
-      types = c("character", "XStringSet", "data.frame")
-    )
-  ) {
-    n <- length(seqs)
-    tseqs <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
-    purrr::pwalk(list(seq = seqs, fname = tseqs), write_sequence)
-  } else {
-    checkmate::assert_multi_class(
-      seqs,
-      c("data.frame", "character", "XStringSet")
-    )
-    n <- 1
-    tseqs <- withr::local_tempfile(fileext = ".fasta")
-    write_sequence(seqs, tseqs)
-  }
-  is_empty <- vapply(
-    tseqs,
-    function(x) length(Biostrings::fasta.seqlengths(x)) == 0L,
-    logical(1)
+  tmp_parent <- environment()
+  tseqs <- seq_batch_make_chunk_files(
+    seqs = seqs,
+    files = files,
+    seq_idx = seq_idx,
+    ncpu = ncpu,
+    local_envir = tmp_parent
   )
-  run_idx <- which(!is_empty)
-  if (length(run_idx) == 0L) {
+  n <- length(tseqs)
+  if (n == 0L) {
     return(empty_domtblout())
   }
-  outfile <- replicate(n, withr::local_tempfile(fileext = ".hmmout"))
+  outfile <- replicate(
+    n,
+    withr::local_tempfile(fileext = ".hmmout", .local_envir = tmp_parent)
+  )
   # fmt: skip
   args <- data.frame(
     "--noali",
     "--notextw",
-      "--domtblout", outfile[run_idx],
+    "--domtblout", outfile,
     hmm,
-      tseqs[run_idx]
+    tseqs
   )
   args <- as.matrix(args)
 
-  hmmer <- vector("list", length(run_idx))
-  for (i in seq_along(run_idx)) {
+  hmmer <- vector("list", n)
+  for (i in seq_len(n)) {
     hmmer[[i]] <- processx::process$new(
       command = exec,
       args = args[i, ],
@@ -387,43 +416,86 @@ hmmsearch <- function(seqs, hmm) {
     )
   }
   hmmer_return <- integer()
-  for (i in seq_along(run_idx)) {
+  for (i in seq_len(n)) {
     hmmer[[i]]$wait()
     hmmer_return <- union(hmmer[[i]]$get_exit_status(), hmmer_return)
     stopifnot(identical(hmmer_return, 0L))
   }
-  purrr::map_dfr(
-    outfile[run_idx],
-    read_domtblout
-  )
+  purrr::map_dfr(outfile, read_domtblout)
 }
 
 #' Search for subsequences matching one or more nucleotide HMMs in a set of
 #' sequences
 #'
-#' @inherit hmmsearch params return
-#' @param ncpu (`integer`) number of threads to use for searching
+#' @param seqs ([`XStringSet`][Biostrings::XStringSet-class], `character`
+#'   vector, `data.frame`, or
+#'   [`fastqindexr_index`][fastqindexr::create_index()] object) query sequences.
+#'   A `character` vector may contain literal sequences (in which case it should
+#'   be named) or file paths to one or more FASTA files (possibly gzipped) or
+#'   `.fqi` files for [fastqindexr::read_fqi_index()].
+#' @param hmm (`character` file name) path to HMM(s) to search for
+#' @param files (`NULL` or `character`) when `seqs` is a `fastqindexr_index` or
+#'   `.fqi` paths, optional per-file paths overriding those stored in the index
+#'   (same length as the index file list). Useful after moving inputs or for
+#'   `targets` dependency tracking.
+#' @param seq_idx (`NULL` or `integer`) optional 1-based indices into the
+#'   logical sequence stream (`NULL` means all sequences in order). Applies
+#'   after concatenating multiple FASTA inputs, and supports duplicates and
+#'   request order.
+#' @param ncpu (`integer`) number of threads passed to nhmmer (`--cpu`).
+#'   Parallelism is only inside nhmmer; the query is not split across
+#'   processes.
+#' @param ... ignored; reserved for `targets` dependency tracking (e.g. file
+#'   hashes) without changing behavior.
+#' @return a [`tibble`][tibble::tibble()] like [hmmsearch()] tblout parsing.
+#'   Empty sequence inputs return an empty tibble with the DNA tblout columns.
 #' @export
-nhmmer <- function(seqs, hmm, ncpu = local_cpus()) {
+nhmmer <- function(
+  seqs,
+  hmm,
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  ...
+) {
   checkmate::assert_string(hmm)
   checkmate::assert_file_exists(hmm, access = "r")
   checkmate::assert_count(ncpu)
+  if (is.list(seq_idx) && length(seq_idx) > 1L) {
+    stop(
+      "`seq_idx` must not be a list with more than one partition.",
+      call. = FALSE
+    )
+  }
+  indexed_like <- inherits(seqs, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(seqs)
+  if (!is.null(files) && !indexed_like) {
+    stop(
+      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
   exec <- find_nhmmer()
   checkmate::assert_file_exists(exec, access = "x")
-  if (length(seqs) == 1 && checkmate::test_file_exists(seqs, "r")) {
-    tseqs <- seqs
-  } else {
-    checkmate::assert_multi_class(
-      seqs,
-      c("data.frame", "character", "XStringSet")
-    )
-    tseqs <- withr::local_tempfile(fileext = ".fasta")
-    write_sequence(seqs, tseqs)
+  tmp_parent <- environment()
+  qfiles <- seq_batch_make_chunk_files(
+    seqs = seqs,
+    files = files,
+    seq_idx = seq_idx,
+    ncpu = 1L,
+    local_envir = tmp_parent
+  )
+  if (length(qfiles) == 0L) {
+    return(empty_dna_tblout())
   }
+  tseqs <- qfiles[[1L]]
   if (length(Biostrings::fasta.seqlengths(tseqs)) == 0L) {
     return(empty_dna_tblout())
   }
-  outfile <- withr::local_tempfile(fileext = ".hmmout")
+  outfile <- withr::local_tempfile(
+    fileext = ".hmmout",
+    .local_envir = tmp_parent
+  )
   # fmt: skip
   args <- c(
     "--noali",

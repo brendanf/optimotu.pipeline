@@ -9,7 +9,10 @@ vsearch_uchime_ref(
   ref,
   ncpu = local_cpus(),
   id_only = FALSE,
-  id_is_int = FALSE
+  id_is_int = FALSE,
+  files = NULL,
+  seq_idx = NULL,
+  ...
 )
 }
 \arguments{
@@ -19,7 +22,8 @@ vsearch_uchime_ref(
 \item{ref}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
 \code{character} vector, or file name) reference sequences}
 
-\item{ncpu}{(\code{integer} count) number of threads to use}
+\item{ncpu}{(\code{integer} count) number of threads passed to vsearch
+(\code{--threads}).}
 
 \item{id_only}{(\code{logical} flag) if \code{TRUE}, return only the sequence IDs}
 

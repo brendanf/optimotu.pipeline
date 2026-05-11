@@ -4,7 +4,16 @@
 \alias{sintax}
 \title{Perform taxonomic classification using SINTAX in VSEARCH}
 \usage{
-sintax(query, ref, ncpu = NULL, id_is_int = FALSE, hash = NULL)
+sintax(
+  query,
+  ref,
+  ncpu = NULL,
+  id_is_int = FALSE,
+  hash = NULL,
+  files = NULL,
+  seq_idx = NULL,
+  ...
+)
 }
 \arguments{
 \item{query}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
@@ -14,7 +23,8 @@ FASTA or gzipped FASTA.}
 \item{ref}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
 \code{character} vector, or file name) reference sequences}
 
-\item{ncpu}{(\code{integer} count) number of threads to use}
+\item{ncpu}{(\code{integer} count) number of threads passed to vsearch
+(\code{--threads}), or \code{NULL} to omit the flag.}
 
 \item{id_is_int}{(\code{logical} flag) if \code{TRUE}, return the sequence IDs as
 integers}

@@ -106,6 +106,33 @@ parse_protax_nameprob <- function(nameprob, id_is_int = FALSE) {
     dplyr::arrange(!!id_col_name, dplyr::desc(rank), dplyr::desc(prob))
 }
 
+#' Create an empty output tibble for ProtaxAnimal
+#' @noRd
+empty_protax_animal_output <- function(id_is_int = FALSE, info = FALSE) {
+  empty_output <- if (id_is_int) {
+    tibble::tibble(seq_idx = integer())
+  } else {
+    tibble::tibble(seq_id = character())
+  }
+  empty_output <- tibble::add_column(
+    empty_output,
+    rank = integer(),
+    taxonomy = character(),
+    prob = numeric()
+  )
+  if (info) {
+    empty_output <- tibble::add_column(
+      empty_output,
+      best_id = integer(),
+      best_dist = numeric(),
+      second_id = integer(),
+      second_dist = numeric(),
+      .after = "prob"
+    )
+  }
+  empty_output
+}
+
 #' Taxonomically identify sequences using ProtaxAnimal
 #'
 #' vectorized on aln_seqs
@@ -129,6 +156,13 @@ parse_protax_nameprob <- function(nameprob, id_is_int = FALSE) {
 #' sequences were the top two matches responsible for each identification
 #' @param options (`character` vector) additional command line options to
 #' Protax
+#' @param files (`NULL` or `character`) when `aln_seqs` is a
+#'   `fastqindexr_index` or `.fqi` paths, optional per-file paths overriding
+#'   those stored in the index.
+#' @param seq_idx (`NULL` or `integer`) optional 1-based indices into the
+#'   logical sequence stream (`NULL` means all sequences in order).
+#' @param ncpu (`integer`) maximum number of parallel classify workers.
+#' @param ... ignored; reserved for dependency-tracking literals/hashes.
 #' @return a `data.frame` with columns `seq_id`, `rank`, `taxonomy`, `prob`,
 #' and if `info` is `TRUE`, `best_id`, `best_dist`, `second_id`, `second_dist`
 #' @export
@@ -140,9 +174,13 @@ run_protax_animal <- function(
   strip_inserts = FALSE,
   id_is_int = FALSE,
   info = FALSE,
-  options = character()
+  options = character(),
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  ...
 ) {
-  checkmate::assert_file_exists(aln_seqs, access = "r")
+  checkmate::assert_count(ncpu)
   checkmate::assert_directory_exists(modeldir)
   priors <- file.path(modeldir, "taxonomy.priors")
   checkmate::assert_file_exists(priors, access = "r")
@@ -161,6 +199,29 @@ run_protax_animal <- function(
   checkmate::assert_flag(strip_inserts)
   checkmate::assert_flag(id_is_int)
   checkmate::assert_character(options)
+
+  indexed_like <- inherits(aln_seqs, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(aln_seqs)
+  if (!is.null(files) && !indexed_like) {
+    stop(
+      "`files` is only valid when `aln_seqs` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
+  tmp_parent <- environment()
+  aln_seqs <- seq_batch_make_chunk_files(
+    seqs = aln_seqs,
+    files = files,
+    seq_idx = seq_idx,
+    ncpu = ncpu,
+    local_envir = tmp_parent
+  )
+
+  n <- length(aln_seqs)
+
+  if (n == 0L) {
+    return(empty_protax_animal_output(id_is_int, info))
+  }
   # fmt: skip
   args <- c(
     "-t", rep_p, options, priors, refs, rseqs, pars, scs, as.character(min_p)
@@ -170,44 +231,6 @@ run_protax_animal <- function(
   stopifnot(all(is_gz) | all(!is_gz))
   is_gz <- all(is_gz)
 
-  n <- length(aln_seqs)
-  if (
-    all(vapply(
-      aln_seqs,
-      function(x) length(Biostrings::fasta.seqlengths(x)) == 0L,
-      logical(1)
-    ))
-  ) {
-    empty_output <- tibble::tibble(
-      rank = integer(),
-      taxonomy = character(),
-      prob = numeric()
-    )
-    if (id_is_int) {
-      empty_output <- tibble::add_column(
-        empty_output,
-        seq_idx = integer(),
-        .before = 1
-      )
-    } else {
-      empty_output <- tibble::add_column(
-        empty_output,
-        seq_id = character(),
-        .before = 1
-      )
-    }
-    if (info) {
-      empty_output <- tibble::add_column(
-        empty_output,
-        best_id = integer(),
-        best_dist = numeric(),
-        second_id = integer(),
-        second_dist = numeric(),
-        .after = "prob"
-      )
-    }
-    return(empty_output)
-  }
   if (strip_inserts | is_gz) {
     prepipe <- vector("list", n)
     protax_in <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
@@ -235,37 +258,8 @@ run_protax_animal <- function(
   }
   protax_exit_status = 0L
   output <- vector("list", n)
-  # empty output in case the file is empty
-  # a bug in vroom causes an error if we try to read an empty file with skip columns
-  empty_output <- tibble::tibble(
-    rank = integer(),
-    taxonomy = character(),
-    prob = numeric()
-  )
-  if (id_is_int) {
-    empty_output <- tibble::add_column(
-      empty_output,
-      seq_idx = integer(),
-      .before = 1
-    )
-  } else {
-    empty_output <- tibble::add_column(
-      empty_output,
-      seq_id = character(),
-      .before = 1
-    )
-  }
-  if (info) {
-    empty_output <- tibble::add_column(
-      empty_output,
-      best_id = integer(),
-      best_dist = numeric(),
-      second_id = integer(),
-      second_dist = numeric(),
-      .after = "prob"
-    )
-  }
 
+  empty_output <- empty_protax_animal_output(id_is_int, info)
   for (i in seq_len(n)) {
     protax[[i]]$wait()
     protax_exit_status <- max(protax_exit_status, protax[[i]]$get_exit_status())
@@ -275,17 +269,7 @@ run_protax_animal <- function(
     } else {
       output[[i]] <- readr::read_delim(
         outfiles[i],
-        col_names = c(
-          if (id_is_int) "seq_idx" else "seq_id",
-          "rank",
-          "taxonomy",
-          "prob",
-          if (info) {
-            c("best_id", "best_dist", "second_id", "second_dist")
-          } else {
-            NULL
-          }
-        ),
+        col_names = names(empty_output),
         col_types = paste0(
           if (id_is_int) "i" else "c",
           "icd",
@@ -313,6 +297,13 @@ run_protax_animal <- function(
 #' be interpreted as integers
 #' @param command (`character`) the Protax command to run, either `"dist_best"`
 #' or `"dist_bipart"`
+#' @param files (`NULL` or `character`) when `aln_query` is a
+#'   `fastqindexr_index` or `.fqi` paths, optional per-file paths overriding
+#'   those stored in the index.
+#' @param seq_idx (`NULL` or `integer`) optional 1-based indices into the
+#'   logical sequence stream (`NULL` means all sequences in order).
+#' @param ncpu (`integer`) maximum number of parallel workers over query chunks.
+#' @param ... ignored; reserved for dependency-tracking literals/hashes.
 #' @return a `data.frame` with columns `seq_id` (or `seq_idx` if
 #' `query_id_is_int` is `TRUE`), `ref_id` (or `ref_idx` if `ref_id_is_int` is
 #' `TRUE`), and `dist`.  When command in `"dist_best"`, each value in
@@ -325,16 +316,53 @@ run_protax_besthit <- function(
   options = character(),
   query_id_is_int = TRUE,
   ref_id_is_int = TRUE,
-  command = "dist_best"
+  command = "dist_best",
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  ...
 ) {
-  checkmate::assert_file_exists(aln_query, access = "r")
-  n_query <- length(aln_query)
+  checkmate::assert_count(ncpu)
+  checkmate::assert_flag(query_id_is_int)
+  checkmate::assert_flag(ref_id_is_int)
   checkmate::assert_file_exists(aln_ref, access = "r")
   n_ref <- length(aln_ref)
   executable <- find_executable(command)
   checkmate::assert_character(options)
-  checkmate::assert_flag(query_id_is_int)
-  checkmate::assert_flag(ref_id_is_int)
+
+  indexed_like <- inherits(aln_query, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(aln_query)
+  if (!is.null(files) && !indexed_like) {
+    stop(
+      "`files` is only valid when `aln_query` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
+  tmp_parent <- environment()
+  aln_query <- seq_batch_make_chunk_files(
+    seqs = aln_query,
+    files = files,
+    seq_idx = seq_idx,
+    ncpu = ncpu,
+    local_envir = tmp_parent
+  )
+  n_query <- length(aln_query)
+
+  if (n_query == 0L) {
+    empty_output <- tibble::tibble(dist = numeric())
+    empty_output <- if (ref_id_is_int) {
+      tibble::add_column(empty_output, ref_idx = integer(), .before = 1)
+    } else {
+      tibble::add_column(empty_output, ref_id = character(), .before = 1)
+    }
+    empty_output <- if (query_id_is_int) {
+      tibble::add_column(empty_output, seq_idx = integer(), .before = 1)
+    } else {
+      tibble::add_column(empty_output, seq_id = character(), .before = 1)
+    }
+    return(empty_output)
+  }
+  checkmate::assert_file_exists(aln_query, access = "r")
 
   is_gz_ref <- endsWith(aln_ref, ".gz")
   stopifnot(all(is_gz_ref) | all(!is_gz_ref))

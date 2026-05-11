@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for environmental DNA metabarcoding
-Version: 0.6.3.9000
+Version: 0.6.3.9001
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -31,7 +31,7 @@ Imports:
     checkmate,
     digest,
     dplyr,
-    fastqindexr (>= 0.0.2),
+    fastqindexr (>= 0.1.0),
     glue,
     IRanges,
     jsonlite,

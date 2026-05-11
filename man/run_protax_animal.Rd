@@ -12,7 +12,11 @@ run_protax_animal(
   strip_inserts = FALSE,
   id_is_int = FALSE,
   info = FALSE,
-  options = character()
+  options = character(),
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  ...
 )
 }
 \arguments{
@@ -41,6 +45,17 @@ sequences were the top two matches responsible for each identification}
 
 \item{options}{(\code{character} vector) additional command line options to
 Protax}
+
+\item{files}{(\code{NULL} or \code{character}) when \code{aln_seqs} is a
+\code{fastqindexr_index} or \code{.fqi} paths, optional per-file paths overriding
+those stored in the index.}
+
+\item{seq_idx}{(\code{NULL} or \code{integer}) optional 1-based indices into the
+logical sequence stream (\code{NULL} means all sequences in order).}
+
+\item{ncpu}{(\code{integer}) maximum number of parallel classify workers.}
+
+\item{...}{ignored; reserved for dependency-tracking literals/hashes.}
 }
 \value{
 a \code{data.frame} with columns \code{seq_id}, \code{rank}, \code{taxonomy}, \code{prob},

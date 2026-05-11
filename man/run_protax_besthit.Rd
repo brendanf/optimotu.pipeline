@@ -11,7 +11,11 @@ run_protax_besthit(
   options = character(),
   query_id_is_int = TRUE,
   ref_id_is_int = TRUE,
-  command = "dist_best"
+  command = "dist_best",
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  ...
 )
 
 run_protax_bipart(
@@ -42,6 +46,17 @@ be interpreted as integers}
 
 \item{command}{(\code{character}) the Protax command to run, either \code{"dist_best"}
 or \code{"dist_bipart"}}
+
+\item{files}{(\code{NULL} or \code{character}) when \code{aln_query} is a
+\code{fastqindexr_index} or \code{.fqi} paths, optional per-file paths overriding
+those stored in the index.}
+
+\item{seq_idx}{(\code{NULL} or \code{integer}) optional 1-based indices into the
+logical sequence stream (\code{NULL} means all sequences in order).}
+
+\item{ncpu}{(\code{integer}) maximum number of parallel workers over query chunks.}
+
+\item{...}{ignored; reserved for dependency-tracking literals/hashes.}
 
 \item{max_d}{(\code{numeric}) maximum distance to include in the distance matrix}
 }

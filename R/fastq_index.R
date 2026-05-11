@@ -25,6 +25,85 @@ fastx_gz_index <- function(file) {
   index
 }
 
+#' Resolve `seq_idx` for indexed extraction (`NULL` means all records, in order)
+#'
+#' @param index_obj A [`fastqindexr_index`][fastqindexr::create_index()] object.
+#' @param seq_idx (`integer` or `NULL`) subset to extract; `integer()` requests
+#'   an empty extraction.
+#'
+#' @return Integer vector of 1-based indices into the logically concatenated
+#'   records.
+#' @noRd
+resolve_indexed_seq_idx <- function(index_obj, seq_idx) {
+  checkmate::assert_class(index_obj, "fastqindexr_index")
+  if (is.null(seq_idx)) {
+    n <- as.integer(index_obj$n_records)
+    if (n < 1L) {
+      return(integer())
+    }
+    return(seq_len(n))
+  }
+  checkmate::assert_integerish(seq_idx, lower = 1L, any.missing = FALSE)
+  as.integer(seq_idx)
+}
+
+#' Resolve `seq_idx` against a fixed record count (in-memory or flat file read)
+#'
+#' @param n_records Total number of sequences in order (`integer` scalar).
+#' @param seq_idx (`NULL` or `integer`) same semantics as
+#'   resolve_indexed_seq_idx semantics but bounds-checked against `n_records`.
+#'
+#' @return Integer vector of 1-based indices (possibly empty).
+#' @noRd
+resolve_linear_seq_idx <- function(n_records, seq_idx) {
+  checkmate::assert_count(n_records)
+  if (is.null(seq_idx)) {
+    if (n_records < 1L) {
+      return(integer())
+    }
+    return(seq_len(n_records))
+  }
+  checkmate::assert_integerish(
+    seq_idx,
+    lower = 1L,
+    upper = n_records,
+    any.missing = FALSE
+  )
+  as.integer(seq_idx)
+}
+
+#' Split a vector into up to `ncpu` contiguous blocks of nearly equal size
+#'
+#' Used to parallelize tools over sequence batches. Empty `vec` yields a
+#' single empty block.
+#'
+#' @param vec Atomic vector (often integer indices).
+#' @param ncpu Maximum number of blocks (`integer` scalar, at least 1).
+#'
+#' @return `list` of pieces of `vec`, length `min(ncpu, length(vec))` when
+#'   `length(vec) > 0`, else a one-element list holding an empty integer vector.
+#' @noRd
+partition_vector_equal_ncpu <- function(vec, ncpu) {
+  checkmate::assert_count(ncpu)
+  m <- length(vec)
+  if (m == 0L) {
+    return(list(integer()))
+  }
+  k <- min(as.integer(ncpu), m)
+  if (k < 2L) {
+    return(list(vec))
+  }
+  base <- m %/% k
+  rem <- m %% k
+  group_sizes <- rep.int(base, k)
+  if (rem > 0L) {
+    group_sizes[seq_len(rem)] <- group_sizes[seq_len(rem)] + 1L
+  }
+  ends <- cumsum(group_sizes)
+  starts <- c(1L, ends[-k] + 1L)
+  lapply(seq_len(k), function(i) vec[starts[i]:ends[i]])
+}
+
 normalize_fastx_extract_inputs <- function(infile, index) {
   checkmate::assert_character(infile, min.len = 1L, any.missing = FALSE)
   checkmate::assert_file_exists(infile, "r")
@@ -55,32 +134,6 @@ normalize_fastx_extract_inputs <- function(infile, index) {
     ),
     file = NULL
   )
-}
-
-write_fastx_dnastringset <- function(seqs, outfile, append = FALSE) {
-  ensure_directory(outfile)
-  Biostrings::writeXStringSet(
-    x = seqs,
-    filepath = outfile,
-    append = append,
-    compress = endsWith(outfile, ".gz")
-  )
-  outfile
-}
-
-extract_fastx_as_dnastringset <- function(index, file, i, renumber = FALSE) {
-  seqs <- fastqindexr::extract_sequences(
-    index = index,
-    seq_idx = i,
-    file = file,
-    return = "seq"
-  )
-  out <- Biostrings::DNAStringSet(unname(seqs))
-  names(out) <- names(seqs)
-  if (renumber) {
-    names(out) <- as.character(seq_along(out))
-  }
-  out
 }
 
 #' @param infile (`character` filename) gzipped fasta or fastq file
@@ -121,16 +174,6 @@ fastx_gz_extract <- function(
     file.create(outfile)
     return(outfile)
   }
-  if (isTRUE(renumber)) {
-    seqs <- extract_fastx_as_dnastringset(
-      index = input$index,
-      file = input$file,
-      i = i,
-      renumber = FALSE
-    )
-    names(seqs) <- as.character(seq_along(seqs) - 1L)
-    return(write_fastx_dnastringset(seqs, outfile = outfile, append = append))
-  }
   fastqindexr::extract_sequences_to_file(
     index = input$index,
     seq_idx = i,
@@ -138,7 +181,8 @@ fastx_gz_extract <- function(
     outfile = outfile,
     type = "auto",
     append = append,
-    compress = endsWith(outfile, ".gz")
+    compress = endsWith(outfile, ".gz"),
+    renumber = if (isTRUE(renumber)) "zero_based" else "none"
   )
   outfile
 }
@@ -173,24 +217,17 @@ fastx_gz_random_access_extract <- function(
   checkmate::assert_flag(append)
   checkmate::assert_integerish(max_gap, lower = 1)
   input <- normalize_fastx_extract_inputs(infile = infile, index = index)
-  seqs <- extract_fastx_as_dnastringset(
-    index = input$index,
-    file = input$file,
-    i = i,
-    renumber = renumber
-  )
+
   if (is.null(outfile)) {
-    seqs
+    fastqindexr::extract_sequences_dnastringset(
+      index = input$index,
+      seq_idx = i,
+      file = input$file,
+      renumber = if (isTRUE(renumber)) "zero_based" else "none"
+    )
   } else {
     if (!append && file.exists(outfile)) {
       unlink(outfile)
-    }
-    if (isTRUE(renumber)) {
-      return(write_fastx_dnastringset(
-        seqs = seqs,
-        outfile = outfile,
-        append = append
-      ))
     }
     fastqindexr::extract_sequences_to_file(
       index = input$index,
@@ -199,9 +236,9 @@ fastx_gz_random_access_extract <- function(
       outfile = outfile,
       type = "fasta",
       append = append,
-      compress = endsWith(outfile, ".gz")
+      compress = endsWith(outfile, ".gz"),
+      renumber = if (isTRUE(renumber)) "zero_based" else "none"
     )
-    outfile
   }
 }
 

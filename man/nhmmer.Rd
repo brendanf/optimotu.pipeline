@@ -5,20 +5,38 @@
 \title{Search for subsequences matching one or more nucleotide HMMs in a set of
 sequences}
 \usage{
-nhmmer(seqs, hmm, ncpu = local_cpus())
+nhmmer(seqs, hmm, files = NULL, seq_idx = NULL, ncpu = local_cpus(), ...)
 }
 \arguments{
 \item{seqs}{(\code{\link[Biostrings:XStringSet-class]{XStringSet}}, \code{character}
-file name of a FASTA file (possibly gzipped), \code{character} vector, or
-\code{data.frame}) sequences to search}
+vector, \code{data.frame}, or
+\code{\link[fastqindexr:create_index]{fastqindexr_index}} object) query sequences.
+A \code{character} vector may contain literal sequences (in which case it should
+be named) or file paths to one or more FASTA files (possibly gzipped) or
+\code{.fqi} files for \code{\link[fastqindexr:read_fqi_index]{fastqindexr::read_fqi_index()}}.}
 
 \item{hmm}{(\code{character} file name) path to HMM(s) to search for}
 
-\item{ncpu}{(\code{integer}) number of threads to use for searching}
+\item{files}{(\code{NULL} or \code{character}) when \code{seqs} is a \code{fastqindexr_index} or
+\code{.fqi} paths, optional per-file paths overriding those stored in the index
+(same length as the index file list). Useful after moving inputs or for
+\code{targets} dependency tracking.}
+
+\item{seq_idx}{(\code{NULL} or \code{integer}) optional 1-based indices into the
+logical sequence stream (\code{NULL} means all sequences in order). Applies
+after concatenating multiple FASTA inputs, and supports duplicates and
+request order.}
+
+\item{ncpu}{(\code{integer}) number of threads passed to nhmmer (\code{--cpu}).
+Parallelism is only inside nhmmer; the query is not split across
+processes.}
+
+\item{...}{ignored; reserved for \code{targets} dependency tracking (e.g. file
+hashes) without changing behavior.}
 }
 \value{
-a \code{\link[tibble:tibble]{tibble}} listing the HMM hits. Empty sequence
-inputs return an empty tibble with the standard HMMER columns.
+a \code{\link[tibble:tibble]{tibble}} like \code{\link[=hmmsearch]{hmmsearch()}} tblout parsing.
+Empty sequence inputs return an empty tibble with the DNA tblout columns.
 }
 \description{
 Search for subsequences matching one or more nucleotide HMMs in a set of

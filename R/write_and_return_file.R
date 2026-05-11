@@ -1,13 +1,16 @@
 #### write a file and returning its name ####
 
-#' Create the parent directory of a file if it does not exist
-#' @param file (`character` string) file path to create the parent directory for
-#' @return the input file path (invisibly)
+#' Create the parent directory of one or more files if they do not exist
+#' @param file (`character` vector) file paths to create the parent
+#'   directories for
+#' @return the input file path(s) (invisibly)
 #' @export
 ensure_directory <- function(file) {
-  d <- dirname(file)
-  if (!dir.exists(d)) {
-    dir.create(d, recursive = TRUE)
+  checkmate::assert_character(file)
+  for (d in unique(dirname(file))) {
+    if (!dir.exists(d)) {
+      dir.create(d, recursive = TRUE)
+    }
   }
   invisible(file)
 }

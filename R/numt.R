@@ -10,12 +10,57 @@
 #' "frameshift" or "stop_codon", `pos` is the 1-based position of the indicator,
 #' and `len` is the length of the indicator.
 #' @export
-detect_numts <- function(a2m, id_is_int = FALSE) {
+detect_numts <- function(
+  a2m,
+  id_is_int = FALSE,
+  files = NULL,
+  seq_idx = NULL,
+  ...
+) {
   # avoid R CMD check NOTE: no visible binding for global variable
   pos <- len <- i <- seq_id <- numt_indicator <- NULL
 
-  checkmate::assert_file(a2m, access = "r")
   checkmate::assert_flag(id_is_int)
+  indexed_like <- inherits(a2m, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(a2m)
+  if (!is.null(files) && !indexed_like) {
+    stop(
+      "`files` is only valid when `a2m` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
+  if (indexed_like || !is.null(seq_idx)) {
+    tmp_parent <- environment()
+    qfiles <- seq_batch_make_chunk_files(
+      seqs = a2m,
+      files = files,
+      seq_idx = seq_idx,
+      ncpu = 1L,
+      local_envir = tmp_parent
+    )
+    if (length(qfiles) == 0L) {
+      if (id_is_int) {
+        return(
+          tibble::tibble(
+            seq_idx = integer(),
+            numt_indicator = character(),
+            pos = integer(),
+            len = integer()
+          )
+        )
+      }
+      return(
+        tibble::tibble(
+          seq_id = character(),
+          numt_indicator = character(),
+          pos = integer(),
+          len = integer()
+        )
+      )
+    }
+    a2m <- qfiles[[1L]]
+  }
+  checkmate::assert_file(a2m, access = "r")
   a2m <- Biostrings::readBStringSet(a2m) |>
     sub(pattern = "^[acgt]+", replacement = "") |>
     sub(pattern = "[acgt]+$", replacement = "")
