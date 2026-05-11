@@ -23,8 +23,25 @@ bayesant <- function(
   ncpu = local_cpus(),
   id_is_int = FALSE,
   n_top_taxa = 20,
-  min_prob = 0.01
+  min_prob = 0.01,
+  file = NULL,
+  seq_idx = NULL
 ) {
+  checkmate::assert_count(ncpu)
+  checkmate::assert_flag(id_is_int)
+  checkmate::assert_count(n_top_taxa)
+  checkmate::assert_number(min_prob, lower = 0, upper = 1)
+  checkmate::assert_character(file, null.ok = TRUE)
+  checkmate::assert_integerish(seq_idx, null.ok = TRUE)
+
+  indexed_like <- inherits(query, "fastqindexr_index") ||
+    seq_batch_is_fqi_path_set(query)
+  if (!is.null(file) && !indexed_like) {
+    stop(
+      "`file` is only valid when `query` is a fastqindexr_index or .fqi paths.",
+      call. = FALSE
+    )
+  }
   # avoid R CMD check NOTE
   taxon <- i <- leaf_prob <- prob <- seq_id <- NULL
   if (is.character(model) && file.exists(model)) {
@@ -59,37 +76,7 @@ bayesant <- function(
   } else if (!inherits(model, "BayesANT")) {
     stop("Model must be a BayesANT model or a valid file path.")
   }
-  if (checkmate::test_file_exists(query, access = "r")) {
-    if (endsWith(query, ".gz")) {
-      query_decompressed <- withr::local_tempfile(fileext = ".fasta")
-      write_sequence(Biostrings::readDNAStringSet(query), query_decompressed)
-      query <- query_decompressed
-    }
-    query <- BayesANT::read.BayesANT.testDNA(query)
-  }
-  if (methods::is(query, "DNAStringSet")) {
-    query <- as.character(query)
-  }
-  if (is.data.frame(query)) {
-    query <- `names<-`(
-      query[[find_seq_col(query)]],
-      query[[find_name_col(query)]]
-    )
-  }
-  if (length(query) == 0L) {
-    out <- tibble::tibble(
-      seq_id = character(),
-      rank = rank2factor(character()),
-      parent_taxonomy = character(),
-      taxon = character(),
-      prob = numeric()
-    )
-    if (id_is_int) {
-      out <- tibble::add_column(out, seq_idx = integer(), .before = 1)
-      out <- dplyr::select(out, -seq_id)
-    }
-    return(out)
-  }
+  query <- seq_batch_character(query, file, seq_idx)
   checkmate::assert_character(
     query,
     min.chars = 1,
@@ -132,4 +119,24 @@ bayesant <- function(
   }
 
   out
+}
+
+#' Inject code to read BayesANT file from disk or target
+#' @noRd
+read_bayesant_model <- function(model = bayesant_model()) {
+  if (is.null(model)) {
+    quote(bayesant_model)
+  } else {
+    ext <- tools::file_ext(model) |>
+      tolower()
+    if (ext == "rds") {
+      substitute(readRDS(model), list(model = model))
+    } else if (ext == "qs") {
+      substitute(qs::qread(model), list(model = model))
+    } else if (ext == "qs2") {
+      substitute(qs2::qs_read(model), list(model = model))
+    } else {
+      stop("Unsupported file type '", ext, "' for bayesant_model")
+    }
+  }
 }

@@ -174,3 +174,83 @@ seq_batch_make_chunk_files <- function(
     character(1)
   )
 }
+
+#' Convert any type of sequence input to a character vector of sequences
+#'
+#' @param seqs (`character` vector, [`XStringSet`][Biostrings::XStringSet],
+#'   `data.frame`, or `fastqindexr_index`)
+#'   Source sequences. `character` vectors may be literal sequences (in which
+#'   case they should typically be named) or file paths; files may be either
+#'   FASTA (possibly gzipped) or `.fqi` indexes for
+#'   [`fastqindexr::read_fqi_index()`].
+#' @param files (`character` vector) optional per-file paths overriding those
+#'   stored in the index, if `seqs` is a
+#'   [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi`
+#'   path(s). Useful after moving inputs or for `targets` dependency tracking.
+#' @param seq_idx (`integer` vector) optional 1-based indices into the logical
+#'   sequence stream (`NULL` means all sequences in order). Applies after
+#'   concatenating multiple FASTA inputs, and supports duplicates and
+#'   reordering.
+#' @return `character` vector of sequences
+#' @noRd
+seq_batch_character <- function(
+  seqs,
+  files = NULL,
+  seq_idx = NULL
+) {
+  checkmate::assert_character(files, null.ok = TRUE)
+  checkmate::assert_integerish(seq_idx, null.ok = TRUE)
+
+  if (seq_batch_is_fqi_path_set(seqs)) {
+    seqs <- fastqindexr::read_fqi_index(
+      fqi_path = seqs,
+      files = files,
+      type = "auto"
+    )
+  }
+
+  if (inherits(seqs, "fastqindexr_index")) {
+    if (is.null(seq_idx)) {
+      # shortcut: Biostrings is faster than fastqindexr when no subsetting
+      # is needed.
+      if (is.null(files)) {
+        files <- seqs$files
+      }
+      Biostrings::readBStringSet(files) |>
+        as.character()
+    } else {
+      fastqindexr::extract_sequences(
+        index = seqs,
+        seq_idx = seq_idx,
+        file = files,
+        return = "seq"
+      )
+    }
+  } else {
+    if (checkmate::test_file_exists(seqs, "r")) {
+      seqs <- Biostrings::readBStringSet(seqs)
+    }
+    if (methods::is(seqs, "XStringSet")) {
+      if (!is.null(seq_idx)) {
+        seqs <- seqs[seq_idx]
+      }
+      as.character(seqs)
+    } else if (is.data.frame(seqs)) {
+      if (!is.null(seq_idx)) {
+        seqs <- seqs[seq_idx, ]
+      }
+      stats::setNames(
+        seqs[[find_seq_col(seqs)]],
+        seqs[[find_name_col(seqs)]]
+      )
+    } else if (is.character(seqs)) {
+      if (!is.null(seq_idx)) {
+        seqs[seq_idx]
+      } else {
+        seqs
+      }
+    } else {
+      stop("Unsupported sequence input type: ", class(seqs))
+    }
+  }
+}

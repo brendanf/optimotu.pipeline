@@ -10,7 +10,9 @@ bayesant(
   ncpu = local_cpus(),
   id_is_int = FALSE,
   n_top_taxa = 20,
-  min_prob = 0.01
+  min_prob = 0.01,
+  file = NULL,
+  seq_idx = NULL
 )
 }
 \arguments{
