@@ -9,13 +9,20 @@ run_protax(
   outdir,
   modeldir,
   ncpu = local_cpus(),
+  seqs_file = NULL,
+  seq_idx = NULL,
   script = "scripts/runprotax"
 )
 }
 \arguments{
 \item{seqs}{(\code{\link[Biostrings:XStringSet-class]{DNAStringSet}}, \code{character}
-path to a FASTA file, \code{character} vector, or \code{data.frame}) sequences to
-taxonomically identify}
+vector, \code{\link[fastqindexr:create_index]{fastqindexr_index}}, or \code{data.frame})
+sequences to taxonomically identify. If a \code{character} vector, it may be
+literal sequences (in which case they should typically be named) or file
+paths; files may be either FASTA (possibly gzipped) or \code{.fqi} indexes for
+\code{\link[fastqindexr:read_fqi_index]{fastqindexr::read_fqi_index()}}. A single fasta file named \code{all.fa} in the
+\code{outdir} is a special case which will be preserved; otherwise this file will
+be created as a temporary file and deleted on exit.}
 
 \item{outdir}{(\code{character} string) directory to write output to. If the
 directory exists, all existing files in it will be deleted.}

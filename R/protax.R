@@ -1,8 +1,13 @@
 #' Taxonomically identify sequences using the PERL implementation of ProtaxFungi
 #'
 #' @param seqs ([`DNAStringSet`][Biostrings::XStringSet-class], `character`
-#' path to a FASTA file, `character` vector, or `data.frame`) sequences to
-#' taxonomically identify
+#' vector, [`fastqindexr_index`][fastqindexr::create_index()], or `data.frame`)
+#' sequences to taxonomically identify. If a `character` vector, it may be
+#' literal sequences (in which case they should typically be named) or file
+#' paths; files may be either FASTA (possibly gzipped) or `.fqi` indexes for
+#' [`fastqindexr::read_fqi_index()`]. A single fasta file named `all.fa` in the
+#' `outdir` is a special case which will be preserved; otherwise this file will
+#' be created as a temporary file and deleted on exit.
 #' @param outdir (`character` string) directory to write output to. If the
 #' directory exists, all existing files in it will be deleted.
 #' @param modeldir (`character` string) directory containing trained model files
@@ -16,6 +21,8 @@ run_protax <- function(
   outdir,
   modeldir,
   ncpu = local_cpus(),
+  seqs_file = NULL,
+  seq_idx = NULL,
   script = "scripts/runprotax"
 ) {
   checkmate::assert_directory_exists(modeldir)
@@ -27,16 +34,26 @@ run_protax <- function(
   }
   dir.create(outdir)
   protax_infile <- file.path(outdir, "all.fa")
-  if (length(seqs) == 1 && file.exists(seqs)) {
-    if (endsWith(seqs, ".gz")) {
-      write_sequence(Biostrings::readDNAStringSet(seqs), protax_infile)
-    } else if (seqs != protax_infile) {
-      file.copy(seqs, protax_infile)
+  if (
+    checkmate::test_file_exists(seqs) &&
+      normalizePath(protax_infile, mustWork = FALSE) %in%
+        normalizePath(seqs, mustWork = FALSE)
+  ) {
+    if (length(seqs) > 1) {
+      stop(
+        "`seqs` contains the output file '",
+        protax_infile,
+        "'",
+        call. = FALSE
+      )
     }
   } else {
-    write_sequence(seqs, protax_infile)
+    on.exit(unlink(protax_infile), add = TRUE)
+    seq_batch_character(seqs, seqs_file, seq_idx) |>
+      write_sequence(protax_infile)
   }
-  if (length(Biostrings::fasta.seqlengths(protax_infile)) == 0L) {
+
+  if (file.size(protax_infile) == 0L) {
     return(character())
   }
   status <- system2(
