@@ -16,7 +16,12 @@ small_preclosed_taxon_table(
 \arguments{
 \item{known_taxon_table}{(\code{data.frame}) a table of known taxon assignments}
 
-\item{asv_taxsort}{(\code{data.frame}) a table of ASV taxonomic assignments}
+\item{asv_taxsort}{(\code{data.frame}) a table of ASV taxonomic assignments.
+Must include \code{seq_idx} (integer, 1-based index after taxonomic sorting)
+and exactly one of \code{seq_idx_in} (1-based index before sorting) or
+\code{seq_id} (character sequence identifier). When using \code{seq_id}, the taxon
+table must include \code{seq_id}; a taxon table with only \code{seq_idx} is not
+allowed.}
 
 \item{rank}{(\code{character}) the taxonomic rank to calculate}
 

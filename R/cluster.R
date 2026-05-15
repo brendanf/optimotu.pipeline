@@ -5,7 +5,12 @@
 #' It is also used internally by [large_preclosed_taxon_table()] and
 #' [small_preclosed_taxon_table()].
 #' @param known_taxon_table (`data.frame`) a table of known taxon assignments
-#' @param asv_taxsort (`data.frame`) a table of ASV taxonomic assignments
+#' @param asv_taxsort (`data.frame`) a table of ASV taxonomic assignments.
+#'   Must include `seq_idx` (integer, 1-based index after taxonomic sorting)
+#'   and exactly one of `seq_idx_in` (1-based index before sorting) or
+#'   `seq_id` (character sequence identifier). When using `seq_id`, the taxon
+#'   table must include `seq_id`; a taxon table with only `seq_idx` is not
+#'   allowed.
 #' @param rank (`character`) the taxonomic rank to calculate
 #' @param parent_rank (`character`) the taxonomic rank to use as a parent
 #' @param tax_ranks (`character`) the taxonomic ranks to use
@@ -48,25 +53,10 @@ full_preclosed_taxon_table <- function(
   checkmate::assert_integerish(known_taxon_table[["seq_idx"]], null.ok = TRUE)
   checkmate::assert_character(known_taxon_table[["seq_id"]], null.ok = TRUE)
 
-  checkmate::assert_data_frame(asv_taxsort)
-  checkmate::assert_names(
-    names(asv_taxsort),
-    must.include = c("seq_idx", "seq_idx_in")
-  )
-
   rank_sym <- rlang::sym(rank)
   super_ranks <- superranks(rank, tax_ranks)
 
-  if ("seq_idx" %in% names(known_taxon_table)) {
-    known_taxon_table <- dplyr::rename(known_taxon_table, seq_idx_in = seq_idx)
-  } else {
-    known_taxon_table <- dplyr::mutate(
-      known_taxon_table,
-      seq_idx_in = readr::parse_number(seq_id)
-    )
-  }
-
-  out <- dplyr::left_join(known_taxon_table, asv_taxsort, by = "seq_idx_in") |>
+  out <- join_table_with_taxsort(known_taxon_table, asv_taxsort) |>
     dplyr::arrange(dplyr::pick(all_of(c(super_ranks, "seq_idx")))) |>
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::filter(
@@ -75,7 +65,7 @@ full_preclosed_taxon_table <- function(
     ) |>
     targets::tar_group()
   if ("seq_id" %in% names(out)) {
-    out <- dplyr::select(out, -seq_idx_in)
+    out <- dplyr::select(out, -any_of("seq_idx_in"))
   }
   ensure_table(out)
 }
@@ -85,11 +75,7 @@ full_preclosed_taxon_table <- function(
 #' This calculates a pre-closed-reference table for taxa with many sequences,
 #' which may be efficiently parallelized within a single parent taxon.
 #'
-#' @param known_taxon_table (`data.frame`) a table of known taxon assignments
-#' @param asv_taxsort (`data.frame`) a table of ASV taxonomic assignments
-#' @param rank (`character`) the taxonomic rank to calculate
-#' @param parent_rank (`character`) the taxonomic rank to use as a parent
-#' @param tax_ranks (`character`) the taxonomic ranks to use
+#' @inheritParams full_preclosed_taxon_table
 #' @param min_ops (`integer` scalar) the minimum number of operations required
 #' for a single parent taxon to be considered "large"
 #'
@@ -132,11 +118,7 @@ large_preclosed_taxon_table <- function(
 #' This calculates a pre-closed-reference table for taxa with few sequences,
 #' and groups them into approximately equally sized execution groups.
 #'
-#' @param known_taxon_table (`data.frame`) a table of known taxon assignments
-#' @param asv_taxsort (`data.frame`) a table of ASV taxonomic assignments
-#' @param rank (`character`) the taxonomic rank to calculate
-#' @param parent_rank (`character`) the taxonomic rank to use as a parent
-#' @param tax_ranks (`character`) the taxonomic ranks to use
+#' @inheritParams full_preclosed_taxon_table
 #' @param max_ops (`integer` scalar) the maximum number of operations to put
 #' together in a single execution group
 #'
@@ -344,24 +326,12 @@ full_predenovo_taxon_table <- function(
   rank_sym <- rlang::sym(rank)
   super_ranks <- superranks(rank, tax_ranks)
 
-  if ("seq_idx" %in% names(closedref_taxon_table)) {
-    closedref_taxon_table <- dplyr::rename(
-      closedref_taxon_table,
-      seq_idx_in = seq_idx
-    )
-  } else {
-    closedref_taxon_table <- dplyr::mutate(
-      closedref_taxon_table,
-      seq_idx_in = readr::parse_number(seq_id)
-    )
-  }
-
   out <- closedref_taxon_table |>
     dplyr::filter(is.na(!!rank_sym))
 
-  out <- dplyr::left_join(out, asv_taxsort, by = "seq_idx_in") |>
+  out <- join_table_with_taxsort(out, asv_taxsort) |>
     dplyr::arrange(dplyr::pick(all_of(c(super_ranks, "seq_idx")))) |>
-    dplyr::select(-seq_idx_in) |>
+    dplyr::select(-any_of("seq_idx_in")) |>
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::filter(dplyr::n() > 1) |>
     targets::tar_group()
@@ -377,10 +347,7 @@ full_predenovo_taxon_table <- function(
 #' closed-reference clustering is required. Must have columns `seq_idx`
 #' (`integer`) giving the indices of sequences in `seq_file`, as well as
 #' columns with names matching `rank` and `parent_rank`.
-#' @param asv_taxsort (`data.frame`) a table of ASV taxonomic assignments
-#' @param rank (`character`) the taxonomic rank to calculate
-#' @param parent_rank (`character`) the taxonomic rank to use as a parent
-#' @param tax_ranks (`character`) the taxonomic ranks to use
+#' @inheritParams full_preclosed_taxon_table
 #' @param min_ops (`integer` scalar) the minimum number of operations required
 #' for a single parent taxon to be considered "large"
 #'
@@ -426,10 +393,7 @@ large_predenovo_taxon_table <- function(
 #' closed-reference clustering is required. Must have columns `seq_idx`
 #' (`integer`) giving the indices of sequences in `seq_file`, as well as
 #' columns with names matching `rank` and `parent_rank`.
-#' @param asv_taxsort (`data.frame`) a table of ASV taxonomic assignments
-#' @param rank (`character`) the taxonomic rank to calculate
-#' @param parent_rank (`character`) the taxonomic rank to use as a parent
-#' @param tax_ranks (`character`) the taxonomic ranks to use
+#' @inheritParams full_preclosed_taxon_table
 #' @param max_ops (`integer` scalar) the maximum number of operations to put
 #' together in a single execution group
 #'
@@ -587,4 +551,87 @@ do_denovo_cluster <- function(
         dplyr::select(-any_of(c(rank, "tar_group", "seq_idx"))),
       . = _
     )
+}
+
+#' Validate `asv_taxsort` column layout
+#'
+#' @param asv_taxsort (`data.frame`) ASV taxonomic sort table.
+#' @return (`character`) join key: `"seq_idx_in"` or `"seq_id"`.
+#' @keywords internal
+validate_asv_taxsort <- function(asv_taxsort) {
+  checkmate::assert_data_frame(asv_taxsort)
+  checkmate::assert_names(names(asv_taxsort), must.include = "seq_idx")
+  has_idx_in <- "seq_idx_in" %in% names(asv_taxsort)
+  has_id <- "seq_id" %in% names(asv_taxsort)
+  if (has_idx_in && has_id) {
+    stop(
+      "`asv_taxsort` must not contain both `seq_idx_in` and `seq_id`."
+    )
+  }
+  if (!has_idx_in && !has_id) {
+    stop(
+      "`asv_taxsort` must contain exactly one of `seq_idx_in` or",
+      "`seq_id` (in addition to `seq_idx`)."
+    )
+  }
+  checkmate::assert_integerish(asv_taxsort[["seq_idx"]])
+  if (has_idx_in) {
+    checkmate::assert_integerish(asv_taxsort[["seq_idx_in"]])
+    return("seq_idx_in")
+  }
+  checkmate::assert_character(asv_taxsort[["seq_id"]])
+  "seq_id"
+}
+
+#' Prepare a taxon table for joining with `asv_taxsort`
+#'
+#' @param taxon_table (`data.frame`) known or closed-reference taxon table.
+#' @param join_by (`character`) `"seq_idx_in"` or `"seq_id"`.
+#' @return (`data.frame`) table ready for joining with `asv_taxsort`.
+#' @keywords internal
+prep_table_for_taxsort <- function(taxon_table, join_by) {
+  seq_idx <- seq_id <- NULL
+  if (join_by == "seq_idx_in") {
+    if ("seq_idx" %in% names(taxon_table)) {
+      return(dplyr::rename(taxon_table, seq_idx_in = seq_idx))
+    }
+    if ("seq_id" %in% names(taxon_table)) {
+      return(
+        dplyr::mutate(
+          taxon_table,
+          seq_idx_in = readr::parse_number(seq_id)
+        )
+      )
+    }
+    stop(
+      "taxon table must contain `seq_idx` or `seq_id` when joining on",
+      "`seq_idx_in`."
+    )
+  }
+  if (
+    "seq_idx" %in% names(taxon_table) && !("seq_id" %in% names(taxon_table))
+  ) {
+    stop(
+      "When `asv_taxsort` uses `seq_id`, the taxon table must include",
+      "`seq_id`; a taxon table with only `seq_idx` is not allowed."
+    )
+  }
+  if (!"seq_id" %in% names(taxon_table)) {
+    stop(
+      "taxon table must contain `seq_id` when joining on `seq_id`."
+    )
+  }
+  taxon_table
+}
+
+#' Join a taxon table with `asv_taxsort`
+#'
+#' @param taxon_table (`data.frame`) known or closed-reference taxon table.
+#' @param asv_taxsort (`data.frame`) ASV taxonomic sort table.
+#' @return (`data.frame`) joined table.
+#' @keywords internal
+join_table_with_taxsort <- function(taxon_table, asv_taxsort) {
+  join_by <- validate_asv_taxsort(asv_taxsort)
+  taxon_table <- prep_table_for_taxsort(taxon_table, join_by)
+  dplyr::left_join(taxon_table, asv_taxsort, by = join_by)
 }

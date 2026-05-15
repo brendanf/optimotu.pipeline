@@ -9,6 +9,8 @@
   `fastq_gz_random_access_extract()` have been refactored to also use
   `fastqindexr` internally for better performance.
 * `ensure_directory()` is now vectorized over multiple inputs.
+* Helper functions for clustering now support taxonomic sorting maps using
+  character IDs as an alternative to numeric IDs.
 
 # optimotu.pipeline 0.6.3
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from

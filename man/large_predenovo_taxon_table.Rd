@@ -19,7 +19,12 @@ closed-reference clustering is required. Must have columns \code{seq_idx}
 (\code{integer}) giving the indices of sequences in \code{seq_file}, as well as
 columns with names matching \code{rank} and \code{parent_rank}.}
 
-\item{asv_taxsort}{(\code{data.frame}) a table of ASV taxonomic assignments}
+\item{asv_taxsort}{(\code{data.frame}) a table of ASV taxonomic assignments.
+Must include \code{seq_idx} (integer, 1-based index after taxonomic sorting)
+and exactly one of \code{seq_idx_in} (1-based index before sorting) or
+\code{seq_id} (character sequence identifier). When using \code{seq_id}, the taxon
+table must include \code{seq_id}; a taxon table with only \code{seq_idx} is not
+allowed.}
 
 \item{rank}{(\code{character}) the taxonomic rank to calculate}
 
