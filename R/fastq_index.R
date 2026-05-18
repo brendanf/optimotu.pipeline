@@ -251,22 +251,33 @@ fastx_gz_random_access_extract <- function(
 #' @export
 fastx_gz_hash <- function(infile, index, start, n) {
   checkmate::assert_file_exists(infile, "r")
-  checkmate::assert_file_exists(index, "r")
+  checkmate::assert(
+    checkmate::check_file_exists(index, "r"),
+    checkmate::check_class(index, "fastqindexr_index"),
+    combine = "or"
+  )
   checkmate::assert_integerish(start, lower = 1)
   checkmate::assert_integerish(n, lower = 1)
-  fastqindex <- find_executable("fastqindex")
-  checkmate::assert_file_exists(fastqindex, access = "x")
-  is_fastq <- endsWith(infile, "fastq.gz") || endsWith(infile, "fq.gz")
-  command <- sprintf(
-    "%s extract -s=%i -n=%i -e=%i -f=%s -i=%s | tail -n+8 | md5sum",
-    fastqindex,
-    start - 1L,
-    n,
-    if (is_fastq) 4 else 2,
-    infile,
-    index
+
+  tmp_fifo <- withr::local_tempfile(fileext = ".fifo")
+  system2("mkfifo", tmp_fifo)
+  md5_run <- processx::process$new(
+    command = "md5sum",
+    args = tmp_fifo,
+    stdout = "|"
   )
-  result <- system(command, intern = TRUE)
-  stopifnot(attr(result, "status") == 0)
-  c(strtrim(result, 32))
+  fastqindexr::extract_sequences_to_file(
+    index = index,
+    seq_idx = seq(start, start + n - 1L),
+    file = infile,
+    outfile = tmp_fifo,
+    type = "auto",
+    append = FALSE,
+    compress = FALSE,
+    collapse_sequence_lines = FALSE,
+    renumber = "none"
+  )
+  md5_run$wait()
+  stopifnot(md5_run$get_exit_status() == 0)
+  c(strtrim(md5_run$read_all_output_lines(), 32))
 }

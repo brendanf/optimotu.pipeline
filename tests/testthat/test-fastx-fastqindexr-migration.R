@@ -159,6 +159,62 @@ test_that("fastx_gz_random_access_extract in-memory renumber is zero_based", {
   expect_equal(names(got), c("0", "1"))
 })
 
+reference_fastx_gz_hash <- function(infile, index, start, n) {
+  tmp <- withr::local_tempfile()
+  fastqindexr::extract_sequences_to_file(
+    index = index,
+    seq_idx = seq(start, start + n - 1L),
+    file = infile,
+    outfile = tmp,
+    type = "auto",
+    append = FALSE,
+    compress = FALSE,
+    collapse_sequence_lines = FALSE,
+    renumber = "none"
+  )
+  c(strtrim(system2("md5sum", tmp, stdout = TRUE), 32))
+}
+
+test_that("fastx_gz_hash matches md5 of extracted byte stream", {
+  skip_if_not(nzchar(Sys.which("md5sum")), "md5sum not on PATH")
+  seq <- c("ACGT", "TGCA", "GGGG", "CCCC", "TTAA")
+  ids <- c("h1", "h2", "h3", "h4", "h5")
+  infile <- make_oneline_fasta_gz(seq, ids)
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  got <- fastx_gz_hash(infile = infile, index = idx, start = 2L, n = 3L)
+  expect_type(got, "character")
+  expect_length(got, 1L)
+  expect_match(got, "^[0-9a-f]{32}$")
+  expect_equal(got, reference_fastx_gz_hash(infile, idx, 2L, 3L))
+})
+
+test_that("fastx_gz_hash hashes from the first record and single records", {
+  skip_if_not(nzchar(Sys.which("md5sum")), "md5sum not on PATH")
+  seq <- c("AAAA", "AAAC", "AATT")
+  ids <- c("x1", "x2", "x3")
+  infile <- make_oneline_fasta_gz(seq, ids)
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  expect_equal(
+    fastx_gz_hash(infile = infile, index = idx, start = 1L, n = length(seq)),
+    reference_fastx_gz_hash(infile, idx, 1L, length(seq))
+  )
+  expect_equal(
+    fastx_gz_hash(infile = infile, index = idx, start = 3L, n = 1L),
+    reference_fastx_gz_hash(infile, idx, 3L, 1L)
+  )
+})
+
+test_that("fastx_gz_hash accepts fqi path indexes", {
+  skip_if_not(nzchar(Sys.which("md5sum")), "md5sum not on PATH")
+  skip_if(!nzchar(Sys.which("fastqindex")), "fastqindex CLI not available")
+  seq <- c("ACGT", "TGCA", "GGGG")
+  ids <- c("f1", "f2", "f3")
+  infile <- make_oneline_fasta_gz(seq, ids)
+  idx <- fastx_gz_index(infile)
+  got <- fastx_gz_hash(infile = infile, index = idx, start = 1L, n = 2L)
+  expect_equal(got, reference_fastx_gz_hash(infile, idx, 1L, 2L))
+})
+
 test_that("empty extraction requests keep wrapper edge behavior", {
   seq <- c("ACGT", "TGCA")
   ids <- c("e1", "e2")

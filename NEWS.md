@@ -5,9 +5,9 @@
   `nhmmer()`, `run_protax()`, `run_protax_animal()`, `run_protax_besthit()`,
   `detect_numts()`, `sintax()`, `vsearch_uchime_ref()`, `bayesant()`) now use
   a more unified API which allows them to extract a subset of sequences from
-  input files via `fastqindexr`. `fastq_gz_index_extract()` and
-  `fastq_gz_random_access_extract()` have been refactored to also use
-  `fastqindexr` internally for better performance.
+  input files via `fastqindexr`. `fastq_gz_index_extract()`,
+  `fastq_gz_random_access_extract()`, and `fastx_gz_hash()` have been
+  refactored to also use `fastqindexr` internally for better performance.
 * `ensure_directory()` is now vectorized over multiple inputs.
 * Helper functions for clustering now support taxonomic sorting maps using
   character IDs as an alternative to numeric IDs.
