@@ -461,3 +461,52 @@ test_that("lulu_distmx works with fastqindexr index object input", {
   expect_s3_class(out, "data.frame")
   expect_true(all(c("seq_idx1", "seq_idx2", "dist", "nread1") %in% names(out)))
 })
+
+test_that("do_denovo_cluster accepts fastqindexr_index on early return", {
+  seq <- c("AAAA", "TTTT")
+  infile <- make_oneline_fasta_gz(seq, c("1", "2"))
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  tab <- tibble::tibble(seq_idx = 1L, genus = "g1")
+  out <- do_denovo_cluster(
+    predenovo_taxon_table = tab,
+    seq_file = infile,
+    seq_file_index = idx,
+    rank = "species",
+    parent_rank = "genus",
+    tax_ranks = c("genus", "species"),
+    denovo_thresholds = list(`_NA_` = 1),
+    dist_config = optimotu::dist_hamming()
+  )
+  expect_s3_class(out, "data.frame")
+})
+
+test_that("protax_besthit_closedref accepts fastqindexr_index", {
+  seq <- c("ACGT", "TGCA")
+  infile <- make_oneline_fasta_gz(seq, c("1", "2"))
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  out <- protax_besthit_closedref(
+    infile = infile,
+    index = idx,
+    i = integer(),
+    unknowns = logical(),
+    thresh = 90,
+    seq_width = 4L
+  )
+  expect_null(out)
+})
+
+test_that("seq_cluster_protax accepts fastqindexr_index", {
+  skip_if(!nzchar(Sys.which("dist_matrix")), "dist_matrix not available")
+  seq <- c("ACGT", "TGCA", "GGGG")
+  infile <- make_oneline_fasta_gz(seq, c("0", "1", "2"))
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  out <- seq_cluster_protax(
+    aln_seq = infile,
+    aln_index = idx,
+    which = 1L:3L,
+    thresh = 99,
+    aln_len = 4L
+  )
+  expect_s3_class(out, "data.frame")
+  expect_true(all(c("seq_id", "cluster", "dist") %in% names(out)))
+})

@@ -19,8 +19,8 @@ protax_besthit_closedref(
 \item{infile}{(\code{character}) file name of gzipped FASTA file containing
 sequences to cluster}
 
-\item{index}{(\code{character}) file name of index for \code{infile}, as created by
-\code{fastx_gz_index()}}
+\item{index}{(\code{character} or \code{fastqindexr_index}) file path or
+\code{\link[fastqindexr:create_index]{fastqindexr_index}} object for \code{infile}}
 
 \item{i}{(\code{integer}) integer indices of sequences to cluster}
 

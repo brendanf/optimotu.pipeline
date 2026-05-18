@@ -460,8 +460,8 @@ run_protax_bipart <- function(
 #' Closed-reference single-linkage clustering of aligned sequences
 #' @param infile (`character`) file name of gzipped FASTA file containing
 #' sequences to cluster
-#' @param index (`character`) file name of index for `infile`, as created by
-#' `fastx_gz_index()`
+#' @param index (`character` or `fastqindexr_index`) file path or
+#'   [`fastqindexr_index`][fastqindexr::create_index()] object for `infile`
 #' @param i (`integer`) integer indices of sequences to cluster
 #' @param unknowns (`logical`) logical vector indicating which sequences in `i`
 #' are considered unknowns (the rest are references)
@@ -489,7 +489,11 @@ protax_besthit_closedref <- function(
 
   # check arguments
   checkmate::assert_file(infile, "r")
-  checkmate::assert_file(index, "r")
+  checkmate::assert(
+    checkmate::check_file_exists(index, "r"),
+    checkmate::check_class(index, "fastqindexr_index"),
+    combine = "or"
+  )
   checkmate::assert_integerish(i)
   checkmate::assert_logical(unknowns, len = length(i))
   checkmate::assert_number(thresh, lower = 50, upper = 100)
@@ -560,8 +564,8 @@ protax_besthit_closedref <- function(
 #'
 #' @param aln_seq (`character`) file name of gzipped FASTA file containing
 #' sequences to cluster
-#' @param aln_index (`character`) file name of index for `aln_seq`, as created
-#' by `fastx_gz_index()`
+#' @param aln_index (`character` or `fastqindexr_index`) file path or
+#'   [`fastqindexr_index`][fastqindexr::create_index()] object for `aln_seq`
 #' @param which (`integer`) integer indices of sequences to cluster
 #' @param thresh (`numeric`) clustering similarity threshold as a percentage,
 #' i.e., 0.0 to 100.0
@@ -569,6 +573,12 @@ protax_besthit_closedref <- function(
 #' @return a `data.frame` with columns `seq_id`, `cluster`, and `dist`
 #' @export
 seq_cluster_protax <- function(aln_seq, aln_index, which, thresh, aln_len) {
+  checkmate::assert_file_exists(aln_seq, "r")
+  checkmate::assert(
+    checkmate::check_file_exists(aln_index, "r"),
+    checkmate::check_class(aln_index, "fastqindexr_index"),
+    combine = "or"
+  )
   nslice <- floor(sqrt(local_cpus() - 1))
   allseq <- fastqindexr::extract_sequences(
     index = aln_index,

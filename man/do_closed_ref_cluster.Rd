@@ -27,7 +27,9 @@ columns with names matching \code{rank} and \code{parent_rank}.}
 
 \item{seq_file}{(\code{character}) the path to the sequence file}
 
-\item{seq_file_index}{(\code{character}) the path to the sequence file index}
+\item{seq_file_index}{(\code{character} or \code{fastqindexr_index}) file path or
+\code{\link[fastqindexr:create_index]{fastqindexr_index}} object for the sequence
+file index}
 
 \item{thresholds}{(\code{numeric}) a named vector of thresholds to use for
 closed-reference clustering. These are interpreted as distances on the

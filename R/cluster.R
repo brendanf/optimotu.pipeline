@@ -177,7 +177,9 @@ small_preclosed_taxon_table <- function(
 #' @param rank (`character`) the taxonomic rank to calculate clusters for
 #' @param parent_rank (`character`) the taxonomic rank to use as a parent
 #' @param seq_file (`character`) the path to the sequence file
-#' @param seq_file_index (`character`) the path to the sequence file index
+#' @param seq_file_index (`character` or `fastqindexr_index`) file path or
+#'  [`fastqindexr_index`][fastqindexr::create_index()] object for the sequence
+#'  file index
 #' @param thresholds (`numeric`) a named vector of thresholds to use for
 #' closed-reference clustering. These are interpreted as distances on the
 #' interval \[0, 100\], where 0 is a perfect match and 100 is a perfect
@@ -212,7 +214,11 @@ do_closed_ref_cluster <- function(
   checkmate::assert_character(preclosed_taxon_table[[rank]])
   checkmate::assert_character(preclosed_taxon_table[[parent_rank]])
   checkmate::assert_file_exists(seq_file, "r")
-  checkmate::assert_file_exists(seq_file_index, "r")
+  checkmate::assert(
+    checkmate::check_file_exists(seq_file_index, "r"),
+    checkmate::check_class(seq_file_index, "fastqindexr_index"),
+    combine = "or"
+  )
   checkmate::assert_named(thresholds)
   checkmate::assert_numeric(thresholds)
   checkmate::assert_class(dist_config, "optimotu_dist_config")
@@ -447,7 +453,9 @@ small_predenovo_taxon_table <- function(
 #' giving the indices of sequences in `seq_file`, as well a column with
 #' names matching `parent_rank`.
 #' @param seq_file (`character`) the path to the sequence file
-#' @param seq_file_index (`character`) the path to the sequence file index
+#' @param seq_file_index (`character` or `fastqindexr_index`) file path or
+#'  [`fastqindexr_index`][fastqindexr::create_index()] object for the sequence
+#'  file index
 #' @param rank (`character`) the (first) taxonomic rank to calculate
 #' @param parent_rank (`character`) the taxonomic rank to use as a parent
 #' @param tax_ranks (`character`) the taxonomic ranks in use, from most- to
@@ -484,6 +492,12 @@ do_denovo_cluster <- function(
 ) {
   super_ranks <- superranks(rank, tax_ranks)
   sub_ranks <- subranks(rank, tax_ranks)
+  checkmate::assert_file_exists(seq_file, "r")
+  checkmate::assert(
+    checkmate::check_file_exists(seq_file_index, "r"),
+    checkmate::check_class(seq_file_index, "fastqindexr_index"),
+    combine = "or"
+  )
 
   if (nrow(predenovo_taxon_table) <= 1L) {
     return(

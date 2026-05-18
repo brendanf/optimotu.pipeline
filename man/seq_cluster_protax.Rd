@@ -10,8 +10,8 @@ seq_cluster_protax(aln_seq, aln_index, which, thresh, aln_len)
 \item{aln_seq}{(\code{character}) file name of gzipped FASTA file containing
 sequences to cluster}
 
-\item{aln_index}{(\code{character}) file name of index for \code{aln_seq}, as created
-by \code{fastx_gz_index()}}
+\item{aln_index}{(\code{character} or \code{fastqindexr_index}) file path or
+\code{\link[fastqindexr:create_index]{fastqindexr_index}} object for \code{aln_seq}}
 
 \item{which}{(\code{integer}) integer indices of sequences to cluster}
 
