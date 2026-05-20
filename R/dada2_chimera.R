@@ -118,7 +118,7 @@ bimera_denovo_table.data.frame <- function(
   seq_col <- seq_col[1]
   if (seq_col != "seq") {
     if (length(seqs) == 1 && file.exists(seqs)) {
-      seqs <- Biostrings::readDNAStringSet(seqs)
+      seqs <- Biostrings::readBStringSet(seqs)
     }
     if (methods::is(seqs, "XStringSet")) {
       seqs <- as.character(seqs)

@@ -508,7 +508,7 @@ protax_besthit_closedref <- function(
     return = "seq"
   )
   seq_names <- names(seqs)
-  seqs <- Biostrings::DNAStringSet(unname(seqs))
+  seqs <- Biostrings::BStringSet(unname(seqs))
   names(seqs) <- seq_names
 
   queries <- names(seqs)[unknowns]
@@ -586,7 +586,7 @@ seq_cluster_protax <- function(aln_seq, aln_index, which, thresh, aln_len) {
     file = aln_seq,
     return = "seq"
   )
-  allseq <- Biostrings::DNAStringSet(unname(allseq))
+  allseq <- Biostrings::BStringSet(unname(allseq))
   names(allseq) <- as.character(seq_along(allseq) - 1L)
   if (length(which) > 1000) {
     seq <- character(nslice)

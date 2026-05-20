@@ -90,14 +90,14 @@ write_sequence.data.frame <- function(
 ) {
   dplyr::select(seq, !!name_col, !!seq_col) |>
     tibble::deframe() |>
-    Biostrings::DNAStringSet() |>
+    Biostrings::BStringSet() |>
     write_and_return_file(fname, ...)
 }
 
 #' @rdname write_sequence
 #' @exportS3Method
 write_sequence.character <- function(seq, fname, ...) {
-  Biostrings::DNAStringSet(seq) |>
+  Biostrings::BStringSet(seq) |>
     write_and_return_file(fname, ...)
 }
 

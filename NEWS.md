@@ -11,6 +11,10 @@
 * `ensure_directory()` is now vectorized over multiple inputs.
 * Helper functions for clustering now support taxonomic sorting maps using
   character IDs as an alternative to numeric IDs.
+* Sequence helper functions now use intermediate `BStringSet` instead of
+  `DNAStringSet` where possible, in order to prevent unwanted alphabet
+  conversion when the sequences contain non-DNA characters (including
+  lower-case letters).
 
 # optimotu.pipeline 0.6.3
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from

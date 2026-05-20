@@ -444,7 +444,7 @@ trim_primer <- function(seqs, primer, ...) {
     trim = temptrimmed,
     ...
   )
-  Biostrings::readDNAStringSet(temptrimmed) |>
+  Biostrings::readBStringSet(temptrimmed) |>
     as.character() |>
     tibble::enframe(name = "seq_id", value = "seq")
 }
