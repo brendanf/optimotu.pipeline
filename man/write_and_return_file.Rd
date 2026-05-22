@@ -4,6 +4,8 @@
 \alias{write_and_return_file}
 \alias{write_and_return_file.XStringSet}
 \alias{write_and_return_file.data.frame}
+\alias{write_and_return_file.matrix}
+\alias{write_and_return_file.list}
 \alias{write_and_return_file.character}
 \alias{write_and_return_file.ggplot}
 \alias{write_and_return_file.default}
@@ -13,25 +15,35 @@ write_and_return_file(x, file, ...)
 
 \method{write_and_return_file}{XStringSet}(x, file, width = 20001L, ...)
 
-\method{write_and_return_file}{data.frame}(x, file, type = c("rds", "tsv"), ...)
+\method{write_and_return_file}{data.frame}(x, file, type = NULL, ...)
+
+\method{write_and_return_file}{matrix}(x, file, type = NULL, ...)
+
+\method{write_and_return_file}{list}(x, file, type = NULL, envir = parent.frame(), ...)
 
 \method{write_and_return_file}{character}(x, file, ...)
 
 \method{write_and_return_file}{ggplot}(x, file, ...)
 
-\method{write_and_return_file}{default}(x, file, type = tolower(tools::file_ext(file)), ...)
+\method{write_and_return_file}{default}(x, file, type = NULL, ...)
 }
 \arguments{
 \item{x}{(any object) object to write}
 
 \item{file}{(\code{character} string) file path to write to}
 
-\item{...}{additional arguments to pass to the writing function}
+\item{...}{additional arguments passed to methods; several methods accept
+a \code{type} argument (see method documentation)}
 
 \item{width}{(integer) the maximum width of each line in the output file}
 
-\item{type}{(\code{character} string) the type of file to write to; currently
-supported are \code{"rds"} (default) and \code{"tsv"}}
+\item{type}{(\code{character}) tabular format: \code{"rds"}, \code{"tsv"}, \code{"csv"},
+\code{"xlsx"}, \code{"fst"}, \code{"feather"}, \code{"parquet"}, \code{"qs2"}, or \code{"qdata"}
+(\code{"qd"} is an alias). If \code{NULL}, inferred from \code{file} extension (not
+case-sensitive).}
+
+\item{envir}{(\code{environment}) environment for resolving symbol names when
+writing RData from an unnamed list of names or symbols}
 }
 \value{
 the file path

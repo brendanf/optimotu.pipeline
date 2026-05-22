@@ -1833,33 +1833,138 @@ do_guilds <- function() {
   getOption("optimotu.pipeline.do_guilds", FALSE)
 }
 
-#### OTU table settings ####
-#' @rdname parse_pipeline_options
+#### output / OTU table settings ####
+
+#' Normalize and validate output format names from pipeline options
+#' @param formats (`character` or `list`) format names from YAML
+#' @return normalized lowercase `character` vector
 #' @keywords internal
-parse_otu_table_options <- function(pipeline_options) {
-  if (
-    !is.null(pipeline_options$wide_table) &&
-      !is.null(pipeline_options$dense_table)
-  ) {
+normalize_output_formats <- function(formats) {
+  if (is.null(formats)) {
+    return(c("rds", "tsv"))
+  }
+  if (is.list(formats) && !is.character(formats)) {
+    if (all(vapply(formats, is.atomic, logical(1)))) {
+      formats <- unlist(formats, use.names = FALSE)
+    } else {
+      formats <- unlist(unnest_yaml_list(formats), use.names = FALSE)
+    }
+  }
+  checkmate::assert_character(formats, min.len = 1)
+  formats <- unique(tolower(as.character(formats)))
+  formats[formats == "qd"] <- "qdata"
+  allowed <- c(
+    "rds",
+    "tsv",
+    "csv",
+    "xlsx",
+    "fst",
+    "feather",
+    "parquet",
+    "qs2",
+    "qdata",
+    "rdata",
+    "rda"
+  )
+  bad <- setdiff(formats, allowed)
+  if (length(bad) > 0L) {
+    stop(
+      "Unknown output format(s) in 'pipeline_options.yaml': ",
+      paste(bad, collapse = ", "),
+      ".\nAllowed formats: ",
+      paste(allowed, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  formats
+}
+
+#' Parse output options from pipeline_options.yaml
+#' @param pipeline_options (`list`) parsed YAML options
+#' @keywords internal
+parse_output_options <- function(pipeline_options) {
+  output_opts <- pipeline_options$output
+  if (!is.null(output_opts) && is.list(output_opts)) {
+    output_opts <- unnest_yaml_list(output_opts)
+  }
+
+  wide_table <- pipeline_options$wide_table
+  dense_table <- pipeline_options$dense_table
+  formats <- NULL
+
+  if (!is.null(output_opts)) {
+    if (!is.null(output_opts$wide_table)) {
+      wide_table <- output_opts$wide_table
+    }
+    if (!is.null(output_opts$dense_table)) {
+      dense_table <- output_opts$dense_table
+    }
+    if (!is.null(output_opts$formats)) {
+      formats <- output_opts$formats
+    }
+  }
+
+  if (!is.null(wide_table) && !is.null(dense_table)) {
     stop(
       "Only one of 'wide_table' and 'dense_table' may be set in ",
       "'pipeline_options.yaml'.\n",
-      "Please remove one of them."
+      "Please remove one of them.",
+      call. = FALSE
     )
   }
-  checkmate::assert_flag(pipeline_options$wide_table, null.ok = TRUE)
-  checkmate::assert_flag(pipeline_options$dense_table, null.ok = TRUE)
-  if (all(pipeline_options$wide_table, pipeline_options$dense_table)) {
-    options(
-      optimotu.pipeline.wide_table = TRUE
-    )
+
+  checkmate::assert_flag(wide_table, null.ok = TRUE)
+  checkmate::assert_flag(dense_table, null.ok = TRUE)
+
+  wide_on <- isTRUE(wide_table) || isTRUE(dense_table)
+  if (wide_on) {
+    options(optimotu.pipeline.wide_table = TRUE)
   }
+
+  options(
+    optimotu.pipeline.output_formats = normalize_output_formats(formats)
+  )
+}
+
+#' @rdname parse_pipeline_options
+#' @export
+parse_otu_table_options <- function(pipeline_options) {
+  parse_output_options(pipeline_options)
 }
 
 #' @rdname pipeline_options
 #' @export
 do_wide_otu_table <- function() {
   getOption("optimotu.pipeline.wide_table", FALSE)
+}
+
+#' Output format names requested in pipeline_options.yaml
+#'
+#' Includes per-file formats and `rdata` when a bundled `.RData` file is
+#' requested.
+#'
+#' @return `character` vector of format names (lowercase). Defaults to
+#'   `c("rds", "tsv")` when not configured.
+#' @export
+output_formats <- function() {
+  getOption("optimotu.pipeline.output_formats", c("rds", "tsv"))
+}
+
+#' Per-file tabular output formats (excludes `rdata`)
+#'
+#' @return `character` vector of format names for [write_tabular_outputs()]
+#' @export
+output_table_formats <- function() {
+  formats <- output_formats()
+  formats[!formats %in% c("rdata", "rda")]
+}
+
+#' Whether to write a bundled RData file of tabular outputs
+#'
+#' @return `logical` scalar
+#' @export
+do_output_rdata <- function() {
+  any(output_formats() %in% c("rdata", "rda"))
 }
 
 #### rarefaction settings ####
@@ -2001,7 +2106,7 @@ parse_pipeline_options <- function() {
   parse_uncross_options(pipeline_options)
   parse_amplicon_model_options(pipeline_options)
   parse_lulu_options(pipeline_options)
-  parse_otu_table_options(pipeline_options)
+  parse_output_options(pipeline_options)
   parse_control_options(pipeline_options)
   if (!is.null(pipeline_options$protax)) {
     parse_protax_options(pipeline_options$protax)

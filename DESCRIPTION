@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for environmental DNA metabarcoding
-Version: 0.6.3.9006
+Version: 0.6.3.9007
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -53,14 +53,17 @@ Imports:
     Rcpp
 Roxygen: list(markdown = TRUE)
 Suggests:
+    arrow,
     BayesANT,
     dada2,
+    fst,
     ggplot2,
     lulu,
     png,
     qs,
     qs2,
     readxl,
+    writexl,
     RcppParallel,
     S4Vectors,
     testthat (>= 3.0.0),

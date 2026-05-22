@@ -1,4 +1,19 @@
 # optimotu.pipeline (development version)
+* Add `output` section support in `pipeline_options.yaml` via
+  `parse_output_options()`: configurable tabular output formats (`rds`, `tsv`,
+  `csv`, `xlsx`, `fst`, `feather`, `parquet`, `qs2`, `qdata`, `rdata`), plus
+  `wide_table`
+  (with legacy `dense_table` YAML alias). New accessors: `output_formats()`,
+  `output_table_formats()`, `do_output_rdata()`. Default per-file formats are
+  `rds` and `tsv`.
+* Add `write_tabular_outputs()` to write a table to multiple formats from one
+  stem path.
+* Extend `write_and_return_file()` for tabular formats; add
+  `write_and_return_file.list()` for bundled `.RData` export when `type` is
+  `rdata` (named lists, symbol lists, or string name lists). Add
+  `write_and_return_file.matrix()` with tibble coercion for tabular formats.
+* Fix `parse_otu_table_options()` / `do_wide_otu_table()` so either
+  `wide_table: yes` or legacy `dense_table: yes` alone enables wide output.
 * Fix `hmmalign()` bugs when running with a single input sequence.
 * Require `fastqindexr` (>= 0.1.0).
 * Wrapper functions for many external tools (`hmmalign()`, `hmmsearch()`,
