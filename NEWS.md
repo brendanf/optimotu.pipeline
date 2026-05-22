@@ -30,6 +30,8 @@
   `DNAStringSet` where possible, in order to prevent unwanted alphabet
   conversion when the sequences contain non-DNA characters (including
   lower-case letters).
+* Fix error when supplying non-default values for `min_taxa` or `min_refseq`
+  for threshold optimization in `pipeline_options.yaml`.
 
 # optimotu.pipeline 0.6.3
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from

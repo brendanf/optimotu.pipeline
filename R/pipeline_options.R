@@ -1657,12 +1657,12 @@ parse_cluster_thresholds <- function(thresh_opts) {
         "(file: pipeline_options.yaml)"
       )
     }
-    checkmate::assert_count(
+    checkmate::assert_integerish(
       thresh_opts$min_taxa,
       lower = 2,
       null.ok = TRUE
     )
-    checkmate::assert_count(
+    checkmate::assert_integerish(
       thresh_opts$min_refseq,
       lower = 2,
       null.ok = TRUE
