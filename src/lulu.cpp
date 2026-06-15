@@ -8,68 +8,42 @@
 #include <algorithm>
 
 
-// struct to store match information
-// id1 and id2 are the sequence IDs
-// nread is a vector of pairs of (nread1, nread2)
-// nsample1 and nsample2 are the number of samples in which the two sequences
-// each occur
+// struct to store match information about a pair of sequences
+// abund_ratio is either the sum of abundance ratios in all samples where the
+//  sequences co-occur (if use_mean_abundance = true) or the minimum abundance
+//  ratio (if use_mean_abundance_ratio = false).
+// nboth is the number of samples in which they co-occur.
+// It is assumed that the first sequence is the potential child, i.e. the one
+// which is less prevalent, or if tied then less abundant.
 struct match_info {
-  int id1, id2;
-  std::vector<std::pair<int, int>> nread;
-  int nsample1, nsample2;
+  double abund_ratio = 0;
+  int nboth = 0;
 
-  match_info(
-    int id1,
-    int id2,
-    int nread1,
-    int nread2,
-    const std::vector<int> & total_occurrence,
-    const std::vector<int> & total_abundance
-  ) : id1(id1), id2(id2), nsample1(total_occurrence[id1]),
-     nsample2(total_occurrence[id2]) {
-      if (nsample1 > nsample2 || (nsample1 == nsample2 && id1 > id2)) {
-        std::swap(this->id1, this->id2);
-        std::swap(this->nsample1, this->nsample2);
-        nread.push_back(std::make_pair(nread2, nread1));
-      } else {
-        nread.push_back(std::make_pair(nread1, nread2));
-      }
-  }
+  match_info(int nread1, int nread2) :
+    abund_ratio(double(nread2) / double(nread1)),
+    nboth(1) {}
 
-  match_info(
-    int id1,
-    int id2,
-    int nread1,
-    int nread2,
-    int nsample1,
-    int nsample2
-  ) : id1(id1), id2(id2), nsample1(nsample1), nsample2(nsample2) {
-    nread.push_back(std::make_pair(nread1, nread2));
-  }
+  match_info() {}
 
-  match_info() : id1(0), id2(0), nsample1(0), nsample2(0) {}
-
-  bool operator<(const match_info& other) const {
-    if (nsample1 < other.nsample1) {
-      return true;
-    } else if (nsample1 > other.nsample1) {
-      return false;
-    } else if (nsample2 > other.nsample2) {
-      return true;
-    } else if (nsample2 < other.nsample2) {
-      return false;
-    } else if (id1 < other.id1) {
-      return true;
-    } else if (id1 > other.id1) {
-      return false;
+  void add_match(int nread1, int nread2, bool use_mean_abundance_ratio) {
+    double new_abund_ratio = double(nread2) / double(nread1);
+    if (nboth == 0) {
+      abund_ratio = new_abund_ratio;
+    } else if (use_mean_abundance_ratio) {
+      abund_ratio += new_abund_ratio;
     } else {
-      return id2 < other.id2;
+      abund_ratio = std::min(abund_ratio, new_abund_ratio);
     }
+    ++nboth;
   }
 };
 
 struct match_info_data {
-  std::map<std::pair<int, int>, std::vector<std::pair<int, int>>> data;
+  std::map<std::pair<int, int>, match_info> data;
+  const bool use_mean;
+
+  match_info_data(bool use_mean_abundance_ratio) :
+    use_mean(use_mean_abundance_ratio) {}
 
 
   void add_match(int id1, int id2, int nread1, int nread2) {
@@ -79,9 +53,105 @@ struct match_info_data {
       std::swap(id1, id2);
       std::swap(nread1, nread2);
     }
-    data[std::make_pair(id1, id2)].push_back(std::make_pair(nread1, nread2));
+    data[std::make_pair(id1, id2)].add_match(nread1, nread2, use_mean);
   }
 };
+
+// overload for core implementation
+Rcpp::DataFrame lulu_map_impl(
+    Rcpp::IntegerVector seq_idx_out,
+    match_info_data & match_info,
+    std::vector<int> & total_occurrence,
+    double min_abundance_ratio = 1.0,
+    double min_cooccurrence_ratio = 0.95,
+    bool use_mean_abundance_ratio = false,
+    int verbose = 0
+) {
+
+  std::vector<int> lulu_map(total_occurrence.size(), NA_INTEGER);
+  for (int i : seq_idx_out) {
+    lulu_map[i] = i;
+  }
+
+  for (const auto & mi : match_info.data) {
+    if (verbose > 0) {
+      Rcpp::Rcerr << "Considering match pair (" << mi.first.first
+                  << ", " << mi.first.second << ") with "
+                  << mi.second.nboth << " co-occurrences"
+                  << std::endl;
+    }
+    // if the potential child has already been denoised, skip
+    if (lulu_map[mi.first.first] != mi.first.first) {
+      if (verbose > 0) {
+        Rcpp::Rcerr << "seq " << mi.first.first
+                    << " already mapped to seq " << lulu_map[mi.first.first]
+                    << "; skipping" << std::endl;
+      }
+      continue;
+    }
+
+    // check the co-occurrence ratio
+    // mi.second is the vector of (nread1, nread2) pairs; its size is the
+    // number of co-occurrences
+    if (mi.second.nboth < min_cooccurrence_ratio * total_occurrence[mi.first.first]) {
+      if (verbose > 0) {
+        Rcpp::Rcerr << "co-occurrence ratio " << mi.second.nboth
+                    << " / " << total_occurrence[mi.first.first]
+                    << " = " << double(mi.second.nboth) / double(total_occurrence[mi.first.first])
+                    << " is less than minimum " << min_cooccurrence_ratio
+                    << "; skipping" << std::endl;
+      }
+      continue;
+    } else if (verbose > 1) {
+      Rcpp::Rcerr << "co-occurrence ratio " << mi.second.nboth
+                  << " / " << total_occurrence[mi.first.first]
+                  << " = " << double(mi.second.nboth) / double(total_occurrence[mi.first.first])
+                  << " is greater than or equal to minimum " << min_cooccurrence_ratio
+                  << std::endl;
+    }
+
+    // check the abundance ratio
+    double abundance_ratio = mi.second.abund_ratio;
+    if (use_mean_abundance_ratio) {
+      // the object has accumulated the sum, so we need to divide.
+      abundance_ratio /= mi.second.nboth;
+    }
+    if (abundance_ratio > min_abundance_ratio) {
+      if (verbose > 1) {
+        Rcpp::Rcerr << (use_mean_abundance_ratio ? "mean abundance ratio " : "abundance ratio ")
+                    << abundance_ratio << " greater than minimum "
+                    << min_abundance_ratio << std::endl;
+      }
+      if (verbose > 0) {
+        Rcpp::Rcerr << "Mapping child " << mi.first.first
+                    << " to parent " << mi.first.second
+                    << std::endl;
+      }
+      lulu_map[mi.first.first] = mi.first.second;
+    } else {
+      if (verbose > 0) {
+        Rcpp::Rcerr << (use_mean_abundance_ratio ? "mean abundance ratio " : "abundance ratio ")
+                    << abundance_ratio << " less than or equal to minimum " << min_abundance_ratio
+                    << "; skipping" << std::endl;
+      }
+    }
+  }
+
+  Rcpp::IntegerVector lulu_idx_out(seq_idx_out.size());
+
+  for (R_xlen_t i = 0; i < seq_idx_out.size(); i++) {
+    int j = seq_idx_out[i];
+    while (lulu_map[j] != j) {
+      j = lulu_map[j];
+    }
+    lulu_idx_out[i] = j;
+  }
+
+  return Rcpp::DataFrame::create(
+    Rcpp::Named("seq_idx") = seq_idx_out,
+    Rcpp::Named("lulu_idx") = lulu_idx_out
+  );
+}
 
 //' LULU secondary denoising
 //'
@@ -170,7 +240,7 @@ Rcpp::DataFrame lulu_map_impl(
   Rcpp::IntegerVector seq_idx_out(n_seq_idx);
   Rcpp::IntegerVector lulu_idx_out(n_seq_idx);
   int j = 0;
-  
+
   for (std::size_t i = 0; i < total_occurrence.size(); i++) {
     if (total_occurrence[i] > 0) {
       seq_idx_out[j] = i;
@@ -196,104 +266,23 @@ Rcpp::DataFrame lulu_map_impl(
   }
 
 
-  match_info_data match_info;
+  match_info_data match_info(use_mean_abundance_ratio);
   for (int i = 0; i < match_id1.size(); i++) {
     if (match_dist[i] <= max_dist) {
       match_info.add_match(match_id1[i], match_id2[i], match_nread1[i], match_nread2[i]);
     }
   }
 
-  std::vector<int> lulu_map(total_occurrence.size(), NA_INTEGER);
-  for (int i : seq_idx_out) {
-    lulu_map[i] = i;
-  }
-
-  for (const auto & mi : match_info.data) {
-    if (verbose > 0) {
-      Rcpp::Rcerr << "Considering match pair (" << mi.first.first
-                  << ", " << mi.first.second << ") with "
-                  << mi.second.size() << " co-occurrences"
-                  << std::endl;
-    }
-    // if the potential child has already been denoised, skip
-    if (lulu_map[mi.first.first] != mi.first.first) {
-      if (verbose > 0) {
-        Rcpp::Rcerr << "seq " << mi.first.first
-                    << " already mapped to seq " << lulu_map[mi.first.first]
-                    << "; skipping" << std::endl;
-      }
-      continue;
-    }
-
-    // check the co-occurrence ratio
-    // mi.second is the vector of (nread1, nread2) pairs; its size is the
-    // number of co-occurrences
-    if (mi.second.size() < min_cooccurrence_ratio * total_occurrence[mi.first.first]) {
-      if (verbose > 0) {
-        Rcpp::Rcerr << "co-occurrence ratio " << mi.second.size()
-                    << " / " << total_occurrence[mi.first.first]
-                    << " = " << double(mi.second.size()) / double(total_occurrence[mi.first.first])
-                    << " is less than minimum " << min_cooccurrence_ratio
-                    << "; skipping" << std::endl;
-      }
-      continue;
-    } else if (verbose > 1) {
-      Rcpp::Rcerr << "co-occurrence ratio " << mi.second.size()
-                  << " / " << total_occurrence[mi.first.first]
-                  << " = " << double(mi.second.size()) / double(total_occurrence[mi.first.first])
-                  << " is greater than or equal to minimum " << min_cooccurrence_ratio
-                  << std::endl;
-    }
-
-    // check the abundance ratio
-    double abundance_ratio;
-    if (use_mean_abundance_ratio) {
-      abundance_ratio = 0;
-      for (const auto & nread : mi.second) {
-        abundance_ratio += double(nread.second) / double(nread.first);
-      }
-      abundance_ratio /= mi.second.size();
-    } else {
-      abundance_ratio = std::numeric_limits<double>::infinity();
-      for (const auto & nread : mi.second) {
-        double my_abundance_ratio = double(nread.second) / double(nread.first);
-        if (my_abundance_ratio < abundance_ratio) {
-          abundance_ratio = my_abundance_ratio;
-        }
-      }
-    }
-    if (abundance_ratio > min_abundance_ratio) {
-      if (verbose > 1) {
-        Rcpp::Rcerr << (use_mean_abundance_ratio ? "mean abundance ratio " : "abundance ratio ")
-                    << abundance_ratio << " greater than minimum "
-                    << min_abundance_ratio << std::endl;
-      }
-      if (verbose > 0) {
-        Rcpp::Rcerr << "Mapping child " << mi.first.first
-                    << " to parent " << mi.first.second
-                    << std::endl;
-      }
-      lulu_map[mi.first.first] = mi.first.second;
-    } else {
-      if (verbose > 0) {
-        Rcpp::Rcerr << (use_mean_abundance_ratio ? "mean abundance ratio " : "abundance ratio ")
-                    << abundance_ratio << " less than or equal to minimum " << min_abundance_ratio
-                    << "; skipping" << std::endl;
-      }
-    }
-  }
-
-  for (R_xlen_t i = 0; i < seq_idx_out.size(); i++) {
-    int j = seq_idx_out[i];
-    while (lulu_map[j] != j) {
-      j = lulu_map[j];
-    }
-    lulu_idx_out[i] = j;
-  }
-
-  return Rcpp::DataFrame::create(
-    Rcpp::Named("seq_idx") = seq_idx_out,
-    Rcpp::Named("lulu_idx") = lulu_idx_out
+  return lulu_map_impl(
+    seq_idx_out,
+    match_info,
+    total_occurrence,
+    min_abundance_ratio,
+    min_cooccurrence_ratio,
+    use_mean_abundance_ratio,
+    verbose
   );
 }
+
+
 

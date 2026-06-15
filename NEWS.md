@@ -32,6 +32,8 @@
   lower-case letters).
 * Fix error when supplying non-default values for `min_taxa` or `min_refseq`
   for threshold optimization in `pipeline_options.yaml`.
+* Reduce memory usage of internal C++ structures for `lulu_map()` (but memory
+  usage is typically dominated by R input data).
 
 # optimotu.pipeline 0.6.3
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from
