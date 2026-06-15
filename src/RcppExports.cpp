@@ -363,6 +363,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// lulu_map_lowmem_impl
+Rcpp::DataFrame lulu_map_lowmem_impl(Rcpp::CharacterVector otu_table_names, Rcpp::CharacterVector match_table_names, double max_dist, double min_abundance_ratio, double min_cooccurrence_ratio, bool use_mean_abundance_ratio, int verbose);
+RcppExport SEXP _optimotu_pipeline_lulu_map_lowmem_impl(SEXP otu_table_namesSEXP, SEXP match_table_namesSEXP, SEXP max_distSEXP, SEXP min_abundance_ratioSEXP, SEXP min_cooccurrence_ratioSEXP, SEXP use_mean_abundance_ratioSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type otu_table_names(otu_table_namesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type match_table_names(match_table_namesSEXP);
+    Rcpp::traits::input_parameter< double >::type max_dist(max_distSEXP);
+    Rcpp::traits::input_parameter< double >::type min_abundance_ratio(min_abundance_ratioSEXP);
+    Rcpp::traits::input_parameter< double >::type min_cooccurrence_ratio(min_cooccurrence_ratioSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_mean_abundance_ratio(use_mean_abundance_ratioSEXP);
+    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(lulu_map_lowmem_impl(otu_table_names, match_table_names, max_dist, min_abundance_ratio, min_cooccurrence_ratio, use_mean_abundance_ratio, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_derep_map_only", (DL_FUNC) &_optimotu_pipeline_derep_map_only, 1},
@@ -390,6 +407,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_fastq_split", (DL_FUNC) &_optimotu_pipeline_fastq_split, 3},
     {"_optimotu_pipeline_fasta_split", (DL_FUNC) &_optimotu_pipeline_fasta_split, 3},
     {"_optimotu_pipeline_lulu_map_impl", (DL_FUNC) &_optimotu_pipeline_lulu_map_impl, 12},
+    {"_optimotu_pipeline_lulu_map_lowmem_impl", (DL_FUNC) &_optimotu_pipeline_lulu_map_lowmem_impl, 7},
     {NULL, NULL, 0}
 };
 

@@ -164,3 +164,54 @@ tar_merge <- function(plan1, plan2) {
     })
   )
 }
+
+#' Extract names of targets from an expression
+#'
+#' This function only works inside a running pipeline. (And maybe only on the
+#' main thread?  TBD...)
+#'
+#' @param expr (`symbol`, `call`, or other defused expression accepted by
+#'   `targets::tar_deps_raw()`) an unevaluated expression containing symbols
+#'   which refer to targets tracked in the current project's
+#'   `targets::tar_meta()`
+#'
+#' @return (`character` vector) names of targets present in `expr`. If the
+#'   targets use dynamic branching so that they are stored as multiple children,
+#'   the names of the children are returned.
+#' @keywords internal
+extract_targets <- function(expr, ...) {
+  deps <- targets::tar_deps_raw(expr)
+  meta <- targets::tar_runtime_object()$meta
+  if (is.null(meta)) {
+    meta <- targets::tar_meta(
+      any_of(deps),
+      fields = c("name", "type", "children"),
+      targets_only = TRUE
+    )
+    has_children = !is.na(meta$children)
+    c(
+      meta[!has_children, "name"],
+      unlist(meta[has_children, "children"])
+    )
+  } else {
+    unlist(
+      lapply(
+        deps,
+        \(x) {
+          if (meta$exists_record(x)) {
+            record <- meta$get_record(x)
+            if (record$type %in% c("stem", "branch")) {
+              record$name
+            } else if (record$type == "pattern") {
+              record$children
+            } else {
+              NULL
+            }
+          } else {
+            NULL
+          }
+        }
+      )
+    )
+  }
+}

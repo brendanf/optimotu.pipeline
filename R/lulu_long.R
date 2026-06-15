@@ -144,7 +144,9 @@ lulu_map <- function(
     checkmate::assert_character(match_table$seq_id2)
   }
   checkmate::assert_numeric(max_dist, lower = 0)
-  checkmate::assert_numeric(min_abundance_ratio, lower = 0, upper = 1)
+  checkmate::assert_numeric(min_abundance_ratio, lower = 0)
+  checkmate::assert_numeric(min_cooccurrence_ratio, lower = 0, upper = 1)
+  checkmate::assert_flag(use_mean_abundance_ratio)
   checkmate::assert_int(verbose)
 
   match_table <- dplyr::filter(
@@ -222,6 +224,124 @@ lulu_map <- function(
     }
   }
   out
+}
+
+#' LULU secondary denoising for big(ger) data
+#'
+#' This is an alternative implementation of `lulu_map()` for integration in a
+#' `targets` pipeline. It uses non-standard evaluation to handle the two table
+#' arguments (`otu_table` and `match_table`). It should be run in a target with
+#' option `retrieval = "none"`. The assumption is that the LULU match table
+#' and/or the OTU occurrence table are split into multiple files on disk using
+#' dynamic and/or static branching in targets, and that it may be too memory
+#' intensive to simply load all of the files to generate the full tables in
+#' memory. Instead, they are processed one at a time, with calls to `gc()`
+#' after each one. This saves memory in two ways: first, it avoids holding the
+#' full data in both its R representation and in its internal C++ representation
+#' simultaneously; second, the internal C++ structures are smaller
+#' than the R tables.
+#'
+#' The actual expression passed to `otu_table` and `match_table` is not
+#' evaluated. Instead the expression is "defused" and all of the symbols it
+#' contains are checked against the list of targets in the current pipeline.
+#' Any that match are loaded individually for processing. The final result is
+#' the same as if the input targets had been concatenated using `rbind()` and
+#' passed to `lulu_map()`.  This means you should NOT pass any expression which
+#' is intended to modify the inputs, especially one which contains other targets
+#' from the pipeline which are not (pieces of) the OTU table or LULU match
+#' table.
+#'
+#' Because the function should be run in a target with `retrieval = "none"`,
+#' any other arguments which depend on other targets should have those targets
+#' manually loaded with `targets::tar_read()`.
+#'
+#' This version does not have the full functionality of `lulu_map()`; in
+#' particular it gives an error id `id_is_int = FALSE` and a warning if
+#' `id_is_sorted = TRUE` (it always behaves as if `id_is_sorted = FALSE`, but
+#' this does not actually cause a problem if the IDs are in fact sorted).
+#'
+#' @param otu_table (expression containing one or more `targets` targets which
+#' evaluate to `data.frame`) the long-format table to denoise. Must have
+#' columns `seq_idx` (`integer`) and `nread` (`integer`).  Additional columns
+#' such as the sample id or metadata are allowed but ignored.
+#' @param match_table (expression containing one or more `targets` targets which
+#' evaluate to `data.frame`) table of pairwise matches between co-occuring OTUs.
+#' Must have columns `seq_idx1` and `seq_idx2` (both `integer`), as well as
+#' `nread1` and `nread2` (`integer`) and `dist` (`numeric`). Additional columns
+#' are ignored.
+#' @param max_dist (`numeric` scalar) maximum pairwise distance for two OTUs to
+#' be considered for merging. This may be given as a percentage between 0 and
+#' 100, as a fraction between 0.0 and 1.0, or any other non-negative scale, but
+#' should be on the same scale as the values of `dist` in `match_table`.
+#' Default: `0.1` (intended as a fraction).
+#' @param min_abundance_ratio (`numeric` scalar) minimum ratio of
+#' "parent":"daughter" abundances for two OTUs to be considered for merging.
+#' The exact meaning is dependent on the value of `use_mean_abundance_ratio`.
+#' Default: `1`.
+#' @param min_cooccurrence_ratio (`numeric` scalar) minimum ratio of
+#' co-occurrences to total occurrences of the "daughter" for two OTUs to be
+#' considered for merging. Default: `1`.
+#' @param use_mean_abundance_ratio (`logical` flag) if `TRUE`,
+#' `min_abundance_ratio` refers to the mean of the relative abundances between
+#' the "parent" and "daughter" sequences in all samples where they co-occur. If
+#' `FALSE`, the minimum is enforced for every sample. Default: `FALSE`.
+#' @param verbose (`integer` scalar) level of verbosity for progress messages.
+#'
+#' @returns a two-column `data.frame` with columns `seq_idx` and `lulu_idx`
+#' or `seq_id` and `lulu_id`. `seq_id*` includes all values which occur in
+#' `otu_table`, and `lulu_id*` gives the corresponding value in `lulu_table`;
+#' these differ only for sequences which were determined to be minor variants
+#' of another sequence.
+#' @export
+lulu_map_lowmem <- function(
+  otu_table,
+  match_table,
+  max_dist = lulu_max_dist(),
+  min_abundance_ratio = lulu_min_abundance_ratio(),
+  min_cooccurrence_ratio = lulu_min_cooccurrence_ratio(),
+  use_mean_abundance_ratio = lulu_use_mean_abundance_ratio(),
+  id_is_int = TRUE,
+  id_is_sorted = FALSE,
+  verbose = 0
+) {
+  otu_table_targets <- extract_targets(rlang::enquo(otu_table))
+  if (length(otu_table_targets) < 1) {
+    stop("'otu_table` must include one or more targets from a `targets` pipeline.")
+  }
+  match_table_targets <- extract_targets(rlang::enquo(match_table))
+  if (length(match_table_targets) < 1) {
+    stop("'match_table` must include one or more targets from a `targets` pipeline.")
+  }
+
+  checkmate::assert_numeric(max_dist, lower = 0)
+  checkmate::assert_numeric(min_abundance_ratio, lower = 0)
+  checkmate::assert_numeric(min_cooccurrence_ratio, lower = 0, upper = 1)
+  checkmate::assert_flag(use_mean_abundance_ratio)
+  checkmate::assert_flag(id_is_int)
+  if (isFALSE(id_is_int)) {
+    stop(
+      "String sequence IDs ('id_is_int = FALSE') are not yet supported in",
+      " 'lulu_map_lowmem()'."
+    )
+  }
+  checkmate::assert_flag(id_is_sorted)
+  if (isTRUE(id_is_sorted)) {
+    warning(
+      "Pre-sorted sequence IDs ('id_is_sorted = TRUE') are not yet supported",
+      "in 'lulu_map_lowmem()`."
+    )
+  }
+  checkmate::assert_int(verbose)
+
+  lulu_map_lowmem_impl(
+    otu_table_targets,
+    match_table_targets,
+    max_dist,
+    min_abundance_ratio,
+    min_cooccurrence_ratio,
+    use_mean_abundance_ratio,
+    verbose
+  )
 }
 
 #' Apply LULU denoising to an OTU table

@@ -34,6 +34,9 @@
   for threshold optimization in `pipeline_options.yaml`.
 * Reduce memory usage of internal C++ structures for `lulu_map()` (but memory
   usage is typically dominated by R input data).
+* Add a `lulu_map_lowmem()`, which further reduces peak memory usage by
+  `lulu_map()` in the context of a `targets` pipeline, by internally managing
+  loading of the OTU table and match list from disk.
 
 # optimotu.pipeline 0.6.3
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from
