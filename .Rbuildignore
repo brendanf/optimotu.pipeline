@@ -14,3 +14,4 @@
 ^temp$
 ^\.posit/assistant$
 ^tests/testthat/lulu\.log_.*$
+^AGENTS.md$
