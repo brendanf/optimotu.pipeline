@@ -48,6 +48,15 @@ considered for merging. Default: \code{1}.}
 the "parent" and "daughter" sequences in all samples where they co-occur. If
 \code{FALSE}, the minimum is enforced for every sample. Default: \code{FALSE}.}
 
+\item{id_is_int}{(\code{logical} flag) if \code{TRUE}, the OTU identifiers are
+integers; in this case they are expected to be in columns \verb{seq_idx*}. This
+version does not yet support \code{FALSE} (character identifiers); see Details.}
+
+\item{id_is_sorted}{(\code{logical} flag) if \code{TRUE}, the values of \verb{seq_idx*}
+are sorted in decreasing order of prevalence (number of samples), with ties
+broken by decreasing total abundance (\code{nread}). This version does not yet
+support \code{TRUE}; see Details.}
+
 \item{verbose}{(\code{integer} scalar) level of verbosity for progress messages.}
 }
 \value{

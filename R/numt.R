@@ -5,6 +5,15 @@
 #' characters.
 #' @param id_is_int (`logical`) if `TRUE`, return the sequence index as an
 #' integer
+#' @param files (`character` vector) optional per-file paths overriding those
+#' stored in the index, if `a2m` is a
+#' [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi`
+#' path(s). Useful after moving inputs or for `targets` dependency tracking.
+#' @param seq_idx (`integer` vector) optional 1-based indices into the logical
+#' sequence stream (`NULL` means all sequences in order). Applies after
+#' concatenating multiple FASTA inputs, and supports duplicates and
+#' reordering.
+#' @param ... currently unused; reserved for future extensions.
 #' @return `data.frame` with columns `seq_id` (or `seq_idx` if `id_is_int` is
 #' `TRUE`), `numt_indicator`, `pos`, and `len`, where `numt_indicator` is one of
 #' "frameshift" or "stop_codon", `pos` is the 1-based position of the indicator,

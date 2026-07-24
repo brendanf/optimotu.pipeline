@@ -29,6 +29,18 @@ vsearch_uchime_ref(
 
 \item{id_is_int}{(\code{logical} flag) if \code{TRUE}, return the sequence IDs as
 integers}
+
+\item{files}{(\code{character} vector) optional per-file paths overriding those
+stored in the index, if \code{query} is a
+\code{\link[fastqindexr:create_index]{fastqindexr_index}} object or \code{.fqi}
+path(s). Useful after moving inputs or for \code{targets} dependency tracking.}
+
+\item{seq_idx}{(\code{integer} vector) optional 1-based indices into the logical
+sequence stream (\code{NULL} means all sequences in order). Applies after
+concatenating multiple FASTA inputs, and supports duplicates and
+reordering.}
+
+\item{...}{currently unused; reserved for future extensions.}
 }
 \value{
 if \code{id_only} is FALSE, a \code{tibble::tibble} with columns \code{seq_id} (or

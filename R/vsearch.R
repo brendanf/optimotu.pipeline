@@ -97,6 +97,15 @@ vsearch_usearch_global <- function(
 #' @param id_only (`logical` flag) if `TRUE`, return only the sequence IDs
 #' @param id_is_int (`logical` flag) if `TRUE`, return the sequence IDs as
 #' integers
+#' @param files (`character` vector) optional per-file paths overriding those
+#' stored in the index, if `query` is a
+#' [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi`
+#' path(s). Useful after moving inputs or for `targets` dependency tracking.
+#' @param seq_idx (`integer` vector) optional 1-based indices into the logical
+#' sequence stream (`NULL` means all sequences in order). Applies after
+#' concatenating multiple FASTA inputs, and supports duplicates and
+#' reordering.
+#' @param ... currently unused; reserved for future extensions.
 #' @return if `id_only` is FALSE, a `tibble::tibble` with columns `seq_id` (or
 #' `seq_idx` if `id_is_int` is TRUE) and `seq`, where `seq_id` (`seq_idx`) is
 #' the name of a sequence from `query` that is a chimera, and `seq` is the
@@ -391,6 +400,15 @@ nomismatch_hits_vsearch <- function(
 #' integers
 #' @param hash (`character` string) hash value for the queries; ignored (but
 #' used by `targets` for dependency tracking)
+#' @param files (`character` vector) optional per-file paths overriding those
+#' stored in the index, if `query` is a
+#' [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi`
+#' path(s). Useful after moving inputs or for `targets` dependency tracking.
+#' @param seq_idx (`integer` vector) optional 1-based indices into the logical
+#' sequence stream (`NULL` means all sequences in order). Applies after
+#' concatenating multiple FASTA inputs, and supports duplicates and
+#' reordering.
+#' @param ... currently unused; reserved for future extensions.
 #' @return `tibble::tibble` with columns `seq_id` (or `seq_idx` if `id_is_int`
 #' is TRUE), `rank`, `parent_taxonomy`, `taxon`, and `prob`, where `seq_id`
 #' (`seq_idx`) is the ID of a sequence from `query`, `rank` is the taxonomic

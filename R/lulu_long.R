@@ -285,6 +285,13 @@ lulu_map <- function(
 #' `min_abundance_ratio` refers to the mean of the relative abundances between
 #' the "parent" and "daughter" sequences in all samples where they co-occur. If
 #' `FALSE`, the minimum is enforced for every sample. Default: `FALSE`.
+#' @param id_is_int (`logical` flag) if `TRUE`, the OTU identifiers are
+#' integers; in this case they are expected to be in columns `seq_idx*`. This
+#' version does not yet support `FALSE` (character identifiers); see Details.
+#' @param id_is_sorted (`logical` flag) if `TRUE`, the values of `seq_idx*`
+#' are sorted in decreasing order of prevalence (number of samples), with ties
+#' broken by decreasing total abundance (`nread`). This version does not yet
+#' support `TRUE`; see Details.
 #' @param verbose (`integer` scalar) level of verbosity for progress messages.
 #'
 #' @returns a two-column `data.frame` with columns `seq_idx` and `lulu_idx`

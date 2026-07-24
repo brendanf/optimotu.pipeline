@@ -8,6 +8,14 @@
 #' @param id_is_int (`logical`) if `TRUE`, parse the sequence IDs as integers
 #' @param n_top_taxa (`integer`) the number of top taxa to return
 #' @param min_prob (`numeric`) the minimum probability to return
+#' @param file (`character` vector) optional per-file paths overriding those
+#' stored in the index, if `query` is a
+#' [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi`
+#' path(s). Useful after moving inputs or for `targets` dependency tracking.
+#' @param seq_idx (`integer` vector) optional 1-based indices into the logical
+#' sequence stream (`NULL` means all sequences in order). Applies after
+#' concatenating multiple FASTA inputs, and supports duplicates and
+#' reordering.
 #' @return a `data.frame` with columns `seq_id` (or `seq_idx` if `id_is_int` is
 #' `TRUE`), `rank`, `parent_taxonomy`, `taxon`, and `prob`, where `seq_id`
 #' (`seq_idx`) is the ID of a sequence from `query`, `rank` is the taxonomic
