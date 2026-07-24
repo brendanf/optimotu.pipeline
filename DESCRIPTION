@@ -18,7 +18,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 RoxygenNote: 7.3.3
 SystemRequirements: zlib
-Requires:
+Depends:
     R (>= 4.2.0)
 LinkingTo: 
     Rcpp,
