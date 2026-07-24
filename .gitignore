@@ -11,3 +11,7 @@ renv
 .cursor
 temp
 .posit/assistant
+
+# test side effects (LULU test runs write logs into tests/testthat/)
+tests/testthat/lulu.log_*
+tests/testthat/centroids_test.txt

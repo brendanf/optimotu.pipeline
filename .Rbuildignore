@@ -13,3 +13,4 @@
 ^\.cursor$
 ^temp$
 ^\.posit/assistant$
+^tests/testthat/lulu\.log_.*$
