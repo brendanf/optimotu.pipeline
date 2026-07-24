@@ -12,3 +12,4 @@
 ^[.]?air[.]toml$
 ^\.cursor$
 ^temp$
+^\.posit/assistant$

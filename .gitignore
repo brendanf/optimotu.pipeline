@@ -10,3 +10,4 @@ renv
 .vscode
 .cursor
 temp
+.posit/assistant
