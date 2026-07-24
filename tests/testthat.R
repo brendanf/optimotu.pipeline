@@ -9,4 +9,30 @@
 library(testthat)
 library(optimotu.pipeline)
 
-test_check("optimotu.pipeline")
+# lulu::lulu() (called from test_lulu.R) unconditionally writes a verbose
+# "lulu.log_<timestamp>" file to the working directory, with no option to
+# suppress or redirect it. These logs are useful for debugging failures in
+# our own re-implementation, so we only delete the ones created by this run
+# if the whole suite passes; if anything fails, they are left behind
+# alongside the (still-propagated) test failure for post-mortem inspection.
+old_logs <- list.files(pattern = "^lulu\\.log_")
+tests_passed <- TRUE
+
+tryCatch(
+  test_check("optimotu.pipeline"),
+  error = function(e) {
+    tests_passed <<- FALSE
+    stop(e)
+  },
+  finally = {
+    new_logs <- setdiff(list.files(pattern = "^lulu\\.log_"), old_logs)
+    if (tests_passed) {
+      unlink(new_logs)
+    } else if (length(new_logs)) {
+      message(
+        "Tests failed; keeping LULU debug log(s) for inspection: ",
+        paste(new_logs, collapse = ", ")
+      )
+    }
+  }
+)

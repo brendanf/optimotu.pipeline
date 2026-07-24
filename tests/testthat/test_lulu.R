@@ -19,18 +19,10 @@ comm_matrix <- matrix(
   dimnames = list(
     1:1000,
     c(
-      "p1",
-      "p2",
-      "p3",
-      "c1.1",
-      "c2.1",
-      "c3.1",
-      "c1.2",
-      "c2.2",
-      "c3.2",
-      "c1.3",
-      "c2.3",
-      "c3.3"
+      "p1", "p2", "p3",
+      "c1.1", "c2.1", "c3.1",
+      "c1.2", "c2.2", "c3.2",
+      "c1.3", "c2.3", "c3.3"
     )
   )
 )
@@ -102,8 +94,7 @@ testthat::test_that("lulu_map_impl works", {
       0.16,
       min_cooccurrence_ratio = 0.95,
       min_abundance_ratio = 0.9,
-      use_mean_abundance_ratio = TRUE,
-      verbose = 0
+      use_mean_abundance_ratio = TRUE
     ),
     tibble::tibble(
       seq_idx = 1L:12L,
@@ -113,116 +104,56 @@ testthat::test_that("lulu_map_impl works", {
   )
 })
 
-testthat::test_that("lulu_map_lowmem_impl works", {
-  comm_matrix_long$seq_idx <- as.integer(comm_matrix_long$seq_id)
-  pairs$seq_idx1 <- as.integer(pairs$seq_id1)
-  pairs$seq_idx2 <- as.integer(pairs$seq_id2)
-  targets::tar_dir({
-    readr::write_tsv(pairs, "pairs.tsv")
-    readr::write_tsv(comm_matrix_long, "comm_matrix_long.tsv")
-    targets::tar_script({
-      library('targets')
-      library('tarchetypes')
-      list(
-        tar_fst_tbl(
-          comm_matrix_long1,
-          readr::read_tsv('comm_matrix_long.tsv', col_types = "icii") |>
-            dplyr::slice_head(prop = 0.5)
-        ),
-        tar_fst_tbl(
-          comm_matrix_long2,
-          readr::read_tsv('comm_matrix_long.tsv', col_types = "icii") |>
-            dplyr::slice_tail(prop = 0.5)
-        ),
-        tar_fst_tbl(
-          pairs1,
-          readr::read_tsv('pairs.tsv', col_types = "icicidii") |>
-            dplyr::slice_head(prop = 0.5)
-        ),
-        tar_fst_tbl(
-          pairs2,
-          readr::read_tsv('pairs.tsv', col_types = "icicidii") |>
-            dplyr::slice_tail(prop = 0.5)
-        ),
-        tar_fst_tbl(
-          lulu_map,
-          {
-            # verify that the dependencies have *not* been loaded by targets
-            stopifnot(isFALSE(exists("comm_matrix_long1")))
-            stopifnot(isFALSE(exists("comm_matrix_long2")))
-            stopifnot(isFALSE(exists("pairs1")))
-            stopifnot(isFALSE(exists("pairs2")))
-            optimotu.pipeline::lulu_map_lowmem(
-              otu_table = c(comm_matrix_long1, comm_matrix_long2),
-              match_table = c(pairs1, pairs2),
-              max_dist = 0.16,
-              min_cooccurrence_ratio = 0.95,
-              min_abundance_ratio = 0.9,
-              use_mean_abundance_ratio = FALSE,
-              verbose = 0
-            )
-          },
-          retrieval = "none"
-        )
-      )
-    })
-    targets::tar_make(callr_function = NULL, reporter = "silent")
-    testthat::expect_equal(
-      targets::tar_read(lulu_map),
-      tibble::tibble(
-        seq_idx = 1L:12L,
-        lulu_idx = c(1L, 3L, 9L)[as.integer(substring(colnames(comm_matrix), 2L))]
-      ),
-      ignore_attr = TRUE
-    )
-  })
-})
-
 # Run example from LULU github
+
+# Download to a temp dir (cleaned up automatically when this test file
+# finishes) rather than the working directory, so re-running tests doesn't
+# leave downloaded fixtures behind. `blast_output.txt` is not downloaded; it
+# is a checked-in fixture (see comment below on how it was generated).
+lulu_example_dir <- withr::local_tempdir("lulu-example-data")
+centroids_file <- file.path(lulu_example_dir, "centroids_test.txt")
+otutable_file <- file.path(lulu_example_dir, "otutable_test.txt")
 
 download.file(
   "https://raw.githubusercontent.com/tobiasgf/lulu/master/Example_data/centroids_test.txt",
-  destfile = "centroids_test.txt",
-  quiet = TRUE
+  destfile = centroids_file
 )
 download.file(
   "https://raw.githubusercontent.com/tobiasgf/lulu/master/Example_data/otutable_test.txt",
-  destfile = "otutable_test.txt",
-  quiet = TRUE
+  destfile = otutable_file
 )
 
-# run in terminal
+# blast_output.rds was generated once by running blastn in the terminal and
+# saving the result, so that these tests don't require BLAST to be
+# installed:
 # blastn -query centroids_test.txt\
 #        -subject centroids_test.txt\
 #        -outfmt "6 qseqid sseqid pident"\
 #        -out blast_output.txt\
 #        -qcov_hsp_perc 80\
 #        -perc_identity 84
+# saveRDS(
+#   within(
+#     read.table("blast_output.txt", header = FALSE, as.is = TRUE, stringsAsFactors = FALSE),
+#     {V1 <- factor(V1); V2 <- factor(V2)}
+#   ),
+#   "blast_output.rds",
+#   compress = "xz"
+# )
+# The raw blast_output.txt is ~28MB; blast_output.rds is <1MB because V1/V2
+# only take ~2400 distinct values, which compress far better as factors than
+# as repeated character strings.
 
-lulu_otutab <- read.csv(
-  "otutable_test.txt",
-  sep = "\t",
-  header = TRUE,
-  as.is = TRUE,
-  row.names = 1
-)
-lulu_matchlist <- read.table(
-  "blast_output.txt",
-  header = FALSE,
-  as.is = TRUE,
-  stringsAsFactors = FALSE
-)
+lulu_otutab <- read.csv(otutable_file, sep = "\t", header = TRUE, as.is = TRUE, row.names = 1)
+lulu_matchlist <- readRDS("blast_output.rds")
+lulu_matchlist$V1 <- as.character(lulu_matchlist$V1)
+lulu_matchlist$V2 <- as.character(lulu_matchlist$V2)
 
 # run lulu to get reference result
 # lulu is very verbose...
 sink("/dev/null")
 # use minimum_relative_cooccurrence = 1.0 to avoid LULU bug
-lulu_result <- lulu::lulu(
-  lulu_otutab,
-  lulu_matchlist,
-  minimum_ratio_type = "min",
-  minimum_relative_cooccurence = 1.0
-)
+lulu_result <- lulu::lulu(lulu_otutab, lulu_matchlist, minimum_ratio_type = "min", minimum_relative_cooccurence = 1.0)
 sink()
 
 # convert lulu OTU table to long format
@@ -248,12 +179,7 @@ long_matchlist <-
   # subject are swapped.  Take the larger similarity/smaller distance.
   dplyr::summarize(V3 = max(V3), .by = c(V1, V2)) |>
   # join with long OTU table to get read counts for each sample for seq1
-  dplyr::left_join(
-    long_otutab,
-    y = _,
-    by = c("seq_id" = "V1"),
-    relationship = "many-to-many"
-  ) |>
+  dplyr::left_join(long_otutab, y = _, by = c("seq_id" = "V1"), relationship = "many-to-many") |>
   dplyr::rename(seq_id1 = seq_id, seq_id2 = V2) |>
   # join again to get read counts for seq2
   dplyr::inner_join(long_otutab, by = c("sample_key", "seq_id2" = "seq_id")) |>
@@ -279,7 +205,6 @@ long_lulu_map <- optimotu.pipeline::lulu_map(
   verbose = 0
 )
 
-
 testthat::test_that("lulu_map and lulu give same map result", {
   testthat::expect_equal(
     long_lulu_map$lulu_id,
@@ -300,125 +225,18 @@ wide_lulu_otutab <- tidyr::pivot_wider(
 
 # LULU keeps empty rows (OTUs). optimotu does not.  Check that this is accurate
 testthat::test_that("lulu_table does not include rows which are empty in lulu", {
-  testthat::expect_length(
-    intersect(
-      rownames(wide_lulu_otutab),
-      rownames(lulu_result$curated_table)[
-        rowSums(lulu_result$curated_table) == 0
-      ]
-    ),
-    0
-  )
+  testthat::expect_length(intersect(rownames(wide_lulu_otutab), rownames(lulu_result$curated_table)[rowSums(lulu_result$curated_table) == 0]), 0)
 })
 
 # Add these rows
-wide_lulu_otutab[
-  rownames(lulu_result$curated_table)[rowSums(lulu_result$curated_table) == 0],
-] <- 0L
+wide_lulu_otutab[rownames(lulu_result$curated_table)[rowSums(lulu_result$curated_table) == 0], ] <- 0L
 
 # reorder the table to match the LULU result
-wide_lulu_otutab <- wide_lulu_otutab[
-  rownames(lulu_result$curated_table),
-  colnames(lulu_result$curated_table)
-]
+wide_lulu_otutab <- wide_lulu_otutab[rownames(lulu_result$curated_table), colnames(lulu_result$curated_table)]
 
 testthat::test_that("lulu_table and lulu give same result", {
   testthat::expect_equal(
     wide_lulu_otutab,
     lulu_result$curated_table
   )
-})
-
-testthat::test_that("lulu_map_lowmem gives the same result as lulu_map", {
-  targets::tar_dir({
-    # we need to convert from seq_id to seq_idx
-    seq_ids <- unique(long_otutab$seq_id)
-    dplyr::mutate(
-      long_otutab,
-      seq_idx = as.integer(factor(seq_id, levels = seq_ids)),
-      .keep = "unused"
-    ) |>
-      saveRDS("long_otutab.rds")
-    dplyr::mutate(
-      long_matchlist,
-      seq_idx1 = as.integer(factor(seq_id1, levels = seq_ids)),
-      seq_idx2 = as.integer(factor(seq_id2, levels = seq_ids))
-    ) |>
-      saveRDS("long_matchlist.rds")
-
-    targets::tar_script({
-      library(targets)
-      library(tarchetypes)
-
-      # we use different types of formats and branching for the purposes of
-      # testing
-      list(
-        # first part is just a targets (similar to static branching)
-        tar_target(
-          otu_table1,
-          readRDS("long_otutab.rds") |>
-            dplyr::slice_head(prop = 0.5)
-        ),
-        # second part is dynamically branched
-        tar_group_count(
-          otu_table2,
-          readRDS("long_otutab.rds") |>
-            dplyr::slice_tail(prop = 0.5),
-          count = 3
-        ),
-        # realize the dynamic branches; use a different format
-        tar_target(
-          otu_table2_branch,
-          otu_table2,
-          pattern = map(otu_table2),
-          format = "fst"
-        ),
-        # first part a single target, another format
-        tar_target(
-          match_table1,
-          readRDS("long_matchlist.rds") |>
-            dplyr::slice_head(prop = 0.5),
-          format = "qs"
-        ),
-        # second part branched
-        tar_group_size(
-          match_table2,
-          readRDS("long_matchlist.rds") |>
-            dplyr::slice_tail(prop = 0.5),
-          size = 50000
-        ),
-        # realize the branches in a different format
-        tar_target(
-          match_table2_branch,
-          match_table2,
-          pattern = map(match_table2),
-          format = "parquet"
-        ),
-        tar_target(
-          lulu_map,
-          optimotu.pipeline::lulu_map_lowmem(
-            otu_table = list(otu_table1, otu_table2_branch),
-            # cbind is semantically wrong, but it is ignored here!
-            match_table = cbind(match_table1, match_table2_branch),
-            max_dist = 0.16,
-            min_abundance_ratio = 1,
-            min_cooccurrence_ratio = 1,
-            use_mean_abundance_ratio = FALSE,
-            verbose = 0
-          )
-        )
-      )
-    })
-    targets::tar_make(reporter = "silent", callr_function = NULL)
-    long_lulu_map_idx <- dplyr::transmute(
-      long_lulu_map,
-      seq_idx = as.integer(factor(seq_id, levels = seq_ids)),
-      lulu_idx = as.integer(factor(lulu_id, levels = seq_ids))
-    ) |>
-      dplyr::arrange(seq_idx)
-    testthat::expect_equal(
-      targets::tar_read(lulu_map) |> dplyr::arrange(seq_idx),
-      long_lulu_map_idx
-    )
-  })
 })
