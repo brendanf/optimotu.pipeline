@@ -4,6 +4,7 @@
 \alias{make_mapped_sequence_table}
 \alias{make_mapped_sequence_table.data.frame}
 \alias{make_mapped_sequence_table.matrix}
+\alias{make_mapped_sequence_table.uc_cluster}
 \alias{make_mapped_sequence_table.list}
 \title{Convert an object into a long (i.e. sparse) sequence occurrence table where
 sequences are stored as integer indices to a master list}
@@ -14,12 +15,14 @@ make_mapped_sequence_table(x, seqs, rc = FALSE)
 
 \method{make_mapped_sequence_table}{matrix}(x, seqs, rc = FALSE)
 
+\method{make_mapped_sequence_table}{uc_cluster}(x, seqs, rc = FALSE)
+
 \method{make_mapped_sequence_table}{list}(x, seqs, rc = FALSE)
 }
 \arguments{
-\item{x}{(\code{data.frame} as returned by \code{dada2::mergePairs()}, or integer
-matrix as returned by \code{dada2::makeSequenceTable()}, or a list of one of
-these.)}
+\item{x}{(\code{data.frame} as returned by \code{dada2::mergePairs()}, integer
+matrix as returned by \code{dada2::makeSequenceTable()}, \code{uc_cluster} as
+returned by \code{\link[=vsearch_cluster_unoise2]{vsearch_cluster_unoise2()}}, or a list of one of these.)}
 
 \item{seqs}{(\code{character} vector, file name, or \code{Biostrings::XStringSet})
 master list of sequences}

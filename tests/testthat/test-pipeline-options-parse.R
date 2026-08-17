@@ -365,3 +365,83 @@ test_that("parse_rarefy_options supports number and fraction modes", {
     "cannot be used in conjunction"
   )
 })
+
+test_that("parse_denoising_options defaults to dada2 and accepts unoise", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+
+  optimotu.pipeline:::parse_denoising_options(list())
+  expect_equal(optimotu.pipeline::denoising_method(), "dada2")
+  expect_true(optimotu.pipeline::do_dada2())
+  expect_false(optimotu.pipeline::do_unoise())
+  expect_equal(optimotu.pipeline::denoising_pool(), "sample")
+
+  optimotu.pipeline:::parse_denoising_options(list(denoising = "unoise"))
+  expect_equal(optimotu.pipeline::denoising_method(), "unoise")
+  expect_true(optimotu.pipeline::do_unoise())
+  expect_equal(optimotu.pipeline::unoise_alpha(), 2)
+  expect_equal(optimotu.pipeline::unoise_minsize(), 8L)
+  expect_equal(optimotu.pipeline::unoise_merge_min_overlap(), 16L)
+  expect_equal(optimotu.pipeline::unoise_merge_max_diffs(), 5)
+
+  optimotu.pipeline:::parse_denoising_options(
+    list(
+      denoising = list(
+        method = "unoise",
+        pool = "sample",
+        unoise = list(
+          alpha = 1.5,
+          minsize = 4L,
+          merge = list(min_overlap = 20L, max_diffs = 3)
+        )
+      )
+    )
+  )
+  expect_equal(optimotu.pipeline::unoise_alpha(), 1.5)
+  expect_equal(optimotu.pipeline::unoise_minsize(), 4L)
+  expect_equal(optimotu.pipeline::unoise_merge_min_overlap(), 20L)
+  expect_equal(optimotu.pipeline::unoise_merge_max_diffs(), 3)
+
+  expect_error(
+    optimotu.pipeline:::parse_denoising_options(list(denoising = "nope")),
+    "Must be element of set"
+  )
+  expect_error(
+    optimotu.pipeline:::parse_denoising_options(
+      list(denoising = list(method = "poanoise"))
+    ),
+    "not implemented"
+  )
+  expect_error(
+    optimotu.pipeline:::parse_denoising_options(
+      list(denoising = list(method = "unoise", pool = "project"))
+    ),
+    "only 'sample' is implemented"
+  )
+})
+
+test_that("parse_filter_options is method-aware for paired vs merged keys", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+  options(optimotu.pipeline.merged_filter_options = NULL)
+
+  options(optimotu.pipeline.denoising_method = "dada2")
+  expect_warning(
+    optimotu.pipeline:::parse_filter_options(
+      list(filtering = list(maxEE_R1 = 1, maxEE_R2 = 2, maxEE = 0.5))
+    ),
+    "Ignoring merged-read filtering"
+  )
+  expect_equal(unname(optimotu.pipeline::dada2_maxEE()["maxEE_R1"]), 1)
+
+  options(optimotu.pipeline.denoising_method = "unoise")
+  expect_warning(
+    optimotu.pipeline:::parse_filter_options(
+      list(filtering = list(maxEE = 0.8, minLen = 100L, maxEE_R1 = 2))
+    ),
+    "Ignoring paired-read filtering"
+  )
+  opts <- merged_filter_options()
+  expect_equal(opts$maxEE, 0.8)
+  expect_equal(opts$minLen, 100L)
+})

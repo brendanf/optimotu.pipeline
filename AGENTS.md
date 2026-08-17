@@ -35,6 +35,12 @@ External tool wrappers:
 - `R/dada2_wrappers.R`, `R/dada2_map.R`, `R/dada2_chimera.R` (DADA2
   filtering/denoising/dereplication/merge options and per-read fate mapping,
   plus per-sample *de novo* chimera detection)
+- `R/vsearch.R` — vsearch wrappers including paired-read merging
+  (`vsearch_fastq_merge_pairs()`) and UNOISE clustering
+  (`vsearch_cluster_unoise2()`, which pipes `--fastx_uniques` into
+  `--cluster_unoise`)
+- `R/unoise.R` — UNOISE per-read fate mapping (`unoise_seq_map()`); sequence
+  tables from `uc_cluster` objects use `make_mapped_sequence_table()`
 
 Denoising / read-quality post-processing:
 
@@ -92,6 +98,9 @@ families include:
 - external command wrappers and sequence IO helpers
 - DADA2 wrapper/option classes and per-read fate mapping (`dada2_wrappers.R`,
   `dada2_map.R`, `dada2_chimera.R`)
+- UNOISE (vsearch) merge/cluster wrappers and per-read mapping (`vsearch.R`,
+  `unoise.R`), configured through `parse_denoising_options()` /
+  `parse_filter_options()` (`do_unoise()`, `do_dada2()`, `denoising_method()`)
 - LULU secondary-clustering entry points (`lulu_long.R`), configured through
   `parse_lulu_options()`
 
@@ -113,6 +122,9 @@ commands.
   - wrapper files in `R/` listed above
 - change DADA2 denoising/chimera behavior:
   - `R/dada2_wrappers.R`, `R/dada2_map.R`, `R/dada2_chimera.R`
+- change UNOISE denoising or merged-read filtering:
+  - `R/vsearch.R`, `R/unoise.R`, `parse_denoising_options()` /
+    `parse_filter_options()` in `R/pipeline_options.R`
 - change LULU secondary clustering behavior or its options:
   - `R/lulu_long.R`, `src/lulu.cpp`, `parse_lulu_options()` in
     `R/pipeline_options.R`
@@ -137,6 +149,9 @@ commands.
   and metaprogramming-heavy target factory helpers.
 - Preserve `targets` dependency semantics (`!!`, `!!!`, quoted calls) when
   editing helpers used in target commands.
+- UNOISE uses merge-then-denoise (vsearch `--fastq_mergepairs`, then
+  `--cluster_unoise`). Do not reorder those steps to match DADA2's
+  denoise-then-merge workflow.
 
 ## 7) Relationship to sister repos
 

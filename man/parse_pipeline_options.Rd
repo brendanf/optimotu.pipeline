@@ -13,6 +13,8 @@
 \alias{parse_forward_primer}
 \alias{parse_reverse_primer}
 \alias{parse_trim_options}
+\alias{parse_unoise_options}
+\alias{parse_denoising_options}
 \alias{parse_filter_options}
 \alias{parse_uncross_options}
 \alias{parse_lulu_options}
@@ -57,6 +59,10 @@ parse_forward_primer(pipeline_options)
 parse_reverse_primer(pipeline_options)
 
 parse_trim_options(pipeline_options)
+
+parse_unoise_options(unoise_options)
+
+parse_denoising_options(pipeline_options)
 
 parse_filter_options(pipeline_options)
 

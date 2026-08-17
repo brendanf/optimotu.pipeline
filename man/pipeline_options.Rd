@@ -26,6 +26,14 @@
 \alias{forward_primer}
 \alias{reverse_primer}
 \alias{trim_options}
+\alias{denoising_method}
+\alias{do_dada2}
+\alias{do_unoise}
+\alias{denoising_pool}
+\alias{unoise_alpha}
+\alias{unoise_minsize}
+\alias{unoise_merge_min_overlap}
+\alias{unoise_merge_max_diffs}
 \alias{dada2_maxEE}
 \alias{do_tag_jump}
 \alias{tag_jump_f}
@@ -145,6 +153,22 @@ forward_primer()
 reverse_primer()
 
 trim_options()
+
+denoising_method()
+
+do_dada2()
+
+do_unoise()
+
+denoising_pool()
+
+unoise_alpha()
+
+unoise_minsize()
+
+unoise_merge_min_overlap()
+
+unoise_merge_max_diffs()
 
 dada2_maxEE()
 

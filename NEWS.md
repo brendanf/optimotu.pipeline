@@ -1,4 +1,20 @@
 # optimotu.pipeline (development version)
+* Fix `do_denovo_cluster()` with USEARCH distances: call the exported
+  `seq_cluster_usearch()` generic on a `DNAStringSet` so clustering does not
+  look up the unexported `seq_cluster_usearch.DNAStringSet` method in the
+  caller.
+* Add vsearch UNOISE as an alternative ASV denoiser: `vsearch_fastq_merge_pairs()`
+  (empty FASTQ inputs are skipped; `shards` is clamped to the number of files;
+  gzipped output is written via vsearch stdout `-`, not a file named `--`),
+  `merged_filter_options()`, `vsearch_cluster_unoise2()`, and `unoise_seq_map()`,
+  plus `make_mapped_sequence_table()` methods for `uc_cluster` objects.
+* Add optional `denoising:` section in `pipeline_options.yaml` (`method`, `pool`,
+  `unoise` sub-options) with accessors `denoising_method()`, `do_dada2()`,
+  `do_unoise()`, `unoise_alpha()`, `unoise_minsize()`, and merge-overlap
+  accessors. Default remains DADA2 when the section is omitted.
+* Extend `filtering:` to cover both paired-read (DADA2 `maxEE_R1`/`maxEE_R2`)
+  and merged-read (UNOISE `maxEE`, `maxEE_rate`, `maxNs`, `maxLen`, `minLen`)
+  keys, with warnings when keys do not apply to the selected denoiser.
 * Add `output` section support in `pipeline_options.yaml` via
   `parse_output_options()`: configurable tabular output formats (`rds`, `tsv`,
   `csv`, `xlsx`, `fst`, `feather`, `parquet`, `qs2`, `qdata`, `rdata`), plus

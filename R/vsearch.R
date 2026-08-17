@@ -535,3 +535,508 @@ sintax <- function(
   }
   out
 }
+
+#' Class to store merged-fastq filter options for VSEARCH/USEARCH
+#'
+#' In all cases, merged read pairs which do not meet the filter criteria are
+#' excluded.
+#'
+#' Called with no arguments, this returns the values parsed from
+#' `pipeline_options.yaml` when available, otherwise the constructor defaults.
+#'
+#' It appears that vsearch does not count "N"s towards expected errors, even
+#' though their quality score looks like each one represents 0.63 expected
+#' errors. Thus it is possible to allow sequences with N's while still having 0
+#' maximum expected errors.
+#'
+#' @param maxEE (`numeric` scalar) maximum absolute number of expected errors
+#'   allowed in merged read pairs.
+#' @param maxEE_rate (`numeric` scalar) maximum number of expected errors
+#'   allowed in merged read pairs, as a fraction of the sequence length.
+#' @param maxNs (`integer` scalar) maximum number of "N"s allowed in merged
+#'   read pairs.
+#' @param maxLen (`integer` scalar) maximum length allowed for merged read
+#'   pairs.
+#' @param minLen (`integer` scalar) minimum length allowed for merged read
+#'   pairs.
+#' @return An object of class `merged_filter_options`.
+#' @export
+merged_filter_options <- function(
+  maxEE = 1,
+  maxEE_rate = NULL,
+  maxNs = NULL,
+  maxLen = NULL,
+  minLen = NULL
+) {
+  if (
+    missing(maxEE) &&
+      missing(maxEE_rate) &&
+      missing(maxNs) &&
+      missing(maxLen) &&
+      missing(minLen)
+  ) {
+    stored <- getOption("optimotu.pipeline.merged_filter_options")
+    if (!is.null(stored)) {
+      return(stored)
+    }
+  }
+  checkmate::assert_number(maxEE, lower = 0, null.ok = TRUE)
+  checkmate::assert_number(maxEE_rate, lower = 0, upper = 1, null.ok = TRUE)
+  checkmate::assert_count(maxNs, null.ok = TRUE)
+  checkmate::assert_count(maxLen, positive = TRUE, null.ok = TRUE)
+  checkmate::assert_count(minLen, null.ok = TRUE)
+  structure(
+    list(
+      maxEE = maxEE,
+      maxEE_rate = maxEE_rate,
+      maxNs = maxNs,
+      maxLen = maxLen,
+      minLen = minLen
+    ),
+    class = "merged_filter_options"
+  )
+}
+
+#' Names of options in merged_filter_options
+#' @export
+merged_filter_option_names <- c(
+  "maxEE",
+  "maxEE_rate",
+  "maxNs",
+  "maxLen",
+  "minLen"
+)
+
+#' Update method for merged filter options
+#' @param object ([`merged_filter_options`][merged_filter_options()]) existing
+#' merged filter options object to modify
+#' @param new_options (named `list`, single-row `data.frame`, named
+#'  `character` vector, or named `numeric` vector) new values for the options.
+#'  If a `data.frame`, then the values in each column should be all the same.
+#' @param ... Additional arguments (ignored)
+#' @exportS3Method stats::update
+update.merged_filter_options <- function(object, new_options, ...) {
+  checkmate::assert(
+    checkmate::check_list(new_options, null.ok = TRUE),
+    checkmate::check_data_frame(new_options, null.ok = TRUE),
+    checkmate::check_character(new_options, null.ok = TRUE),
+    checkmate::check_numeric(new_options, null.ok = TRUE)
+  )
+  if (is.null(new_options) || length(new_options) == 0L) {
+    return(object)
+  }
+  for (nm in intersect(names(new_options), merged_filter_option_names)) {
+    object[[nm]] <- new_options[[nm]]
+  }
+  do.call(merged_filter_options, object)
+}
+
+# Write an empty FASTA/FASTQ file, gzipped when the path ends in .gz.
+write_empty_seq_file <- function(path) {
+  dirs <- unique(dirname(path))
+  dirs <- dirs[dirs != "."]
+  if (length(dirs) > 0L) {
+    dir.create(dirs, recursive = TRUE, showWarnings = FALSE)
+  }
+  for (p in path) {
+    if (endsWith(p, ".gz")) {
+      con <- gzfile(p, "wb")
+      close(con)
+    } else {
+      file.create(p)
+    }
+  }
+  path
+}
+
+empty_uc_cluster <- function() {
+  structure(
+    list(
+      clusters = tibble::tibble(
+        clust_idx = integer(),
+        size = integer(),
+        seq = character()
+      ),
+      map = tibble::tibble(
+        clust_idx = integer(),
+        seq_id = character()
+      )
+    ),
+    class = "uc_cluster"
+  )
+}
+
+# Start a process/pipeline for a single fastq_mergepairs call.
+# Returns the process to wait on (gzip when compressing, otherwise vsearch).
+fastq_merge_pairs_process <- function(vsearch, args, seq_out, compress) {
+  if (isTRUE(compress)) {
+    processx::pipeline$new(
+      cmds = list(
+        c(vsearch, unlist(as.character(args))),
+        c("gzip", "-cf")
+      ),
+      stdout = seq_out,
+      stderr = "|"
+    )$get_processes()[[2]]
+  } else {
+    processx::process$new(
+      command = vsearch,
+      args = as.character(args),
+      stderr = "|",
+      poll_connection = TRUE
+    )
+  }
+}
+
+merge_pairs_finish <- function(proc) {
+  # Drain stderr so a full pipe cannot stall the process.
+  if (proc$has_error_connection()) {
+    try(proc$read_error(), silent = TRUE)
+  }
+  if (proc$is_alive()) {
+    return(FALSE)
+  }
+  status <- proc$get_exit_status()
+  if (!identical(status, 0L)) {
+    err <- tryCatch(proc$read_all_error(), error = function(e) "")
+    stop(
+      "vsearch/USEARCH fastq_mergepairs failed with exit status ",
+      status,
+      if (nzchar(err)) paste0(":\n", err) else ".",
+      call. = FALSE
+    )
+  }
+  TRUE
+}
+
+#' Assemble Illumina read pairs using USEARCH or VSEARCH
+#' @param seq_R1 (`character` vector) path(s) of one or more FASTQ files,
+#'   possibly gzipped, to be assembled in the forward orientation.
+#' @param seq_R2 (`character` vector) path(s) of one or more FASTQ files,
+#'   possibly gzipped, to be assembled in the reverse complement orientation.
+#'   Must be the same number of files as `seq_R1`, and each file must have the
+#'   same number of reads.
+#' @param min_overlap (`integer` scalar) minimum length of the overlapping
+#'   region in order to assemble a read pair.
+#' @param seq_out (`character` vector) file names
+#' @param max_mismatch (`numeric` scalar) if strictly < 1, the fraction of bases
+#'   in the overlapping region which are allowed to be mismatches (
+#'   `--fastq_maxdiffpct` argument, but should be expressed as a fraction rather
+#'   than percent). If >= 1, the number of bases in the overlapping region which
+#'   are allowed to be mismatches (`--fastq_maxdiffs` argument). In the latter
+#'   case it should be integer-valued. Default: 10
+#' @param threads (`integer` scalar) number of threads to use for *each*
+#'   usearch/vsearch process. Individual processes eventually become I/O bound
+#'   and more threads may provide little improvement, or even slow the total
+#'   processing time. The point of diminishing returns is probably dependent on
+#'   the system and the input size.
+#' @param shards (`integer` scalar) number of parallel usearch/vsearch processes
+#'   to run at once.  The total number of CPU threads used is something like
+#'   `threads * shards` (although the R process itself will also consume some).
+#' @param filter_options (result object from [`merged_filter_options()`]) additional
+#'   options to filter the results; passed to USEARCH or VSEARCH.
+#' @param compress (`logical` flag) if `TRUE`, then vsearch/usearch output is
+#'   piped through `gzip` to compress it. The default autodetects based on
+#'   whether the filenames in `seq_out` end with `".gz"`.
+#' @param fastq (`logical` flag) if `TRUE`, then output is in FASTQ format;
+#'   otherwise it is FASTA. By default this is autodetected from the filenames
+#'   in `seq_out`.
+#' @param vsearch (`character` string) path to USEARCH or VSEARCH executable.
+#'
+#' @return `character` vector giving the output file names (as given in
+#' `seq_out`)
+#' @export
+vsearch_fastq_merge_pairs <- function(
+  seq_R1,
+  seq_R2,
+  seq_out,
+  min_overlap = 5,
+  max_mismatch = 10,
+  threads = 1,
+  shards = min(local_cpus() %/% threads, length(seq_out)),
+  filter_options = merged_filter_options(),
+  compress = all(endsWith(seq_out, ".gz")),
+  fastq = all(grepl("[.]fa?s?t?q", basename(seq_out))),
+  vsearch = find_vsearch()
+) {
+  checkmate::assert_character(seq_R1)
+  checkmate::assert_character(seq_R2, len = length(seq_R1))
+  checkmate::assert_character(seq_out, len = length(seq_R1))
+  if (length(seq_R1) == 0L) {
+    return(character())
+  }
+  checkmate::assert_file_exists(seq_R1, access = "r")
+  checkmate::assert_file_exists(seq_R2, access = "r")
+  checkmate::assert_path_for_output(seq_out, overwrite = TRUE)
+  checkmate::assert_count(min_overlap)
+  checkmate::assert_integerish(min_overlap, lower = 5L)
+  checkmate::assert_number(max_mismatch, lower = 0)
+  checkmate::assert_count(threads, positive = TRUE)
+  checkmate::assert_count(shards, positive = TRUE)
+  checkmate::assert_class(filter_options, "merged_filter_options")
+  checkmate::assert_flag(compress)
+  checkmate::assert_flag(fastq)
+  checkmate::assert_file_exists(vsearch, "x")
+  write_empty_seq_file(seq_out)
+  nonempty <- which(sequence_size(seq_R1) > 0L & sequence_size(seq_R2) > 0L)
+  if (length(nonempty) == 0L) {
+    return(seq_out)
+  }
+  seq_R1 <- seq_R1[nonempty]
+  seq_R2 <- seq_R2[nonempty]
+  seq_todo <- seq_out[nonempty]
+  shards <- max(1L, min(as.integer(shards), length(seq_todo)))
+
+  args <- c(
+    # fmt: skip
+    list(
+      "--fastq_mergepairs", seq_R1,
+      "--reverse", seq_R2,
+      "--fastq_minovlen", min_overlap,
+      "--threads", threads
+    ),
+    if (isTRUE(fastq)) {
+      list("--fastqout")
+    } else {
+      list("--fastaout")
+    },
+    if (isTRUE(compress)) {
+      # vsearch treats "-" as stdout; "--" is a literal output filename.
+      list("-")
+    } else {
+      list(seq_todo)
+    },
+    if (max_mismatch >= 1) {
+      list("--fastq_maxdiffs", max_mismatch)
+    } else {
+      list("--fastq_maxdiffpct", max_mismatch * 100)
+    },
+    if (!is.null(filter_options$maxEE)) {
+      list("--fastq_maxee", filter_options$maxEE)
+    },
+    if (!is.null(filter_options$maxEE_rate)) {
+      list("--fastq_maxee_rate", filter_options$maxEE_rate)
+    },
+    if (!is.null(filter_options$maxNs)) {
+      list("--fastq_maxns", filter_options$maxNs)
+    },
+    if (!is.null(filter_options$maxLen)) {
+      list("--fastq_maxmergelen", filter_options$maxLen)
+    },
+    if (!is.null(filter_options$minLen)) {
+      list("--fastq_minmergelen", filter_options$minLen)
+    }
+  )
+
+  args <- as.data.frame(args, stringsAsFactors = FALSE)
+  processes <- vector("list", shards)
+  i <- 0
+  n_finished <- 0
+  n_todo <- length(seq_todo)
+  while (i < shards && i < n_todo) {
+    i <- i + 1
+    processes[[i]] <-
+      fastq_merge_pairs_process(vsearch, args[i, ], seq_todo[i], compress)
+  }
+  while (n_finished < n_todo) {
+    processx::poll(processes, -1)
+    for (j in rev(seq_along(processes))) {
+      if (merge_pairs_finish(processes[[j]])) {
+        n_finished <- n_finished + 1
+        if (i < n_todo) {
+          i <- i + 1
+          processes[[j]] <-
+            fastq_merge_pairs_process(
+              vsearch,
+              args[i, ],
+              seq_todo[i],
+              compress
+            )
+        } else {
+          processes <- processes[-j]
+        }
+      }
+    }
+  }
+  seq_out
+}
+
+# start the process(es) for dereplicating and denoising a single file
+unoise_process <- function(vsearch, seq_in, args) {
+  processx::pipeline$new(
+    cmds = list(
+      c(
+        vsearch,
+        "--fastx_uniques",
+        seq_in,
+        "--sizeout",
+        "--fastaout",
+        "-"
+      ),
+      c(vsearch, unlist(as.character(args)))
+    ),
+    stdout = "|",
+    stderr = "|"
+  )$get_processes()[[2]]
+}
+
+#' Find denoised sequences using UNOISE3 (`vsearch --cluster_unoise`)
+#'
+#' This command actually executes both `--fastx_uniques` (or equivalent
+#' dereplication) and `--cluster_unoise`, since the former is required for the
+#' latter. The function name retains "unoise2" for historical reasons.
+#'
+#' @param seq (`character` vector) path(s) of one or more FASTA or FASTQ files,
+#'   possibly gzipped
+#' @param min_size (`integer` scalar) minimum abundance of a sequence to be
+#'   considered a centroid (`--minsize`)
+#' @param alpha (`numeric` scalar) alpha parameter for UNOISE (`--unoise_alpha`)
+#' @param threads (`integer` scalar) number of threads to use per vsearch
+#' process
+#' @param shards (`integer` scalar) number of shards (parallel vsearch calls) to
+#' use
+#' @param vsearch (`character` scalar) path to vsearch executable
+#' @return a named `list` of objects of class `uc_cluster`, where names match
+#'   the values of `seq`. Each `uc_cluster` has two members, each a
+#'   `data.frame`:
+#'   - `clusters` with columns:
+#'     - `clust_idx` - cluster index; integer from 0 to number of clusters - 1
+#'     - `size` - the number of reads in the cluster
+#'     - `seq` - the representative sequence (i.e. centroid) of the cluster
+#'   - `map` with columns:
+#'     - `clust_idx` - cluster index; integer from 0 to number of clusters - 1
+#'     - `seq_id` - the sequence ID of a sequence which is a member of the
+#'       cluster. Although input sequences are typically dereplicated and
+#'       include a `";size="` annotation, it is stripped off so that the ID
+#'       should match a read in the original file.
+#'
+#'   Empty inputs return an empty `uc_cluster` without invoking vsearch.
+#' @export
+vsearch_cluster_unoise2 <- function(
+  seq,
+  min_size = 8,
+  alpha = 2.0,
+  threads = 1,
+  shards = min(local_cpus() %/% threads, length(seq)),
+  vsearch = find_vsearch()
+) {
+  # avoid R CMD check NOTE about global variables due to NSE
+  type <- clust_idx <- size <- seq_id <- NULL
+  checkmate::assert_character(seq)
+  if (length(seq) == 0L) {
+    return(stats::setNames(list(), character()))
+  }
+  checkmate::assert_file_exists(seq, "r")
+  checkmate::assert_count(min_size, positive = TRUE)
+  checkmate::assert_number(alpha, lower = 0, finite = TRUE)
+  checkmate::assert_count(threads, positive = TRUE)
+  checkmate::assert_file_exists(vsearch, "x")
+  # fmt: skip
+  args <- c(
+    "--cluster_unoise", "-",
+    "--sizein",
+    "--minsize", as.character(min_size),
+    "--unoise_alpha", as.character(alpha),
+    "--threads", as.character(threads),
+    "--uc", "-",
+    "--strand", "plus"
+  )
+
+  result <- vector("list", length(seq))
+  names(result) <- seq
+  nonempty <- which(sequence_size(seq) > 0L)
+  empty <- setdiff(seq_along(seq), nonempty)
+  result[empty] <- replicate(
+    length(empty),
+    empty_uc_cluster(),
+    simplify = FALSE
+  )
+  if (length(nonempty) == 0L) {
+    return(result)
+  }
+  seq_todo <- seq[nonempty]
+  shards <- max(1L, min(shards, length(seq_todo)))
+  checkmate::assert_count(shards, positive = TRUE)
+
+  processes <- vector("list", shards)
+  index <- integer(shards)
+  i <- 0
+  n_finished <- 0
+  n_todo <- length(seq_todo)
+  while (i < shards && i < n_todo) {
+    i <- i + 1
+    processes[[i]] <-
+      unoise_process(vsearch, seq_todo[i], args)
+    index[i] <- nonempty[i]
+  }
+  while (n_finished < n_todo) {
+    poll_result <- processx::poll(processes, -1)
+    for (j in rev(seq_along(poll_result))) {
+      if (poll_result[[j]]["output"] == "ready") {
+        if (processes[[j]]$is_incomplete_output()) {
+          o <- processes[[j]]$read_output_lines()
+          if (length(o) > 0) {
+            o <- readr::read_tsv(
+              I(o),
+              # fmt: skip
+              col_names = c("type", "clust_idx", "size", "sim", "strand", "na1",
+                "na2", "na3", "seq_id", "hit_id"),
+              col_types = "cii-----c-",
+              na = c("NA", "*")
+            ) |>
+              dplyr::mutate(seq_id = sub(";size=[0-9]+", "", seq_id))
+            result[[index[j]]] <- dplyr::bind_rows(result[[index[j]]], o)
+          }
+        } else {
+          n_finished <- n_finished + 1
+          if (processes[[j]]$get_exit_status() != 0) {
+            stop(
+              "vsearch/USEARCH process failed with exit status ",
+              processes[[j]]$get_exit_status(),
+              call. = FALSE
+            )
+          }
+          if (is.null(result[[index[j]]])) {
+            result[[index[j]]] <- empty_uc_cluster()
+          } else {
+            r <- result[[index[j]]] # just an alias for brevity
+            r <- structure(
+              list(
+                clusters = dplyr::filter(r, type == "C") |>
+                  dplyr::select(clust_idx, size, seq = seq_id),
+                map = dplyr::filter(r, type != "C") |>
+                  dplyr::select(clust_idx, seq_id)
+              ),
+              class = "uc_cluster"
+            )
+            # Replace sequence identifiers with sequences themselves.
+            # There is no convenient vsearch/usearch output that provides both
+            # the mapping and the centroid sequences, so this requires an extra
+            # file read.  Seems easier to extract from the original file than
+            # to have vsearch write them to a temp file.
+            orig_seqs <- if (grepl(fastq_regex, seq[index[j]])) {
+              Biostrings::readDNAStringSet(seq[index[j]], format = "fastq")
+            } else {
+              Biostrings::readDNAStringSet(seq[index[j]], format = "fasta")
+            }
+            # Vsearch strips off everything after the first whitespace in the
+            # sequence ID, so we need to do the same here to match.
+            names(orig_seqs) <- sub("\\s.*", "", names(orig_seqs))
+            r$clusters$seq <- as.character(orig_seqs[r$clusters$seq])
+            result[[index[j]]] <- r
+          }
+          if (i < n_todo) {
+            i <- i + 1
+            processes[[j]] <-
+              unoise_process(vsearch, seq_todo[i], args)
+            index[j] <- nonempty[i]
+          } else {
+            processes <- processes[-j]
+            index <- index[-j]
+          }
+        }
+      }
+    }
+  }
+  result
+}

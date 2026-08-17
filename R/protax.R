@@ -56,7 +56,6 @@ run_protax <- function(
       )
     }
   } else {
-    on.exit(unlink(protax_infile), add = TRUE)
     seq_batch_character(seqs, seqs_file, seq_idx) |>
       write_sequence(protax_infile)
   }

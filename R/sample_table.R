@@ -12,6 +12,7 @@ finalize_sample_table <- function(
   # avoid R CMD check note for undefined global variables due to NSE
   sample <- seqrun <- fastq_R1 <- fastq_R2 <- rarefy_text <- NULL
   readwise_key <- orient <- sample_key <- filt_R1 <- filt_R2 <- NULL
+  merged <- NULL
   checkmate::assert_tibble(sample_table)
   checkmate::check_names(
     names(sample_table),
@@ -102,6 +103,10 @@ finalize_sample_table <- function(
         filt_path(),
         paste(readwise_key, orient, "R2_filt.fastq.gz", sep = "_")
       ),
+      merged = file.path(
+        filt_path(),
+        paste(readwise_key, orient, "merged.fastq.gz", sep = "_")
+      ),
       to_denoise_R1 = if (do_rarefy()) {
         ifelse(
           rarefy_text == "full",
@@ -125,6 +130,18 @@ finalize_sample_table <- function(
         )
       } else {
         filt_R2
+      },
+      to_denoise_merged = if (do_rarefy()) {
+        ifelse(
+          rarefy_text == "full",
+          merged,
+          file.path(
+            rarefy_path(),
+            paste(sample_key, orient, "merged.fastq.gz", sep = "_")
+          )
+        )
+      } else {
+        merged
       },
       readwise_key = file_to_sample_key(filt_R1), # to be sure
       tar_seed = targets::tar_seed_create(readwise_key)

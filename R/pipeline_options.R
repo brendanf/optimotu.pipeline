@@ -680,22 +680,235 @@ trim_options <- function() {
   getOption("optimotu.pipeline.trim_options", cutadapt_paired_options())
 }
 
+#### denoising settings ####
+paired_filter_option_names <- c("maxEE_R1", "maxEE_R2")
+
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_unoise_options <- function(unoise_options) {
+  if (is.null(unoise_options)) {
+    unoise_options <- list()
+  } else {
+    unoise_options <- unnest_yaml_list(unoise_options)
+  }
+  checkmate::assert_list(unoise_options)
+  if (length(unoise_options) > 0L) {
+    checkmate::assert_names(
+      names(unoise_options),
+      subset.of = c("alpha", "minsize", "merge")
+    )
+  }
+  if ("alpha" %in% names(unoise_options)) {
+    checkmate::assert_number(unoise_options$alpha, lower = 0, finite = TRUE)
+    options(optimotu.pipeline.unoise_alpha = unoise_options$alpha)
+  }
+  if ("minsize" %in% names(unoise_options)) {
+    checkmate::assert_count(unoise_options$minsize, positive = TRUE)
+    options(
+      optimotu.pipeline.unoise_minsize = as.integer(unoise_options$minsize)
+    )
+  }
+  if ("merge" %in% names(unoise_options)) {
+    merge_opts <- unnest_yaml_list(unoise_options$merge)
+    checkmate::assert_names(
+      names(merge_opts),
+      subset.of = c("min_overlap", "max_diffs")
+    )
+    if ("min_overlap" %in% names(merge_opts)) {
+      checkmate::assert_integerish(merge_opts$min_overlap, lower = 5, len = 1)
+      options(
+        optimotu.pipeline.unoise_merge_min_overlap = as.integer(
+          merge_opts$min_overlap
+        )
+      )
+    }
+    if ("max_diffs" %in% names(merge_opts)) {
+      checkmate::assert_number(merge_opts$max_diffs, lower = 0, finite = TRUE)
+      options(optimotu.pipeline.unoise_merge_max_diffs = merge_opts$max_diffs)
+    }
+  }
+}
+
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_denoising_options <- function(pipeline_options) {
+  denoising <- pipeline_options$denoising
+  if (is.null(denoising)) {
+    options(
+      optimotu.pipeline.denoising_method = "dada2",
+      optimotu.pipeline.denoising_pool = "sample"
+    )
+    return(invisible())
+  }
+  if (checkmate::test_string(denoising)) {
+    denoising <- list(method = denoising)
+  } else {
+    checkmate::assert_list(denoising)
+    denoising <- unnest_yaml_list(denoising)
+  }
+  checkmate::assert_names(
+    names(denoising),
+    subset.of = c("method", "pool", "unoise", "poanoise")
+  )
+  method <- denoising$method
+  if (is.null(method)) {
+    method <- "dada2"
+  }
+  checkmate::assert_choice(method, c("dada2", "unoise", "poanoise"))
+  if (identical(method, "poanoise")) {
+    stop(
+      "denoising method 'poanoise' is reserved for a future release and is ",
+      "not implemented yet.",
+      call. = FALSE
+    )
+  }
+  pool <- denoising$pool
+  if (is.null(pool)) {
+    pool <- "sample"
+  }
+  checkmate::assert_choice(pool, c("sample", "asv", "derep", "project"))
+  if (!identical(pool, "sample")) {
+    stop(
+      "denoising pool '",
+      pool,
+      "' is reserved for a future release; only 'sample' is implemented.",
+      call. = FALSE
+    )
+  }
+  options(
+    optimotu.pipeline.denoising_method = method,
+    optimotu.pipeline.denoising_pool = pool
+  )
+  if (identical(method, "unoise")) {
+    parse_unoise_options(denoising$unoise)
+  } else if (!is.null(denoising$unoise)) {
+    warning(
+      "Ignoring 'denoising.unoise' options because method is '",
+      method,
+      "'.",
+      call. = FALSE
+    )
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+denoising_method <- function() {
+  getOption("optimotu.pipeline.denoising_method", "dada2")
+}
+
+#' @rdname pipeline_options
+#' @export
+do_dada2 <- function() {
+  identical(denoising_method(), "dada2")
+}
+
+#' @rdname pipeline_options
+#' @export
+do_unoise <- function() {
+  identical(denoising_method(), "unoise")
+}
+
+#' @rdname pipeline_options
+#' @export
+denoising_pool <- function() {
+  getOption("optimotu.pipeline.denoising_pool", "sample")
+}
+
+#' @rdname pipeline_options
+#' @export
+unoise_alpha <- function() {
+  getOption("optimotu.pipeline.unoise_alpha", 2)
+}
+
+#' @rdname pipeline_options
+#' @export
+unoise_minsize <- function() {
+  getOption("optimotu.pipeline.unoise_minsize", 8L)
+}
+
+#' @rdname pipeline_options
+#' @export
+unoise_merge_min_overlap <- function() {
+  getOption("optimotu.pipeline.unoise_merge_min_overlap", 16L)
+}
+
+#' @rdname pipeline_options
+#' @export
+unoise_merge_max_diffs <- function() {
+  getOption("optimotu.pipeline.unoise_merge_max_diffs", 5)
+}
+
 #### filtering settings ####
 #' @rdname parse_pipeline_options
 #' @keywords internal
 parse_filter_options <- function(pipeline_options) {
   checkmate::assert_list(pipeline_options$filtering, null.ok = TRUE)
+  paired_keys <- paired_filter_option_names
+  merged_keys <- merged_filter_option_names
+  all_keys <- c(paired_keys, merged_keys)
   if (is.null(pipeline_options$filtering)) {
     message(
       "No 'filtering' options given in 'pipeline_options.yaml'\n",
       "Using defaults."
     )
-  } else {
-    filtering <- unnest_yaml_list(pipeline_options$filtering)
-    checkmate::assert_names(
-      names(filtering),
-      subset.of = c("maxEE_R1", "maxEE_R2")
+    return(invisible())
+  }
+  filtering <- unnest_yaml_list(pipeline_options$filtering)
+  checkmate::assert_names(names(filtering), subset.of = all_keys)
+  present_paired <- intersect(names(filtering), paired_keys)
+  present_merged <- intersect(names(filtering), merged_keys)
+  if (do_unoise()) {
+    if (length(present_paired) > 0L) {
+      warning(
+        "Ignoring paired-read filtering option(s) ",
+        paste(present_paired, collapse = ", "),
+        " because denoising method is 'unoise' (merged-read filtering is used).",
+        call. = FALSE
+      )
+    }
+    merged <- filtering[present_merged]
+    if ("maxEE" %in% names(merged)) {
+      checkmate::assert_number(
+        merged$maxEE,
+        lower = 0,
+        finite = TRUE,
+        null.ok = TRUE
+      )
+    }
+    if ("maxEE_rate" %in% names(merged)) {
+      checkmate::assert_number(
+        merged$maxEE_rate,
+        lower = 0,
+        upper = 1,
+        finite = TRUE,
+        null.ok = TRUE
+      )
+    }
+    if ("maxNs" %in% names(merged)) {
+      checkmate::assert_count(merged$maxNs, null.ok = TRUE)
+    }
+    if ("maxLen" %in% names(merged)) {
+      checkmate::assert_count(merged$maxLen, positive = TRUE, null.ok = TRUE)
+    }
+    if ("minLen" %in% names(merged)) {
+      checkmate::assert_count(merged$minLen, null.ok = TRUE)
+    }
+    options(
+      optimotu.pipeline.merged_filter_options = stats::update(
+        merged_filter_options(),
+        merged
+      )
     )
+  } else {
+    if (length(present_merged) > 0L) {
+      warning(
+        "Ignoring merged-read filtering option(s) ",
+        paste(present_merged, collapse = ", "),
+        " because denoising method is 'dada2' (paired-read filtering is used).",
+        call. = FALSE
+      )
+    }
     checkmate::assert_number(
       filtering$maxEE_R1,
       lower = 0,
@@ -2102,6 +2315,7 @@ parse_pipeline_options <- function() {
   parse_forward_primer(pipeline_options)
   parse_reverse_primer(pipeline_options)
   parse_trim_options(pipeline_options)
+  parse_denoising_options(pipeline_options)
   parse_filter_options(pipeline_options)
   parse_uncross_options(pipeline_options)
   parse_amplicon_model_options(pipeline_options)

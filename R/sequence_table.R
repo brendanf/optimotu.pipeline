@@ -151,9 +151,9 @@ make_long_sequence_table.list <- function(x, rc = FALSE) {
 #' Convert an object into a long (i.e. sparse) sequence occurrence table where
 #' sequences are stored as integer indices to a master list
 #'
-#' @param x (`data.frame` as returned by `dada2::mergePairs()`, or integer
-#' matrix as returned by `dada2::makeSequenceTable()`, or a list of one of
-#' these.)
+#' @param x (`data.frame` as returned by `dada2::mergePairs()`, integer
+#' matrix as returned by `dada2::makeSequenceTable()`, `uc_cluster` as
+#' returned by [`vsearch_cluster_unoise2()`], or a list of one of these.)
 #' @param seqs (`character` vector, file name, or `Biostrings::XStringSet`)
 #' master list of sequences
 #' @param rc (logical flag) if TRUE, sequences in `x` will be reverse
@@ -218,6 +218,32 @@ make_mapped_sequence_table.matrix <- function(x, seqs, rc = FALSE) {
 
 #' @rdname make_mapped_sequence_table
 #' @exportS3Method
+make_mapped_sequence_table.uc_cluster <- function(x, seqs, rc = FALSE) {
+  # avoid R CMD check note for undefined global variables due to NSE
+  seq_idx <- nread <- NULL
+  checkmate::assert_class(x, "uc_cluster")
+  checkmate::assert_flag(rc)
+  if (checkmate::test_file_exists(seqs, "r")) {
+    seqs <- Biostrings::readDNAStringSet(seqs)
+  }
+  if (nrow(x$clusters) == 0L) {
+    return(tibble::tibble(seq_idx = integer(), nread = integer()))
+  }
+  cluster_seq <- x$clusters$seq
+  if (isTRUE(rc)) {
+    cluster_seq <- as.character(Biostrings::reverseComplement(
+      Biostrings::DNAStringSet(cluster_seq)
+    ))
+  }
+  tibble::tibble(
+    seq_idx = as.integer(BiocGenerics::match(cluster_seq, seqs)),
+    nread = as.integer(x$clusters$size)
+  ) |>
+    dplyr::filter(!is.na(seq_idx), nread > 0L)
+}
+
+#' @rdname make_mapped_sequence_table
+#' @exportS3Method
 make_mapped_sequence_table.list <- function(x, seqs, rc = FALSE) {
   # avoid R CMD check note for undefined global variables due to NSE
   nread <- seq_idx <- NULL
@@ -225,27 +251,34 @@ make_mapped_sequence_table.list <- function(x, seqs, rc = FALSE) {
   if (checkmate::test_file_exists(seqs, "r")) {
     seqs <- Biostrings::readDNAStringSet(seqs)
   }
-  out <- if (checkmate::test_list(x, types = "data.frame")) {
+  out <- if (length(x) == 0L) {
+    tibble::tibble(
+      sample = character(),
+      seq_idx = integer(),
+      nread = integer()
+    )
+  } else if (checkmate::test_list(x, types = "data.frame")) {
     checkmate::assert_named(x)
-    if (length(x) == 0) {
-      tibble::tibble(
-        sample = character(),
-        seq_idx = integer(),
-        nread = integer()
-      )
-    } else {
-      purrr::map_dfr(
-        x,
-        make_mapped_sequence_table.data.frame,
-        seqs = seqs,
-        rc = rc,
-        .id = "sample"
-      )
-    }
+    purrr::map_dfr(
+      x,
+      make_mapped_sequence_table.data.frame,
+      seqs = seqs,
+      rc = rc,
+      .id = "sample"
+    )
   } else if (checkmate::test_list(x, types = "matrix")) {
     purrr::map_dfr(x, make_mapped_sequence_table.matrix, seqs = seqs, rc = rc)
+  } else if (all(vapply(x, inherits, logical(1), "uc_cluster"))) {
+    checkmate::assert_named(x)
+    purrr::map_dfr(
+      x,
+      make_mapped_sequence_table.uc_cluster,
+      seqs = seqs,
+      rc = rc,
+      .id = "sample"
+    )
   } else {
-    stop("cannot determine entry type in make_long_sequence_table.list")
+    stop("cannot determine entry type in make_mapped_sequence_table.list")
   }
   dplyr::summarize(out, nread = sum(nread), .by = c(sample, seq_idx))
 }

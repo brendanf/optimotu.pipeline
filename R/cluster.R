@@ -544,19 +544,35 @@ do_denovo_cluster <- function(
     file = seq_file,
     return = "seq"
   )
-  denovo_sc <- optimotu::seq_cluster(
-    seq = denovo_seq,
-    dist_config = dist_config,
-    threshold_config = optimotu::threshold_set(
-      tryCatch(
-        denovo_thresholds[[unique(predenovo_taxon_table[[parent_rank]])]],
-        error = function(e) denovo_thresholds[["_NA_"]]
-      ) |>
-        optimotu::threshold_as_dist()
-    ),
-    clust_config = optimotu::clust_tree(),
-    parallel_config = parallel_config
+  threshold_config <- optimotu::threshold_set(
+    tryCatch(
+      denovo_thresholds[[unique(predenovo_taxon_table[[parent_rank]])]],
+      error = function(e) denovo_thresholds[["_NA_"]]
+    ) |>
+      optimotu::threshold_as_dist()
   )
+  # seq_cluster() with USEARCH rewrites the call to
+  # seq_cluster_usearch.DNAStringSet and evals it in the caller, where
+  # that unexported method name is not visible. The exported generic
+  # with a DNAStringSet dispatches through S3 instead.
+  if (identical(dist_config$method, "usearch")) {
+    denovo_sc <- optimotu::seq_cluster_usearch(
+      seq = Biostrings::DNAStringSet(denovo_seq),
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config,
+      usearch = dist_config$usearch,
+      usearch_ncpu = dist_config$usearch_ncpu
+    )
+  } else {
+    denovo_sc <- optimotu::seq_cluster(
+      seq = denovo_seq,
+      dist_config = dist_config,
+      threshold_config = threshold_config,
+      clust_config = clust_config,
+      parallel_config = parallel_config
+    )
+  }
   denovo_sc |>
     t() |>
     tibble::as_tibble() |>
