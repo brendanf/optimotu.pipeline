@@ -18,7 +18,9 @@ unoise_seq_map(sample, fq_raw, fq_trim, fq_merged, uc, seq_all, rc = FALSE)
 \item{uc}{(\code{uc_cluster}) result of \code{\link[=vsearch_cluster_unoise2]{vsearch_cluster_unoise2()}} for this
 sample}
 
-\item{seq_all}{(\code{character} or \code{XStringSet}) unique ASV sequences}
+\item{seq_all}{(\code{character} vector of sequences,
+\code{\link[Biostrings:XStringSet-class]{XStringSet}}, or a readable FASTA path,
+e.g. a \code{tar_file} target) unique ASV sequences}
 
 \item{rc}{(\code{logical}) if \code{TRUE}, centroid sequences in \code{uc} are
 reverse-complemented relative to \code{seq_all}}
@@ -34,7 +36,12 @@ stages:
 0x01 = trimmed
 0x02 = merged and quality-filtered
 0x04 = denoised
+0x08 = survived UNCROSS (set later by \code{\link[=add_uncross_to_seq_map]{add_uncross_to_seq_map()}} when
+\code{is_tag_jump} is \code{FALSE}; not set here)
 }
+
+Bits \code{0x10}--\code{0x80} are reserved for ASV-level filter results
+(\code{asv_map$result}: chimera/spike/model), not per-read fate flags.
 }
 \description{
 Analog of \code{\link[=seq_map]{seq_map()}} for the UNOISE path, where merging and quality

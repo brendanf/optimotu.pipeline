@@ -87,7 +87,9 @@ read_seq_ids <- function(seq) {
 #' @param fq_merged (`character`) name of the merged and filtered FASTQ file
 #' @param uc (`uc_cluster`) result of [`vsearch_cluster_unoise2()`] for this
 #'   sample
-#' @param seq_all (`character` or `XStringSet`) unique ASV sequences
+#' @param seq_all (`character` vector of sequences,
+#'   [`XStringSet`][Biostrings::XStringSet-class], or a readable FASTA path,
+#'   e.g. a `tar_file` target) unique ASV sequences
 #' @param rc (`logical`) if `TRUE`, centroid sequences in `uc` are
 #'   reverse-complemented relative to `seq_all`
 #'
@@ -100,6 +102,11 @@ read_seq_ids <- function(seq) {
 #'    0x01 = trimmed
 #'    0x02 = merged and quality-filtered
 #'    0x04 = denoised
+#'    0x08 = survived UNCROSS (set later by [add_uncross_to_seq_map()] when
+#'      `is_tag_jump` is `FALSE`; not set here)
+#'
+#' Bits `0x10`--`0x80` are reserved for ASV-level filter results
+#' (`asv_map$result`: chimera/spike/model), not per-read fate flags.
 #' @export
 unoise_seq_map <- function(
   sample,
@@ -127,17 +134,11 @@ unoise_seq_map <- function(
   unique_id <- derep_map$unique_id[match(merged_seq_id, derep_map$seq_id)]
   clust_idx <- uc$map$clust_idx[match(unique_id, uc$map$seq_id)]
   centroid_seq <- uc$clusters$seq[match(clust_idx, uc$clusters$clust_idx)]
-  if (isTRUE(rc) && length(centroid_seq) > 0L) {
-    not_na <- !is.na(centroid_seq)
-    centroid_seq[not_na] <- as.character(Biostrings::reverseComplement(
-      Biostrings::DNAStringSet(centroid_seq[not_na])
-    ))
-  }
-  if (checkmate::test_file_exists(seq_all, "r")) {
-    seq_all <- Biostrings::readDNAStringSet(seq_all)
-  }
-  seq_all_chr <- as.character(seq_all)
-  seq_map$dada_idx <- seq_map$seq_idx <- match(centroid_seq, seq_all_chr)
+  seq_map$dada_idx <- seq_map$seq_idx <- match_to_seq_all(
+    centroid_seq,
+    seq_all,
+    rc = rc
+  )
   dplyr::transmute(
     seq_map,
     sample = sample,

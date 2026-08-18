@@ -51,6 +51,38 @@ dada_merge_map <- function(dadaF, derepF, dadaR, derepR, merged) {
   }
 }
 
+#' Match sequences to a master ASV list
+#'
+#' @param sequences (`character`) query sequences, possibly with `NA`
+#' @param seq_all (`character` vector of sequences,
+#'   [`XStringSet`][Biostrings::XStringSet-class], or a readable FASTA path)
+#'   unique ASV sequences
+#' @param rc (`logical`) if `TRUE`, reverse-complement `sequences` before
+#'   matching. Use when queries are reverse-oriented relative to `seq_all`.
+#' @return (`integer`) 1-based indices into `seq_all`; `NA` where there is no
+#'   match or the query is `NA`
+#' @keywords internal
+match_to_seq_all <- function(sequences, seq_all, rc = FALSE) {
+  checkmate::assert_flag(rc)
+  if (checkmate::test_file_exists(seq_all, "r")) {
+    seq_all <- Biostrings::readDNAStringSet(seq_all)
+  }
+  sequences <- as.character(sequences)
+  out <- rep(NA_integer_, length(sequences))
+  not_na <- !is.na(sequences)
+  if (!any(not_na)) {
+    return(out)
+  }
+  query <- sequences[not_na]
+  if (isTRUE(rc)) {
+    query <- as.character(Biostrings::reverseComplement(
+      Biostrings::DNAStringSet(query)
+    ))
+  }
+  out[not_na] <- as.integer(BiocGenerics::match(query, seq_all))
+  out
+}
+
 #' Map the fate of individual reads through merging to find unique reads
 #'
 #' @param sample (`character`) name of the sample
@@ -63,18 +95,26 @@ dada_merge_map <- function(dadaF, derepF, dadaR, derepR, merged) {
 #' @param derepR ([`dada2::dada-class`]) dereplicated R2
 #' @param merged (`data.frame` as returned by `dada2::mergePairs()`) result of
 #' merging `dadaF` and `dadaR`
-#' @param seq_all (`character`) unique ASV sequences
+#' @param seq_all (`character` vector of sequences,
+#'   [`XStringSet`][Biostrings::XStringSet-class], or a readable FASTA path,
+#'   e.g. a `tar_file` target) unique ASV sequences
 #' @param rc (`logical`) if `TRUE`, sequences in `merged` are reverse-complemented
 #'  relative to `seq_all`.
 #'
 #' @return `data.frame` with columns:
-#'  -`sample` (character) the sample name
-#'  -`raw_idx` (integer) the index of the sequence in the raw file; see `seq_map()`
-#'  -`seq_idx` (integer) the index of the sequence in seq_all
-#'  -`flags` (raw) bitset indicating the presence of the sequence at different stages:
+#'  - `sample` (character) the sample name
+#'  - `raw_idx` (integer) the index of the sequence in the raw file
+#'  - `seq_idx` (integer) the index of the sequence in `seq_all`
+#'  - `flags` (raw) bitset indicating the presence of the sequence at different
+#'    stages:
 #'    0x01 = trimmed
 #'    0x02 = filtered
 #'    0x04 = denoised & merged
+#'    0x08 = survived UNCROSS (set later by [add_uncross_to_seq_map()] when
+#'      `is_tag_jump` is `FALSE`; not set here)
+#'
+#' Bits `0x10`--`0x80` are reserved for ASV-level filter results
+#' (`asv_map$result`: chimera/spike/model), not per-read fate flags.
 #' @export
 seq_map <- function(
   sample,
@@ -95,9 +135,11 @@ seq_map <- function(
   seq_map <- fastq_seq_map(fq_raw, fq_trim, fq_filt)
   dada_map <- dada_merge_map(dadaF, derepF, dadaR, derepR, merged)
   seq_map$dada_idx <-
-    seq_map$seq_idx <- match(merged$sequence, seq_all)[dada_map$merge_idx[
-      seq_map$filt_idx
-    ]]
+    seq_map$seq_idx <- match_to_seq_all(
+      merged$sequence,
+      seq_all,
+      rc = rc
+    )[dada_map$merge_idx[seq_map$filt_idx]]
   dplyr::transmute(
     seq_map,
     sample = sample,

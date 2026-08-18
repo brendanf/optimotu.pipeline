@@ -313,11 +313,15 @@ lulu_map_lowmem <- function(
 ) {
   otu_table_targets <- extract_targets(rlang::enquo(otu_table))
   if (length(otu_table_targets) < 1) {
-    stop("'otu_table` must include one or more targets from a `targets` pipeline.")
+    stop(
+      "'otu_table` must include one or more targets from a `targets` pipeline."
+    )
   }
   match_table_targets <- extract_targets(rlang::enquo(match_table))
   if (length(match_table_targets) < 1) {
-    stop("'match_table` must include one or more targets from a `targets` pipeline.")
+    stop(
+      "'match_table` must include one or more targets from a `targets` pipeline."
+    )
   }
 
   checkmate::assert_numeric(max_dist, lower = 0)
@@ -402,6 +406,47 @@ lulu_table <- function(
       .by = c(everything(), -nread, -!!id_col_sym)
     ) |>
     dplyr::rename(!!id_col_sym := !!rlang::sym(lulu_col))
+}
+
+#' Remap a per-read fate map through LULU parent assignment
+#'
+#' Rewrites `seq_idx` from the denoise-time ASV id to the LULU parent id so it
+#' matches post-LULU community tables (`seqtable_lulu`, `seqtable_uncross`).
+#' The original denoise-time id is kept as `denoise_idx`. A LULU daughter is
+#' `!is.na(denoise_idx) && denoise_idx != seq_idx`. No flag bit is set; bits
+#' `0x10`--`0x80` are reserved for ASV-level filter results.
+#'
+#' Never-denoised rows (`seq_idx` `NA`) are left unchanged. Denoise ids missing
+#' from `lulu_map` keep their original `seq_idx`.
+#'
+#' @param seqmap (`data.frame`) sequence map, as returned by [seq_map()] or
+#'   [unoise_seq_map()]
+#' @param lulu_map (`data.frame`) output of [lulu_map()], with columns
+#'   `seq_idx` and `lulu_idx`
+#' @return `data.frame` with the same columns as `seqmap`, plus `denoise_idx`
+#'   (integer). `seq_idx` is the LULU parent where a mapping exists.
+#' @export
+add_lulu_to_seq_map <- function(seqmap, lulu_map) {
+  denoise_idx <- seq_idx <- lulu_idx <- NULL
+  checkmate::assert_data_frame(seqmap)
+  checkmate::assert_names(
+    names(seqmap),
+    must.include = c("sample", "raw_idx", "seq_idx", "flags")
+  )
+  checkmate::assert_data_frame(lulu_map)
+  checkmate::assert_names(
+    names(lulu_map),
+    must.include = c("seq_idx", "lulu_idx")
+  )
+  seqmap |>
+    dplyr::mutate(denoise_idx = seq_idx) |>
+    dplyr::left_join(
+      dplyr::distinct(lulu_map, seq_idx, lulu_idx),
+      by = "seq_idx"
+    ) |>
+    dplyr::mutate(seq_idx = dplyr::coalesce(lulu_idx, seq_idx)) |>
+    dplyr::select(-lulu_idx) |>
+    dplyr::relocate(denoise_idx, .after = seq_idx)
 }
 
 #' Compute pairwise distances for LULU

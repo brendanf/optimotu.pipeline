@@ -6,8 +6,8 @@
 #' to make curves more steep)
 #' @param id_col (`character`) name of the column uniquely identifying the
 #' sequence
-#' @return `data.frame` with columns `sample`, `nread`, `total`, `uncross`, and
-#' `is_tag_jump`
+#' @return `data.frame` with the input columns (including `id_col`) plus
+#' `total`, `uncross`, and `is_tag_jump`. Row order matches `seqtable`.
 #' @export
 #   core by Vladimir Mikryukov,
 #   edited for 'targets' by Sten Anslan
@@ -45,8 +45,7 @@ remove_tag_jumps <- function(seqtable, f, p, id_col = "seq") {
     dplyr::mutate(
       total = sum(nread, na.rm = TRUE),
       .by = dplyr::all_of(id_col)
-    ) |>
-    dplyr::select(-dplyr::all_of(id_col))
+    )
 
   ## Esimate UNCROSS score
   out <- cbind(
@@ -68,9 +67,22 @@ remove_tag_jumps <- function(seqtable, f, p, id_col = "seq") {
 
 #' Add uncrossing information to a sequence map
 #'
+#' Sets bit `0x08` when the read's current `seq_idx` is present in `uncross`
+#' for that sample and `is_tag_jump` is `FALSE`. Join-miss and tag-jumps both
+#' leave `0x08` unset. Extra columns on `seqmap` (e.g. `denoise_idx`) are
+#' preserved.
+#'
+#' When `uncross` includes `seq_idx` (the default after
+#' [remove_tag_jumps()]), the join uses that column. Otherwise keys are rebuilt
+#' from `seqtable_raw` by row position.
+#'
+#' Call this after [add_lulu_to_seq_map()] so `seq_idx` is the LULU parent
+#' when LULU is enabled.
+#'
 #' @param seqmap (`data.frame`) sequence map, as returned by `seq_map()`
-#' @param seqtable_raw (`data.frame`) raw sequence table, as returned by
-#' `make_mapped_sequence_table()`.
+#' @param seqtable_raw (`data.frame`) sequence table passed to
+#'   [remove_tag_jumps()]. Used to rebuild join keys when `uncross` does not
+#'   contain `seq_idx`.
 #' @param uncross (`data.frame`) uncrossing information, as returned by
 #' `remove_tag_jumps()`.
 #' @return `data.frame` with the same columns as `seqmap`, but with the `flags`
@@ -78,23 +90,43 @@ remove_tag_jumps <- function(seqtable, f, p, id_col = "seq") {
 #' @export
 add_uncross_to_seq_map <- function(seqmap, seqtable_raw, uncross) {
   # avoid R CMD check NOTE for undeclared globals
-  raw_idx <- seq_idx <- flags <- is_tag_jump <- NULL
+  flags <- is_tag_jump <- seq_idx <- NULL
 
-  dplyr::left_join(
-    seqmap,
+  checkmate::assert_data_frame(seqmap)
+  checkmate::assert_names(
+    names(seqmap),
+    must.include = c("sample", "seq_idx", "flags")
+  )
+  checkmate::assert_data_frame(uncross)
+  checkmate::assert_names(
+    names(uncross),
+    must.include = c("sample", "is_tag_jump")
+  )
+
+  uncross_keys <- if ("seq_idx" %in% names(uncross)) {
+    dplyr::select(uncross, dplyr::all_of(c("sample", "seq_idx", "is_tag_jump")))
+  } else {
+    checkmate::assert_data_frame(seqtable_raw)
+    checkmate::assert_names(
+      names(seqtable_raw),
+      must.include = c("sample", "seq_idx")
+    )
     tibble::tibble(
       sample = seqtable_raw$sample,
       seq_idx = seqtable_raw$seq_idx,
       is_tag_jump = uncross$is_tag_jump
-    ),
+    )
+  }
+
+  dplyr::left_join(
+    seqmap,
+    uncross_keys,
     by = c("sample", "seq_idx")
   ) |>
-    dplyr::transmute(
-      sample,
-      raw_idx,
-      seq_idx,
+    dplyr::mutate(
       flags = flags | as.raw(ifelse(is.na(is_tag_jump) | is_tag_jump, 0, 0x08))
-    )
+    ) |>
+    dplyr::select(-is_tag_jump)
 }
 
 #' Summarize uncrossing information

@@ -38,20 +38,30 @@ seq_map(
 \item{merged}{(\code{data.frame} as returned by \code{dada2::mergePairs()}) result of
 merging \code{dadaF} and \code{dadaR}}
 
-\item{seq_all}{(\code{character}) unique ASV sequences}
+\item{seq_all}{(\code{character} vector of sequences,
+\code{\link[Biostrings:XStringSet-class]{XStringSet}}, or a readable FASTA path,
+e.g. a \code{tar_file} target) unique ASV sequences}
 
 \item{rc}{(\code{logical}) if \code{TRUE}, sequences in \code{merged} are reverse-complemented
 relative to \code{seq_all}.}
 }
 \value{
 \code{data.frame} with columns:
--\code{sample} (character) the sample name
--\code{raw_idx} (integer) the index of the sequence in the raw file; see \code{seq_map()}
--\code{seq_idx} (integer) the index of the sequence in seq_all
--\code{flags} (raw) bitset indicating the presence of the sequence at different stages:
+\itemize{
+\item \code{sample} (character) the sample name
+\item \code{raw_idx} (integer) the index of the sequence in the raw file
+\item \code{seq_idx} (integer) the index of the sequence in \code{seq_all}
+\item \code{flags} (raw) bitset indicating the presence of the sequence at different
+stages:
 0x01 = trimmed
 0x02 = filtered
 0x04 = denoised & merged
+0x08 = survived UNCROSS (set later by \code{\link[=add_uncross_to_seq_map]{add_uncross_to_seq_map()}} when
+\code{is_tag_jump} is \code{FALSE}; not set here)
+}
+
+Bits \code{0x10}--\code{0x80} are reserved for ASV-level filter results
+(\code{asv_map$result}: chimera/spike/model), not per-read fate flags.
 }
 \description{
 Map the fate of individual reads through merging to find unique reads

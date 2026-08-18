@@ -9,8 +9,9 @@ add_uncross_to_seq_map(seqmap, seqtable_raw, uncross)
 \arguments{
 \item{seqmap}{(\code{data.frame}) sequence map, as returned by \code{seq_map()}}
 
-\item{seqtable_raw}{(\code{data.frame}) raw sequence table, as returned by
-\code{make_mapped_sequence_table()}.}
+\item{seqtable_raw}{(\code{data.frame}) sequence table passed to
+\code{\link[=remove_tag_jumps]{remove_tag_jumps()}}. Used to rebuild join keys when \code{uncross} does not
+contain \code{seq_idx}.}
 
 \item{uncross}{(\code{data.frame}) uncrossing information, as returned by
 \code{remove_tag_jumps()}.}
@@ -20,5 +21,16 @@ add_uncross_to_seq_map(seqmap, seqtable_raw, uncross)
 column updated to include the \code{is_tag_jump} information from \code{uncross}.
 }
 \description{
-Add uncrossing information to a sequence map
+Sets bit \code{0x08} when the read's current \code{seq_idx} is present in \code{uncross}
+for that sample and \code{is_tag_jump} is \code{FALSE}. Join-miss and tag-jumps both
+leave \code{0x08} unset. Extra columns on \code{seqmap} (e.g. \code{denoise_idx}) are
+preserved.
+}
+\details{
+When \code{uncross} includes \code{seq_idx} (the default after
+\code{\link[=remove_tag_jumps]{remove_tag_jumps()}}), the join uses that column. Otherwise keys are rebuilt
+from \code{seqtable_raw} by row position.
+
+Call this after \code{\link[=add_lulu_to_seq_map]{add_lulu_to_seq_map()}} so \code{seq_idx} is the LULU parent
+when LULU is enabled.
 }

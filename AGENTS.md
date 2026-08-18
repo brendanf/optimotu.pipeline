@@ -34,7 +34,9 @@ External tool wrappers:
 - `R/hmmer.R`, `R/infernal.R`, `R/epa.R`, `R/protax.R`, `R/bayesant.R`
 - `R/dada2_wrappers.R`, `R/dada2_map.R`, `R/dada2_chimera.R` (DADA2
   filtering/denoising/dereplication/merge options and per-read fate mapping,
-  plus per-sample *de novo* chimera detection)
+  plus per-sample *de novo* chimera detection). `seq_map()` accepts `seq_all`
+  as sequences, an `XStringSet`, or a FASTA path (`tar_file`). `seq_idx` is
+  the current community-table id; after LULU that is the parent.
 - `R/vsearch.R` — vsearch wrappers including paired-read merging
   (`vsearch_fastq_merge_pairs()`) and UNOISE clustering
   (`vsearch_cluster_unoise2()`, which pipes `--fastx_uniques` into
@@ -47,12 +49,16 @@ Denoising / read-quality post-processing:
 - `R/numt.R` — detection of Nuclear Mitochondrial Paralogs (NUMTs) from
   `hmmalign()`/A2M alignment output
 - `R/uncross.R` — removal of suspected tag-jump/cross-talk from sequence
-  tables
+  tables; `add_uncross_to_seq_map()` sets fate-map bit `0x08` (survived
+  UNCROSS). Join after LULU remap so `seq_idx` is the parent. Bits
+  `0x10`--`0x80` are reserved for `asv_map$result`, not read flags.
 
 Secondary clustering / OTU curation:
 
 - `R/lulu_long.R` — LULU secondary denoising (Frøslev et al. 2017), merges
-  putative artifact OTUs into parent OTUs post-clustering
+  putative artifact OTUs into parent OTUs post-clustering.
+  `add_lulu_to_seq_map()` rewrites per-read `seq_idx` to the parent and
+  stores `denoise_idx` (no extra flag bit).
 - `src/lulu.cpp` — native backend for LULU's pairwise comparisons
 - configured via `parse_lulu_options()` in `R/pipeline_options.R`
   (`do_lulu`, `lulu_dist_type`, `lulu_max_dist`, etc.)
@@ -102,7 +108,7 @@ families include:
   `unoise.R`), configured through `parse_denoising_options()` /
   `parse_filter_options()` (`do_unoise()`, `do_dada2()`, `denoising_method()`)
 - LULU secondary-clustering entry points (`lulu_long.R`), configured through
-  `parse_lulu_options()`
+  `parse_lulu_options()`, including `add_lulu_to_seq_map()` for fate maps
 
 Changes to exported option helpers are high-risk because downstream
 `optimotu_targets` scripts often quote/unquote these calls inside target
@@ -130,6 +136,9 @@ commands.
     `R/pipeline_options.R`
 - change NUMT or tag-jump/cross-talk filtering:
   - `R/numt.R`, `R/uncross.R`
+- change per-read fate maps (FASTA/`rc` matching, LULU remap, UNCROSS bits):
+  - `R/dada2_map.R`, `R/unoise.R`, `add_lulu_to_seq_map()`,
+    `add_uncross_to_seq_map()`
 
 ## 5) Testing workflow
 

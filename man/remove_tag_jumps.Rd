@@ -19,8 +19,8 @@ to make curves more steep)}
 sequence}
 }
 \value{
-\code{data.frame} with columns \code{sample}, \code{nread}, \code{total}, \code{uncross}, and
-\code{is_tag_jump}
+\code{data.frame} with the input columns (including \code{id_col}) plus
+\code{total}, \code{uncross}, and \code{is_tag_jump}. Row order matches \code{seqtable}.
 }
 \description{
 Remove potential tag-jump from sequence table

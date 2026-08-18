@@ -1,4 +1,6 @@
 # optimotu.pipeline (development version)
+* Add new helpers (and fix old helpers) for read-fate maps so that they work
+  correctly with LULU enabled.
 * Fix `do_denovo_cluster()` with USEARCH distances: call the exported
   `seq_cluster_usearch()` generic on a `DNAStringSet` so clustering does not
   look up the unexported `seq_cluster_usearch.DNAStringSet` method in the
