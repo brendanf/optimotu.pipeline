@@ -425,6 +425,7 @@ lulu_table <- function(
 #'   `seq_idx` and `lulu_idx`
 #' @return `data.frame` with the same columns as `seqmap`, plus `denoise_idx`
 #'   (integer). `seq_idx` is the LULU parent where a mapping exists.
+#' @seealso [with_seqmap_annotate()], [add_uncross_to_seq_map()]
 #' @export
 add_lulu_to_seq_map <- function(seqmap, lulu_map) {
   denoise_idx <- seq_idx <- lulu_idx <- NULL

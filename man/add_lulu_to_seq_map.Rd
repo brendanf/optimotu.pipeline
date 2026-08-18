@@ -28,3 +28,6 @@ The original denoise-time id is kept as \code{denoise_idx}. A LULU daughter is
 Never-denoised rows (\code{seq_idx} \code{NA}) are left unchanged. Denoise ids missing
 from \code{lulu_map} keep their original \code{seq_idx}.
 }
+\seealso{
+\code{\link[=with_seqmap_annotate]{with_seqmap_annotate()}}, \code{\link[=add_uncross_to_seq_map]{add_uncross_to_seq_map()}}
+}

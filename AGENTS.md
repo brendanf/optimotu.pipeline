@@ -109,6 +109,7 @@ families include:
   `parse_filter_options()` (`do_unoise()`, `do_dada2()`, `denoising_method()`)
 - LULU secondary-clustering entry points (`lulu_long.R`), configured through
   `parse_lulu_options()`, including `add_lulu_to_seq_map()` for fate maps
+  and `with_seqmap_annotate()` to wrap those steps in target commands
 
 Changes to exported option helpers are high-risk because downstream
 `optimotu_targets` scripts often quote/unquote these calls inside target
@@ -138,7 +139,7 @@ commands.
   - `R/numt.R`, `R/uncross.R`
 - change per-read fate maps (FASTA/`rc` matching, LULU remap, UNCROSS bits):
   - `R/dada2_map.R`, `R/unoise.R`, `add_lulu_to_seq_map()`,
-    `add_uncross_to_seq_map()`
+    `add_uncross_to_seq_map()`, `with_seqmap_annotate()`
 
 ## 5) Testing workflow
 

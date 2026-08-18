@@ -87,6 +87,7 @@ remove_tag_jumps <- function(seqtable, f, p, id_col = "seq") {
 #' `remove_tag_jumps()`.
 #' @return `data.frame` with the same columns as `seqmap`, but with the `flags`
 #' column updated to include the `is_tag_jump` information from `uncross`.
+#' @seealso [with_seqmap_annotate()], [add_lulu_to_seq_map()]
 #' @export
 add_uncross_to_seq_map <- function(seqmap, seqtable_raw, uncross) {
   # avoid R CMD check NOTE for undeclared globals

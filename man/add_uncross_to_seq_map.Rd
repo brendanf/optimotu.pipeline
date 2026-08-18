@@ -34,3 +34,6 @@ from \code{seqtable_raw} by row position.
 Call this after \code{\link[=add_lulu_to_seq_map]{add_lulu_to_seq_map()}} so \code{seq_idx} is the LULU parent
 when LULU is enabled.
 }
+\seealso{
+\code{\link[=with_seqmap_annotate]{with_seqmap_annotate()}}, \code{\link[=add_lulu_to_seq_map]{add_lulu_to_seq_map()}}
+}

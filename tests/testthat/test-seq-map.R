@@ -112,3 +112,75 @@ test_that("add_uncross_to_seq_map falls back to positional keys", {
   expect_equal(bitwAnd(as.integer(out$flags[1]), 0x08), 0x08)
   expect_equal(bitwAnd(as.integer(out$flags[2]), 0x08), 0L)
 })
+
+test_that("with_seqmap_annotate is a no-op when LULU and UNCROSS are off", {
+  withr::local_options(
+    optimotu.pipeline.do_lulu = FALSE,
+    optimotu.pipeline.do_tag_jump = FALSE
+  )
+  expr <- quote(seq_map(x))
+  expect_identical(with_seqmap_annotate(expr), expr)
+})
+
+test_that("with_seqmap_annotate pipes LULU then UNCROSS without evaluating", {
+  withr::local_options(
+    optimotu.pipeline.do_lulu = TRUE,
+    optimotu.pipeline.do_tag_jump = TRUE
+  )
+  got <- with_seqmap_annotate(quote(seq_map(x)))
+  expect_true(is.call(got))
+  expect_equal(
+    got,
+    quote(
+      seq_map(x) |>
+        optimotu.pipeline::add_lulu_to_seq_map(lulu_asv_map) |>
+        optimotu.pipeline::add_uncross_to_seq_map(seqtable_lulu, uncross)
+    )
+  )
+})
+
+test_that("with_seqmap_annotate pipes LULU only", {
+  withr::local_options(
+    optimotu.pipeline.do_lulu = TRUE,
+    optimotu.pipeline.do_tag_jump = FALSE
+  )
+  expect_equal(
+    with_seqmap_annotate(quote(seq_map(x))),
+    quote(
+      seq_map(x) |>
+        optimotu.pipeline::add_lulu_to_seq_map(lulu_asv_map)
+    )
+  )
+})
+
+test_that("with_seqmap_annotate defaults UNCROSS seqtable without LULU", {
+  withr::local_options(
+    optimotu.pipeline.do_lulu = FALSE,
+    optimotu.pipeline.do_tag_jump = TRUE
+  )
+  expect_equal(
+    with_seqmap_annotate(quote(seq_map(x))),
+    quote(
+      seq_map(x) |>
+        optimotu.pipeline::add_uncross_to_seq_map(seqtable_raw, uncross)
+    )
+  )
+})
+
+test_that("with_seqmap_annotate accepts an explicit seqtable expression", {
+  withr::local_options(
+    optimotu.pipeline.do_lulu = TRUE,
+    optimotu.pipeline.do_tag_jump = TRUE
+  )
+  expect_equal(
+    with_seqmap_annotate(
+      quote(seq_map(x)),
+      seqtable = quote(seqtable_pre_uncross)
+    ),
+    quote(
+      seq_map(x) |>
+        optimotu.pipeline::add_lulu_to_seq_map(lulu_asv_map) |>
+        optimotu.pipeline::add_uncross_to_seq_map(seqtable_pre_uncross, uncross)
+    )
+  )
+})

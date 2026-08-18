@@ -179,3 +179,80 @@ merge_seq_maps <- function(seqmap_fwd, seqmap_rev) {
       flags = flags_fwd | flags_rev
     )
 }
+
+#' Pipe LULU and/or UNCROSS annotations onto a fate-map expression
+#'
+#' Plan-time helper for `targets` commands. Wraps `seqmap_expr` in
+#' [add_lulu_to_seq_map()] and/or [add_uncross_to_seq_map()] according to
+#' [do_lulu()] and [do_tag_jump()].
+#'
+#' The result is spliced into a target command with `!!`:
+#' ```
+#' tar_target(dada_map, !!with_seqmap_annotate(quote(seq_map(...))))
+#' ```
+#' Built with [base::substitute()] rather than `rlang::expr(!!x |> f())`.
+#' In a pipe, `!!` is parsed as two `!` operators, so that form would run
+#' the annotation at plan time instead of capturing an expression.
+#'
+#' @param seqmap_expr (`language`) quoted expression that produces a fate
+#'   map as from [seq_map()] or [unoise_seq_map()].
+#' @param lulu_map (`language`) expression for the LULU map target.
+#'   Default `lulu_asv_map`.
+#' @param seqtable (`language` or `NULL`) community table passed to
+#'   [remove_tag_jumps()]. Default `seqtable_lulu` when LULU is enabled,
+#'   otherwise `seqtable_raw`.
+#' @param uncross (`language`) expression for the UNCROSS target. Default
+#'   `uncross`.
+#' @return (`language`) `seqmap_expr`, possibly piped through LULU and
+#'   UNCROSS annotations.
+#' @seealso [add_lulu_to_seq_map()], [add_uncross_to_seq_map()]
+#' @export
+with_seqmap_annotate <- function(
+  seqmap_expr,
+  lulu_map = quote(lulu_asv_map),
+  seqtable = NULL,
+  uncross = quote(uncross)
+) {
+  checkmate::assert(
+    checkmate::check_class(seqmap_expr, "call"),
+    checkmate::check_class(seqmap_expr, "name"),
+    .var.name = "seqmap_expr"
+  )
+  checkmate::assert(
+    checkmate::check_class(lulu_map, "call"),
+    checkmate::check_class(lulu_map, "name"),
+    .var.name = "lulu_map"
+  )
+  checkmate::assert(
+    checkmate::check_class(uncross, "call"),
+    checkmate::check_class(uncross, "name"),
+    .var.name = "uncross"
+  )
+  expr <- seqmap_expr
+  if (do_lulu()) {
+    expr <- substitute(
+      EXPR |> optimotu.pipeline::add_lulu_to_seq_map(LULU),
+      list(EXPR = expr, LULU = lulu_map)
+    )
+  }
+  if (isTRUE(do_tag_jump())) {
+    if (is.null(seqtable)) {
+      seqtable <- if (do_lulu()) {
+        quote(seqtable_lulu)
+      } else {
+        quote(seqtable_raw)
+      }
+    } else {
+      checkmate::assert(
+        checkmate::check_class(seqtable, "call"),
+        checkmate::check_class(seqtable, "name"),
+        .var.name = "seqtable"
+      )
+    }
+    expr <- substitute(
+      EXPR |> optimotu.pipeline::add_uncross_to_seq_map(PRE, UNCROSS),
+      list(EXPR = expr, PRE = seqtable, UNCROSS = uncross)
+    )
+  }
+  expr
+}
