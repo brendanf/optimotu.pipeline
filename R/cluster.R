@@ -153,7 +153,9 @@ small_preclosed_taxon_table <- function(
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::mutate(ops = sum(is.na(!!rank_sym)) * sum(!is.na(!!rank_sym))) |>
     dplyr::filter(ops <= max_ops) |>
-    dplyr::select(-all_of("tar_group"))
+    dplyr::select(-all_of("tar_group")) |>
+    # Ungroup so distribute_tasks() sees all taxa, not one group at a time.
+    dplyr::ungroup()
 
   ops <- dplyr::select(out, all_of(c(parent_rank, "ops"))) |>
     dplyr::distinct() |>
@@ -431,7 +433,9 @@ small_predenovo_taxon_table <- function(
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::mutate(ops = dplyr::n() * (dplyr::n() - 1) / 2) |>
     dplyr::filter(ops <= max_ops) |>
-    dplyr::select(-all_of("tar_group"))
+    dplyr::select(-all_of("tar_group")) |>
+    # Ungroup so distribute_tasks() sees all taxa, not one group at a time.
+    dplyr::ungroup()
 
   ops <- dplyr::select(out, all_of(parent_rank), ops) |>
     dplyr::distinct() |>

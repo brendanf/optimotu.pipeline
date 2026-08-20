@@ -155,6 +155,94 @@ test_that("validate_asv_taxsort rejects ambiguous or incomplete tables", {
   )
 })
 
+small_table_asv_taxsort <- function(seq_id) {
+  tibble::tibble(
+    seq_id = seq_id,
+    seq_idx = seq_along(seq_id),
+    kingdom = "Euk",
+    phylum = "Chordata",
+    class = "Mammalia",
+    order = "Primates",
+    family = "Hominidae"
+  )
+}
+
+expect_one_group_per_parent <- function(out, parent_rank) {
+  groups_per_parent <- out |>
+    dplyr::distinct(dplyr::pick(dplyr::all_of(c(parent_rank, "tar_group")))) |>
+    dplyr::count(dplyr::pick(dplyr::all_of(parent_rank)))
+  expect_true(all(groups_per_parent$n == 1L))
+}
+
+test_that("small_preclosed_taxon_table splits leftover taxa across tar_groups", {
+  known <- tibble::tibble(
+    seq_id = sprintf("ASV%04d", 1:8),
+    genus = rep(c("Homo", "Pan"), each = 4L),
+    species = c(
+      "sapiens",
+      "sapiens",
+      NA,
+      NA,
+      "troglodytes",
+      "troglodytes",
+      NA,
+      NA
+    )
+  )
+  asv_taxsort <- small_table_asv_taxsort(known$seq_id)
+  # Each genus: 2 unknown * 2 known = 4 ops.
+  out_split <- small_preclosed_taxon_table(
+    known_taxon_table = known,
+    asv_taxsort = asv_taxsort,
+    rank = "species",
+    parent_rank = "genus",
+    tax_ranks = tax_ranks_fixture,
+    max_ops = 5
+  )
+  expect_equal(dplyr::n_distinct(out_split$tar_group), 2L)
+  expect_one_group_per_parent(out_split, "genus")
+
+  out_packed <- small_preclosed_taxon_table(
+    known_taxon_table = known,
+    asv_taxsort = asv_taxsort,
+    rank = "species",
+    parent_rank = "genus",
+    tax_ranks = tax_ranks_fixture,
+    max_ops = 8
+  )
+  expect_equal(dplyr::n_distinct(out_packed$tar_group), 1L)
+})
+
+test_that("small_predenovo_taxon_table splits leftover taxa across tar_groups", {
+  closedref <- tibble::tibble(
+    seq_id = sprintf("ASV%04d", 1:6),
+    genus = rep(c("Homo", "Pan"), each = 3L),
+    species = NA_character_
+  )
+  asv_taxsort <- small_table_asv_taxsort(closedref$seq_id)
+  # Each genus: 3 * (3 - 1) / 2 = 3 ops.
+  out_split <- small_predenovo_taxon_table(
+    closedref_taxon_table = closedref,
+    asv_taxsort = asv_taxsort,
+    rank = "species",
+    parent_rank = "genus",
+    tax_ranks = tax_ranks_fixture,
+    max_ops = 4
+  )
+  expect_equal(dplyr::n_distinct(out_split$tar_group), 2L)
+  expect_one_group_per_parent(out_split, "genus")
+
+  out_packed <- small_predenovo_taxon_table(
+    closedref_taxon_table = closedref,
+    asv_taxsort = asv_taxsort,
+    rank = "species",
+    parent_rank = "genus",
+    tax_ranks = tax_ranks_fixture,
+    max_ops = 6
+  )
+  expect_equal(dplyr::n_distinct(out_packed$tar_group), 1L)
+})
+
 test_that("large_preclosed and small_predenovo delegate seq_id join path", {
   out_large <- large_preclosed_taxon_table(
     known_taxon_table = known_taxon_id_fixture(),
