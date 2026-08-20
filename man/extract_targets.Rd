@@ -9,8 +9,7 @@ extract_targets(expr, ...)
 \arguments{
 \item{expr}{(\code{symbol}, \code{call}, or other defused expression accepted by
 \code{targets::tar_deps_raw()}) an unevaluated expression containing symbols
-which refer to targets tracked in the current project's
-\code{targets::tar_meta()}}
+which refer to targets in the current pipeline}
 }
 \value{
 (\code{character} vector) names of targets present in \code{expr}. If the
@@ -18,7 +17,10 @@ targets use dynamic branching so that they are stored as multiple children,
 the names of the children are returned.
 }
 \description{
-This function only works inside a running pipeline. (And maybe only on the
-main thread?  TBD...)
+Resolves symbols in \code{expr} to pipeline target names. Inside a running
+pipeline this uses in-memory metadata when available. Crew remote workers
+do not populate \code{tar_runtime$meta}; in that case names are taken from the
+current target's subpipeline. \code{targets::tar_meta()} is only used outside a
+pipeline.
 }
 \keyword{internal}

@@ -165,15 +165,94 @@ tar_merge <- function(plan1, plan2) {
   )
 }
 
+# Crew remote workers set tar_runtime$target but leave tar_runtime$meta
+# unset. tar_meta() / tar_read() are forbidden there, so these helpers
+# use the current target's subpipeline instead.
+lookup_names_in_meta <- function(deps, meta) {
+  unlist(
+    lapply(
+      deps,
+      function(x) {
+        if (meta$exists_record(x)) {
+          record <- meta$get_record(x)
+          if (record$type %in% c("stem", "branch")) {
+            record$name
+          } else if (identical(record$type, "pattern")) {
+            record$children
+          } else {
+            NULL
+          }
+        } else {
+          NULL
+        }
+      }
+    ),
+    use.names = FALSE
+  )
+}
+
+lookup_names_in_pipeline <- function(deps, pipeline) {
+  unlist(
+    lapply(
+      deps,
+      function(x) {
+        if (!targets:::pipeline_exists_target(pipeline, x)) {
+          return(NULL)
+        }
+        target <- targets:::pipeline_get_target(pipeline, x)
+        if (inherits(target, "tar_pattern")) {
+          targets:::target_get_children(target)
+        } else if (inherits(target, "tar_builder")) {
+          target$name
+        } else {
+          NULL
+        }
+      }
+    ),
+    use.names = FALSE
+  )
+}
+
+read_runtime_target <- function(name) {
+  name <- as.character(name)[[1L]]
+  runtime <- targets::tar_runtime_object()
+  meta <- runtime$meta
+  if (!is.null(meta) && isTRUE(meta$exists_record(name))) {
+    record <- meta$get_record(name)
+    store <- targets:::record_bootstrap_store(record)
+    file <- targets:::record_bootstrap_file(record)
+    return(targets:::store_read_object(store, file))
+  }
+  pipeline <- runtime$target$subpipeline
+  if (
+    !is.null(pipeline) &&
+      isTRUE(targets:::pipeline_exists_target(pipeline, name))
+  ) {
+    dep <- targets:::pipeline_get_target(pipeline, name)
+    return(targets:::target_read_value(dep, pipeline)$object)
+  }
+  if (!is.null(runtime$target) || !is.null(runtime$store)) {
+    stop(
+      "Cannot read target '",
+      name,
+      "' while the pipeline is running: tar_runtime$meta is unset and ",
+      "the name is not in the current target's subpipeline."
+    )
+  }
+  targets::tar_read_raw(name)
+}
+
 #' Extract names of targets from an expression
 #'
-#' This function only works inside a running pipeline. (And maybe only on the
-#' main thread?  TBD...)
+#' Resolves symbols in `expr` to pipeline target names. Inside a running
+#' pipeline this uses in-memory metadata when available. Crew remote workers
+#' do not populate `tar_runtime$meta`; in that case names are taken from the
+#' current target's subpipeline. `targets::tar_meta()` is only used outside a
+#' pipeline.
 #'
 #' @param expr (`symbol`, `call`, or other defused expression accepted by
 #'   `targets::tar_deps_raw()`) an unevaluated expression containing symbols
-#'   which refer to targets tracked in the current project's
-#'   `targets::tar_meta()`
+#'   which refer to targets in the current pipeline
 #'
 #' @return (`character` vector) names of targets present in `expr`. If the
 #'   targets use dynamic branching so that they are stored as multiple children,
@@ -181,37 +260,28 @@ tar_merge <- function(plan1, plan2) {
 #' @keywords internal
 extract_targets <- function(expr, ...) {
   deps <- targets::tar_deps_raw(expr)
-  meta <- targets::tar_runtime_object()$meta
-  if (is.null(meta)) {
-    meta <- targets::tar_meta(
-      any_of(deps),
-      fields = c("name", "type", "children"),
-      targets_only = TRUE
-    )
-    has_children = !is.na(meta$children)
-    c(
-      meta[!has_children, "name"],
-      unlist(meta[has_children, "children"])
-    )
-  } else {
-    unlist(
-      lapply(
-        deps,
-        \(x) {
-          if (meta$exists_record(x)) {
-            record <- meta$get_record(x)
-            if (record$type %in% c("stem", "branch")) {
-              record$name
-            } else if (record$type == "pattern") {
-              record$children
-            } else {
-              NULL
-            }
-          } else {
-            NULL
-          }
-        }
-      )
+  runtime <- targets::tar_runtime_object()
+  if (!is.null(runtime$meta)) {
+    return(lookup_names_in_meta(deps, runtime$meta))
+  }
+  pipeline <- runtime$target$subpipeline
+  if (!is.null(pipeline)) {
+    return(lookup_names_in_pipeline(deps, pipeline))
+  }
+  if (!is.null(runtime$target) || !is.null(runtime$store)) {
+    stop(
+      "Cannot resolve target names while the pipeline is running: ",
+      "tar_runtime$meta is unset and the current target has no subpipeline."
     )
   }
+  meta <- targets::tar_meta(
+    any_of(deps),
+    fields = c("name", "type", "children"),
+    targets_only = TRUE
+  )
+  has_children <- !is.na(meta$children)
+  c(
+    meta[!has_children, "name"],
+    unlist(meta[has_children, "children"])
+  )
 }

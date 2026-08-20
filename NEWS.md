@@ -1,4 +1,7 @@
 # optimotu.pipeline (development version)
+* Fix `lulu_map_lowmem()` on crew remote workers: resolve and load upstream
+  targets from the worker subpipeline instead of calling
+  `targets::tar_meta()` / `tar_read()` during the pipeline.
 * Add new helpers (and fix old helpers) for read-fate maps so that they work
   correctly with LULU enabled.
 * Fix `do_denovo_cluster()` with USEARCH distances: call the exported

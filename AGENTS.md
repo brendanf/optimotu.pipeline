@@ -58,7 +58,9 @@ Secondary clustering / OTU curation:
 - `R/lulu_long.R` — LULU secondary denoising (Frøslev et al. 2017), merges
   putative artifact OTUs into parent OTUs post-clustering.
   `add_lulu_to_seq_map()` rewrites per-read `seq_idx` to the parent and
-  stores `denoise_idx` (no extra flag bit).
+  stores `denoise_idx` (no extra flag bit). `lulu_map_lowmem()` must run
+  with `retrieval = "none"`; on crew workers it reads deps from the
+  target subpipeline rather than `tar_meta()` / `tar_read()`.
 - `src/lulu.cpp` — native backend for LULU's pairwise comparisons
 - configured via `parse_lulu_options()` in `R/pipeline_options.R`
   (`do_lulu`, `lulu_dist_type`, `lulu_max_dist`, etc.)

@@ -93,7 +93,9 @@ table.
 
 Because the function should be run in a target with \code{retrieval = "none"},
 any other arguments which depend on other targets should have those targets
-manually loaded with \code{targets::tar_read()}.
+manually loaded. Do not call \code{targets::tar_read()} from a crew worker;
+that is forbidden during a running pipeline. Prefer splicing extra
+values into the command with \verb{!!} at plan time.
 
 This version does not have the full functionality of \code{lulu_map()}; in
 particular it gives an error id \code{id_is_int = FALSE} and a warning if
