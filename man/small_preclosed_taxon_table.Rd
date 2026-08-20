@@ -10,7 +10,8 @@ small_preclosed_taxon_table(
   rank,
   parent_rank,
   tax_ranks,
-  max_ops = 1e+06
+  min_ops = cluster_min_parallel_ops(),
+  max_ops = cluster_max_batch_ops()
 )
 }
 \arguments{
@@ -29,8 +30,14 @@ allowed.}
 
 \item{tax_ranks}{(\code{character}) the taxonomic ranks to use}
 
-\item{max_ops}{(\code{integer} scalar) the maximum number of operations to put
-together in a single execution group}
+\item{min_ops}{(\code{numeric} scalar) pairwise comparisons at or below which a
+parent taxon is treated as "small". Should match \code{min_ops} passed to
+\code{\link[=large_preclosed_taxon_table]{large_preclosed_taxon_table()}}. Default \code{\link[=cluster_min_parallel_ops]{cluster_min_parallel_ops()}}.}
+
+\item{max_ops}{(\code{numeric} scalar) maximum pairwise comparisons to pack into
+one execution group. Default
+\code{\link[=cluster_max_batch_ops]{cluster_max_batch_ops()}}, which depends on the
+clustering distance method (~10-20 min per batch).}
 }
 \value{
 (\code{data.frame}) a table of sequences for which closed-reference

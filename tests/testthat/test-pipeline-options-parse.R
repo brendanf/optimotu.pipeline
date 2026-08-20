@@ -445,3 +445,65 @@ test_that("parse_filter_options is method-aware for paired vs merged keys", {
   expect_equal(opts$maxEE, 0.8)
   expect_equal(opts$minLen, 100L)
 })
+
+test_that("parse_cluster_options reads min_parallel_ops and max_batch_ops", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+
+  expect_equal(
+    optimotu.pipeline:::cluster_ops_defaults("hamming"),
+    list(min_parallel_ops = 1e6, max_batch_ops = 1e10)
+  )
+  expect_equal(
+    optimotu.pipeline:::cluster_ops_defaults("usearch"),
+    list(min_parallel_ops = 1e6, max_batch_ops = 1e10)
+  )
+  expect_equal(
+    optimotu.pipeline:::cluster_ops_defaults("wfa2"),
+    list(min_parallel_ops = 1e4, max_batch_ops = 1e8)
+  )
+  expect_equal(
+    optimotu.pipeline:::cluster_ops_defaults("edlib"),
+    list(min_parallel_ops = 1e4, max_batch_ops = 1e8)
+  )
+
+  msgs <- testthat::capture_messages(
+    optimotu.pipeline:::parse_cluster_options(
+      list(clustering = list(dist_config = "wfa2"))
+    )
+  )
+  expect_true(any(grepl("min_parallel_ops", msgs)))
+  expect_true(any(grepl("max_batch_ops", msgs)))
+  expect_equal(cluster_min_parallel_ops(), 1e4)
+  expect_equal(cluster_max_batch_ops(), 1e8)
+
+  msgs <- testthat::capture_messages(
+    optimotu.pipeline:::parse_cluster_options(
+      list(
+        clustering = list(
+          dist_config = "wfa2",
+          min_parallel_ops = 2e6,
+          max_batch_ops = 5e9
+        )
+      )
+    )
+  )
+  expect_false(any(grepl("job sizing", msgs)))
+  expect_equal(cluster_min_parallel_ops(), 2e6)
+  expect_equal(cluster_max_batch_ops(), 5e9)
+
+  expect_error(
+    suppressMessages(
+      optimotu.pipeline:::parse_cluster_options(
+        list(
+          clustering = list(
+            dist_config = "wfa2",
+            min_parallel_ops = 1e8,
+            max_batch_ops = 1e6
+          )
+        )
+      )
+    ),
+    "max_batch_ops must be greater than or equal to"
+  )
+})

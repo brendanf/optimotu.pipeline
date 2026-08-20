@@ -70,21 +70,49 @@ full_preclosed_taxon_table <- function(
   ensure_table(out)
 }
 
+#' Pack parent taxa into `tar_group` bins of at most `max_ops`
+#'
+#' @param table (`data.frame`) precluster table with `ops` and `tar_group`.
+#' @param parent_rank (`character`) parent taxon column name.
+#' @param max_ops (`numeric` scalar) maximum ops per execution group.
+#' @return (`data.frame`) table with `tar_group` from [distribute_tasks()].
+#' @keywords internal
+pack_precluster_taxon_table <- function(table, parent_rank, max_ops) {
+  table <- table |>
+    dplyr::select(-all_of("tar_group")) |>
+    dplyr::ungroup()
+  ops <- dplyr::select(table, all_of(c(parent_rank, "ops"))) |>
+    dplyr::distinct() |>
+    dplyr::mutate(tar_group = distribute_tasks(ops, max_ops)) |>
+    dplyr::select(-ops)
+  dplyr::left_join(table, ops, by = parent_rank) |>
+    dplyr::select(-ops) |>
+    ensure_table()
+}
+
 #' Calculate a pre-closed-reference table for taxa with many sequences
 #'
 #' This calculates a pre-closed-reference table for taxa with many sequences,
-#' which may be efficiently parallelized within a single parent taxon.
+#' which may be efficiently parallelized within a single parent taxon. Parent
+#' taxa are then packed into execution groups of at most `max_ops`
+#' comparisons; a taxon larger than `max_ops` is left in its own group.
 #'
 #' @inheritParams full_preclosed_taxon_table
-#' @param min_ops (`integer` scalar) the minimum number of operations required
-#' for a single parent taxon to be considered "large"
+#' @param min_ops (`numeric` scalar) pairwise comparisons above which a parent
+#'   taxon is treated as "large" and is parallelized within the taxon.
+#'   Default [cluster_min_parallel_ops()], which depends
+#'   on the clustering distance method.
+#' @param max_ops (`numeric` scalar) maximum pairwise comparisons to pack into
+#'   one execution group. Default
+#'   [cluster_max_batch_ops()], which depends on the
+#'   clustering distance method (~10-20 min per batch).
 #'
 #' @return (`data.frame`) a table of sequences for which closed-reference
 #' clustering is required. This includes both sequences which are not assigned
 #' to the target rank which will act as queries, and identified sequences
 #' which belong to the same parent rank as one or more queries. The results
-#' includes a `tar_group` column for dynamic branching over each parent
-#' taxon. If there are no queries, a single row is returned to branch over.
+#' includes a `tar_group` column for dynamic branching over execution groups.
+#' If there are no queries, a single row is returned to branch over.
 #' @export
 large_preclosed_taxon_table <- function(
   known_taxon_table,
@@ -92,9 +120,13 @@ large_preclosed_taxon_table <- function(
   rank,
   parent_rank,
   tax_ranks,
-  min_ops = 1e6
+  min_ops = cluster_min_parallel_ops(),
+  max_ops = cluster_max_batch_ops()
 ) {
+  # avoid R CMD check NOTE for undeclared globals
+  ops <- NULL
   checkmate::assert_number(min_ops, lower = 1)
+  checkmate::assert_number(max_ops, lower = 1)
 
   rank_sym <- rlang::sym(rank)
 
@@ -106,11 +138,11 @@ large_preclosed_taxon_table <- function(
     tax_ranks
   )
 
-  out <- fptt |>
+  fptt |>
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
-    dplyr::filter(sum(is.na(!!rank_sym)) * sum(!is.na(!!rank_sym)) > min_ops) |>
-    targets::tar_group()
-  ensure_table(out)
+    dplyr::mutate(ops = sum(is.na(!!rank_sym)) * sum(!is.na(!!rank_sym))) |>
+    dplyr::filter(ops > min_ops) |>
+    pack_precluster_taxon_table(parent_rank, max_ops)
 }
 
 #' Calculate a pre-closed-reference table for taxa with few sequences
@@ -119,8 +151,13 @@ large_preclosed_taxon_table <- function(
 #' and groups them into approximately equally sized execution groups.
 #'
 #' @inheritParams full_preclosed_taxon_table
-#' @param max_ops (`integer` scalar) the maximum number of operations to put
-#' together in a single execution group
+#' @param min_ops (`numeric` scalar) pairwise comparisons at or below which a
+#'   parent taxon is treated as "small". Should match `min_ops` passed to
+#'   [large_preclosed_taxon_table()]. Default [cluster_min_parallel_ops()].
+#' @param max_ops (`numeric` scalar) maximum pairwise comparisons to pack into
+#'   one execution group. Default
+#'   [cluster_max_batch_ops()], which depends on the
+#'   clustering distance method (~10-20 min per batch).
 #'
 #' @return (`data.frame`) a table of sequences for which closed-reference
 #' clustering is required. This includes both sequences which are not assigned
@@ -135,8 +172,12 @@ small_preclosed_taxon_table <- function(
   rank,
   parent_rank,
   tax_ranks,
-  max_ops = 1e6
+  min_ops = cluster_min_parallel_ops(),
+  max_ops = cluster_max_batch_ops()
 ) {
+  # avoid R CMD check NOTE for undeclared globals
+  ops <- NULL
+  checkmate::assert_number(min_ops, lower = 1)
   checkmate::assert_number(max_ops, lower = 1)
 
   rank_sym <- rlang::sym(rank)
@@ -149,22 +190,11 @@ small_preclosed_taxon_table <- function(
     tax_ranks
   )
 
-  out <- fptt |>
+  fptt |>
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::mutate(ops = sum(is.na(!!rank_sym)) * sum(!is.na(!!rank_sym))) |>
-    dplyr::filter(ops <= max_ops) |>
-    dplyr::select(-all_of("tar_group")) |>
-    # Ungroup so distribute_tasks() sees all taxa, not one group at a time.
-    dplyr::ungroup()
-
-  ops <- dplyr::select(out, all_of(c(parent_rank, "ops"))) |>
-    dplyr::distinct() |>
-    dplyr::mutate(tar_group = distribute_tasks(ops, max_ops)) |>
-    dplyr::select(-ops)
-
-  dplyr::left_join(out, ops, by = parent_rank) |>
-    dplyr::select(-ops) |>
-    ensure_table()
+    dplyr::filter(ops <= min_ops) |>
+    pack_precluster_taxon_table(parent_rank, max_ops)
 }
 
 #' Run closed-reference clustering
@@ -349,21 +379,29 @@ full_predenovo_taxon_table <- function(
 #' Calculate a pre-denovo taxon table for taxa with many sequences
 #'
 #' This calculates a pre-denovo taxon table for taxa with many sequences,
-#' which may be efficiently parallelized within a single parent taxon.
+#' which may be efficiently parallelized within a single parent taxon. Parent
+#' taxa are then packed into execution groups of at most `max_ops`
+#' comparisons; a taxon larger than `max_ops` is left in its own group.
 #'
 #' @param closedref_taxon_table (`data.frame`) a table of sequences for which
 #' closed-reference clustering is required. Must have columns `seq_idx`
 #' (`integer`) giving the indices of sequences in `seq_file`, as well as
 #' columns with names matching `rank` and `parent_rank`.
 #' @inheritParams full_preclosed_taxon_table
-#' @param min_ops (`integer` scalar) the minimum number of operations required
-#' for a single parent taxon to be considered "large"
+#' @param min_ops (`numeric` scalar) pairwise comparisons above which a parent
+#'   taxon is treated as "large" and is parallelized within the taxon.
+#'   Default [cluster_min_parallel_ops()], which depends
+#'   on the clustering distance method.
+#' @param max_ops (`numeric` scalar) maximum pairwise comparisons to pack into
+#'   one execution group. Default
+#'   [cluster_max_batch_ops()], which depends on the
+#'   clustering distance method (~10-20 min per batch).
 #'
 #' @return (`data.frame`) a table of sequences for which denovo clustering is
 #' required. This includes both sequences which are not assigned to the target
 #' rank which will act as queries, and identified sequences which belong to the
 #' same parent rank as one or more queries. The results includes a `tar_group`
-#' column for dynamic branching over each parent taxon. If there are no
+#' column for dynamic branching over execution groups. If there are no
 #' queries, a single row is returned to branch over.
 #' @export
 large_predenovo_taxon_table <- function(
@@ -372,9 +410,13 @@ large_predenovo_taxon_table <- function(
   rank,
   parent_rank,
   tax_ranks,
-  min_ops = 1e6
+  min_ops = cluster_min_parallel_ops(),
+  max_ops = cluster_max_batch_ops()
 ) {
+  # avoid R CMD check NOTE for undeclared globals
+  ops <- NULL
   checkmate::assert_number(min_ops, lower = 1)
+  checkmate::assert_number(max_ops, lower = 1)
 
   fptt <- full_predenovo_taxon_table(
     closedref_taxon_table,
@@ -384,12 +426,11 @@ large_predenovo_taxon_table <- function(
     tax_ranks
   )
 
-  out <- fptt |>
+  fptt |>
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
-    dplyr::filter(dplyr::n() * (dplyr::n() - 1) / 2 > min_ops) |>
-    targets::tar_group()
-
-  ensure_table(out)
+    dplyr::mutate(ops = dplyr::n() * (dplyr::n() - 1) / 2) |>
+    dplyr::filter(ops > min_ops) |>
+    pack_precluster_taxon_table(parent_rank, max_ops)
 }
 
 #' Calculate a pre-denovo taxon table for taxa with few sequences
@@ -402,8 +443,13 @@ large_predenovo_taxon_table <- function(
 #' (`integer`) giving the indices of sequences in `seq_file`, as well as
 #' columns with names matching `rank` and `parent_rank`.
 #' @inheritParams full_preclosed_taxon_table
-#' @param max_ops (`integer` scalar) the maximum number of operations to put
-#' together in a single execution group
+#' @param min_ops (`numeric` scalar) pairwise comparisons at or below which a
+#'   parent taxon is treated as "small". Should match `min_ops` passed to
+#'   [large_predenovo_taxon_table()]. Default [cluster_min_parallel_ops()].
+#' @param max_ops (`numeric` scalar) maximum pairwise comparisons to pack into
+#'   one execution group. Default
+#'   [cluster_max_batch_ops()], which depends on the
+#'   clustering distance method (~10-20 min per batch).
 #'
 #' @return (`data.frame`) a table of sequences for which denovo clustering is
 #' required. This includes both sequences which are not assigned to the target
@@ -417,8 +463,12 @@ small_predenovo_taxon_table <- function(
   rank,
   parent_rank,
   tax_ranks,
-  max_ops = 1e6
+  min_ops = cluster_min_parallel_ops(),
+  max_ops = cluster_max_batch_ops()
 ) {
+  # avoid R CMD check NOTE for undeclared globals
+  ops <- NULL
+  checkmate::assert_number(min_ops, lower = 1)
   checkmate::assert_number(max_ops, lower = 1)
 
   fptt <- full_predenovo_taxon_table(
@@ -429,22 +479,11 @@ small_predenovo_taxon_table <- function(
     tax_ranks
   )
 
-  out <- fptt |>
+  fptt |>
     dplyr::group_by(dplyr::pick(all_of(parent_rank))) |>
     dplyr::mutate(ops = dplyr::n() * (dplyr::n() - 1) / 2) |>
-    dplyr::filter(ops <= max_ops) |>
-    dplyr::select(-all_of("tar_group")) |>
-    # Ungroup so distribute_tasks() sees all taxa, not one group at a time.
-    dplyr::ungroup()
-
-  ops <- dplyr::select(out, all_of(parent_rank), ops) |>
-    dplyr::distinct() |>
-    dplyr::mutate(tar_group = distribute_tasks(ops, max_ops)) |>
-    dplyr::select(-ops)
-
-  dplyr::left_join(out, ops, by = parent_rank) |>
-    dplyr::select(-ops) |>
-    ensure_table()
+    dplyr::filter(ops <= min_ops) |>
+    pack_precluster_taxon_table(parent_rank, max_ops)
 }
 
 #' Run denovo clustering

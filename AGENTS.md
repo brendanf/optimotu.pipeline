@@ -102,7 +102,11 @@ families include:
 - taxonomy utilities and rank helpers (`tax_ranks()`, `known_ranks()`,
   `superranks()`, `subranks()`, `build_taxonomy()`)
 - clustering orchestration helpers (`do_closed_ref_cluster()`,
-  `do_denovo_cluster()`, preclosed/predenovo table constructors)
+  `do_denovo_cluster()`, preclosed/predenovo table constructors).
+  `min_ops` is the large/small parallel cutoff; `max_ops` packs both
+  into execution groups. YAML keys are `clustering.min_parallel_ops` and
+  `clustering.max_batch_ops`; omitted values default from `dist_config`
+  method and are messaged at parse time.
 - external command wrappers and sequence IO helpers
 - DADA2 wrapper/option classes and per-read fate mapping (`dada2_wrappers.R`,
   `dada2_map.R`, `dada2_chimera.R`)

@@ -10,7 +10,8 @@ large_predenovo_taxon_table(
   rank,
   parent_rank,
   tax_ranks,
-  min_ops = 1e+06
+  min_ops = cluster_min_parallel_ops(),
+  max_ops = cluster_max_batch_ops()
 )
 }
 \arguments{
@@ -32,18 +33,27 @@ allowed.}
 
 \item{tax_ranks}{(\code{character}) the taxonomic ranks to use}
 
-\item{min_ops}{(\code{integer} scalar) the minimum number of operations required
-for a single parent taxon to be considered "large"}
+\item{min_ops}{(\code{numeric} scalar) pairwise comparisons above which a parent
+taxon is treated as "large" and is parallelized within the taxon.
+Default \code{\link[=cluster_min_parallel_ops]{cluster_min_parallel_ops()}}, which depends
+on the clustering distance method.}
+
+\item{max_ops}{(\code{numeric} scalar) maximum pairwise comparisons to pack into
+one execution group. Default
+\code{\link[=cluster_max_batch_ops]{cluster_max_batch_ops()}}, which depends on the
+clustering distance method (~10-20 min per batch).}
 }
 \value{
 (\code{data.frame}) a table of sequences for which denovo clustering is
 required. This includes both sequences which are not assigned to the target
 rank which will act as queries, and identified sequences which belong to the
 same parent rank as one or more queries. The results includes a \code{tar_group}
-column for dynamic branching over each parent taxon. If there are no
+column for dynamic branching over execution groups. If there are no
 queries, a single row is returned to branch over.
 }
 \description{
 This calculates a pre-denovo taxon table for taxa with many sequences,
-which may be efficiently parallelized within a single parent taxon.
+which may be efficiently parallelized within a single parent taxon. Parent
+taxa are then packed into execution groups of at most \code{max_ops}
+comparisons; a taxon larger than \code{max_ops} is left in its own group.
 }

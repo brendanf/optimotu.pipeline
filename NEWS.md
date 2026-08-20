@@ -1,4 +1,10 @@
 # optimotu.pipeline (development version)
+* Split clustering job sizing: `min_ops` (default `1e6`) is the large/small
+  parallel-efficiency cutoff, while `max_ops` (default `1e10`) packs both
+  large and small taxa into execution groups. These are configured in
+  `pipeline_options.yaml` as `clustering.min_parallel_ops` and
+  `clustering.max_batch_ops`, with suitable defaults for the selected
+  distance algorithm. This change also fixes batching for small clustering jobs.
 * Fix `lulu_map_lowmem()` on crew remote workers: resolve and load upstream
   targets from the worker subpipeline instead of calling
   `targets::tar_meta()` / `tar_read()` during the pipeline.

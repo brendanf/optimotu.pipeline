@@ -83,6 +83,14 @@ parse_file_extension <- function(pipeline_options) {
   }
 }
 
+#' Functions to access pipeline-wide options
+#'
+#' When used in a targets plan, these should always be
+#' pre-evaluated with `!!` or `!!!` to ensure proper dependency tracking.
+#'
+#' @name pipeline_options
+NULL
+
 #' @rdname pipeline_options
 #' @export
 read_file_extension <- function() {
@@ -1241,10 +1249,6 @@ parse_amplicon_model_filter_options <- function(filter_options) {
 }
 
 #' @rdname pipeline_options
-#' @title Functions to access pipeline-wide options
-#'
-#' @description When used in a targets plan, these should always be
-#' pre-evaluated with `!!` or `!!!` to ensure proper dependency tracking.
 #' @export
 amplicon_model_type <- function() {
   getOption("optimotu.pipeline.amplicon_model_type", "none")
@@ -1476,7 +1480,7 @@ parse_taxonomy_ranks <- function(rank_options) {
     )
   }
   if (length(KNOWN_TAXA) == 0) {
-    KNOWN_TAXA = c(rootrank = "root")
+    KNOWN_TAXA <- c(rootrank = "root")
   } else {
     options(optimotu.pipeline.do_outgroup = TRUE)
   }
@@ -1743,6 +1747,69 @@ outgroup_taxonomy <- function() {
 }
 
 #### clustering settings ####
+
+#' Default clustering job-size thresholds for a distance method
+#'
+#' Hamming and USEARCH are treated as fast methods; WFA2, Edlib, and hybrid
+#' alignment are ~100x slower per comparison, so both thresholds are 100x
+#' smaller.
+#'
+#' @param method (`character` scalar) `dist_config` method name
+#' @return named `list` with `min_parallel_ops` and `max_batch_ops`
+#' @keywords internal
+cluster_ops_defaults <- function(method) {
+  checkmate::assert_string(method)
+  if (method %in% c("wfa2", "edlib", "hybrid")) {
+    list(min_parallel_ops = 1e4, max_batch_ops = 1e8)
+  } else {
+    list(min_parallel_ops = 1e6, max_batch_ops = 1e10)
+  }
+}
+
+message_cluster_ops_defaults <- function(
+  method,
+  min_parallel_ops,
+  max_batch_ops,
+  min_is_default,
+  max_is_default
+) {
+  if (!min_is_default && !max_is_default) {
+    return(invisible())
+  }
+  fmt <- function(x) format(x, scientific = TRUE, digits = 1)
+  lines <- paste0(
+    "Using default clustering job sizing for dist_config method '",
+    method,
+    "':"
+  )
+  if (min_is_default) {
+    lines <- c(
+      lines,
+      paste0(
+        "  min_parallel_ops = ",
+        fmt(min_parallel_ops),
+        "  (parallel-efficiency cutoff)"
+      )
+    )
+  }
+  if (max_is_default) {
+    lines <- c(
+      lines,
+      paste0(
+        "  max_batch_ops = ",
+        fmt(max_batch_ops),
+        "  (target ~10-20 min per batch)"
+      )
+    )
+  }
+  lines <- c(
+    lines,
+    "Set clustering.min_parallel_ops and/or clustering.max_batch_ops",
+    "in pipeline_options.yaml to override."
+  )
+  message(paste(lines, collapse = "\n"))
+}
+
 #' @rdname parse_pipeline_options
 #' @keywords internal
 parse_cluster_options <- function(pipeline_options) {
@@ -1770,7 +1837,14 @@ parse_cluster_options <- function(pipeline_options) {
     clustering <- unnest_yaml_list(pipeline_options$clustering)
     checkmate::assert_names(
       names(clustering),
-      subset.of = c("thresholds", "measure", "dist_config", "force_denovo")
+      subset.of = c(
+        "thresholds",
+        "measure",
+        "dist_config",
+        "force_denovo",
+        "min_parallel_ops",
+        "max_batch_ops"
+      )
     )
     parse_cluster_thresholds(clustering$thresholds)
     checkmate::assert_string(clustering$measure, null.ok = TRUE)
@@ -1790,10 +1864,39 @@ parse_cluster_options <- function(pipeline_options) {
     } else {
       clustering$force_denovo <- character(0)
     }
+    min_is_default <- is.null(clustering$min_parallel_ops)
+    max_is_default <- is.null(clustering$max_batch_ops)
+    method <- dist_config$method
+    ops_defaults <- cluster_ops_defaults(method)
+    min_parallel_ops <- clustering$min_parallel_ops
+    if (min_is_default) {
+      min_parallel_ops <- ops_defaults$min_parallel_ops
+    }
+    checkmate::assert_number(min_parallel_ops, lower = 1)
+    max_batch_ops <- clustering$max_batch_ops
+    if (max_is_default) {
+      max_batch_ops <- ops_defaults$max_batch_ops
+    }
+    checkmate::assert_number(max_batch_ops, lower = 1)
+    if (max_batch_ops < min_parallel_ops) {
+      stop(
+        "clustering max_batch_ops must be greater than or equal to ",
+        "min_parallel_ops (file: pipeline_options.yaml)"
+      )
+    }
+    message_cluster_ops_defaults(
+      method = method,
+      min_parallel_ops = min_parallel_ops,
+      max_batch_ops = max_batch_ops,
+      min_is_default = min_is_default,
+      max_is_default = max_is_default
+    )
     options(
       optimotu.pipeline.clustering_measure = clustering$measure,
       optimotu.pipeline.clustering_dist_config = dist_config,
-      optimotu.pipeline.clustering_force_denovo = clustering$force_denovo
+      optimotu.pipeline.clustering_force_denovo = clustering$force_denovo,
+      optimotu.pipeline.clustering_min_parallel_ops = min_parallel_ops,
+      optimotu.pipeline.clustering_max_batch_ops = max_batch_ops
     )
   }
 }
@@ -1994,6 +2097,24 @@ cluster_dist_config <- function() {
 #' @export
 cluster_force_denovo <- function() {
   getOption("optimotu.pipeline.clustering_force_denovo", character(0))
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_min_parallel_ops <- function() {
+  getOption(
+    "optimotu.pipeline.clustering_min_parallel_ops",
+    cluster_ops_defaults(cluster_dist_config()$method)$min_parallel_ops
+  )
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_max_batch_ops <- function() {
+  getOption(
+    "optimotu.pipeline.clustering_max_batch_ops",
+    cluster_ops_defaults(cluster_dist_config()$method)$max_batch_ops
+  )
 }
 
 #' @rdname pipeline_options
