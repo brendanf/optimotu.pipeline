@@ -51,27 +51,72 @@ dada_merge_map <- function(dadaF, derepF, dadaR, derepR, merged) {
   }
 }
 
+#' Precompute a sequence-to-index lookup for a master ASV list
+#'
+#' Matching against a large `seq_all` (millions of ASVs) is dominated by
+#' hashing the table, not by the number of queries. Call this once per chunk
+#' with all unique query sequences, then pass the result to
+#' [match_to_seq_all()] for per-sample lookups.
+#'
+#' @param queries (`character`) query sequences; `NA` values are dropped
+#' @param seq_all (`character` vector of sequences,
+#'   [`XStringSet`][Biostrings::XStringSet-class], or a readable FASTA path)
+#'   unique ASV sequences
+#' @param rc (`logical`) if `TRUE`, reverse-complement `queries` before
+#'   matching. Stored on the result and checked by [match_to_seq_all()].
+#' @return object of class `seq_idx_lookup` with elements `keys`, `idx`, and
+#'   `rc`
+#' @keywords internal
+seq_idx_lookup <- function(queries, seq_all, rc = FALSE) {
+  checkmate::assert_flag(rc)
+  queries <- as.character(queries)
+  keys <- unique(queries[!is.na(queries)])
+  structure(
+    list(
+      keys = keys,
+      idx = match_to_seq_all(keys, seq_all, rc = rc),
+      rc = rc
+    ),
+    class = "seq_idx_lookup"
+  )
+}
+
 #' Match sequences to a master ASV list
 #'
 #' @param sequences (`character`) query sequences, possibly with `NA`
 #' @param seq_all (`character` vector of sequences,
-#'   [`XStringSet`][Biostrings::XStringSet-class], or a readable FASTA path)
+#'   [`XStringSet`][Biostrings::XStringSet-class], a readable FASTA path, or a
+#'   [seq_idx_lookup()] built for the same `rc`)
 #'   unique ASV sequences
 #' @param rc (`logical`) if `TRUE`, reverse-complement `sequences` before
 #'   matching. Use when queries are reverse-oriented relative to `seq_all`.
+#'   Must match the `rc` baked into a `seq_idx_lookup`.
 #' @return (`integer`) 1-based indices into `seq_all`; `NA` where there is no
 #'   match or the query is `NA`
 #' @keywords internal
 match_to_seq_all <- function(sequences, seq_all, rc = FALSE) {
   checkmate::assert_flag(rc)
-  if (checkmate::test_file_exists(seq_all, "r")) {
-    seq_all <- Biostrings::readDNAStringSet(seq_all)
-  }
   sequences <- as.character(sequences)
   out <- rep(NA_integer_, length(sequences))
   not_na <- !is.na(sequences)
   if (!any(not_na)) {
     return(out)
+  }
+  if (inherits(seq_all, "seq_idx_lookup")) {
+    if (!identical(rc, seq_all$rc)) {
+      stop(
+        "match_to_seq_all() rc=",
+        rc,
+        " does not match seq_idx_lookup rc=",
+        seq_all$rc,
+        call. = FALSE
+      )
+    }
+    out[not_na] <- seq_all$idx[match(sequences[not_na], seq_all$keys)]
+    return(out)
+  }
+  if (checkmate::test_file_exists(seq_all, "r")) {
+    seq_all <- Biostrings::readDNAStringSet(seq_all)
   }
   query <- sequences[not_na]
   if (isTRUE(rc)) {
@@ -83,18 +128,31 @@ match_to_seq_all <- function(sequences, seq_all, rc = FALSE) {
   out
 }
 
+empty_seq_map <- function() {
+  tibble::tibble(
+    sample = character(),
+    raw_idx = integer(),
+    seq_idx = integer(),
+    flags = raw()
+  )
+}
+
 #' Map the fate of individual reads through merging to find unique reads
 #'
-#' @param sample (`character`) name of the sample
-#' @param fq_raw (`character`) name of the raw fastq R1 file
-#' @param fq_trim (`character`) name of the trimmed fastq R1 file
-#' @param fq_filt (`character`) name of the filtered fastq R1 file
-#' @param dadaF ([`dada2::dada-class`]) denoised R1
-#' @param derepF ([`dada2::derep-class`]) dereplicated R1
-#' @param dadaR ([`dada2::dada-class`]) denoised R2
-#' @param derepR ([`dada2::dada-class`]) dereplicated R2
-#' @param merged (`data.frame` as returned by `dada2::mergePairs()`) result of
-#' merging `dadaF` and `dadaR`
+#' Accepts a single sample or a chunk of samples. For a chunk, all unique
+#' sequences in `merged` are matched to `seq_all` once, then each sample is
+#' processed against that shared lookup.
+#'
+#' @param sample (`character`) sample name(s)
+#' @param fq_raw (`character`) raw FASTQ R1 file path(s)
+#' @param fq_trim (`character`) trimmed FASTQ R1 file path(s)
+#' @param fq_filt (`character`) filtered FASTQ R1 file path(s)
+#' @param dadaF ([`dada2::dada-class`] or list of such) denoised R1
+#' @param derepF ([`dada2::derep-class`] or list of such) dereplicated R1
+#' @param dadaR ([`dada2::dada-class`] or list of such) denoised R2
+#' @param derepR ([`dada2::derep-class`] or list of such) dereplicated R2
+#' @param merged (`data.frame` as returned by `dada2::mergePairs()`, or a named
+#'   list of such) result of merging `dadaF` and `dadaR`
 #' @param seq_all (`character` vector of sequences,
 #'   [`XStringSet`][Biostrings::XStringSet-class], or a readable FASTA path,
 #'   e.g. a `tar_file` target) unique ASV sequences
@@ -132,25 +190,77 @@ seq_map <- function(
   # avoid R CMD check NOTE: no visible binding for global variable
   raw_idx <- seq_idx <- trim_idx <- filt_idx <- dada_idx <- NULL
 
-  seq_map <- fastq_seq_map(fq_raw, fq_trim, fq_filt)
-  dada_map <- dada_merge_map(dadaF, derepF, dadaR, derepR, merged)
-  seq_map$dada_idx <-
-    seq_map$seq_idx <- match_to_seq_all(
-      merged$sequence,
-      seq_all,
-      rc = rc
-    )[dada_map$merge_idx[seq_map$filt_idx]]
-  dplyr::transmute(
-    seq_map,
-    sample = sample,
-    raw_idx,
-    seq_idx,
-    flags = as.raw(
-      ifelse(is.na(trim_idx), 0, 0x01) +
-        ifelse(is.na(filt_idx), 0, 0x02) +
-        ifelse(is.na(dada_idx), 0, 0x04)
-    )
+  checkmate::assert_character(sample, min.len = 1L, any.missing = FALSE)
+  checkmate::assert_character(fq_raw, len = length(sample), any.missing = FALSE)
+  checkmate::assert_character(
+    fq_trim,
+    len = length(sample),
+    any.missing = FALSE
   )
+  checkmate::assert_character(
+    fq_filt,
+    len = length(sample),
+    any.missing = FALSE
+  )
+  checkmate::assert_file_exists(fq_raw, "r")
+  checkmate::assert_file_exists(fq_trim, "r")
+  checkmate::assert_file_exists(fq_filt, "r")
+  checkmate::assert_flag(rc)
+
+  if (methods::is(merged, "data.frame")) {
+    checkmate::assert_true(length(sample) == 1L)
+    merged <- stats::setNames(list(merged), sample)
+    dadaF <- list(dadaF)
+    derepF <- list(derepF)
+    dadaR <- list(dadaR)
+    derepR <- list(derepR)
+  } else {
+    checkmate::assert_list(merged, len = length(sample))
+    checkmate::assert_list(dadaF, len = length(sample))
+    checkmate::assert_list(derepF, len = length(sample))
+    checkmate::assert_list(dadaR, len = length(sample))
+    checkmate::assert_list(derepR, len = length(sample))
+  }
+
+  queries <- unlist(
+    lapply(merged, \(m) as.character(m$sequence)),
+    use.names = FALSE
+  )
+  lookup <- seq_idx_lookup(queries, seq_all, rc = rc)
+
+  out <- vector("list", length(sample))
+  for (i in seq_along(sample)) {
+    smap <- fastq_seq_map(fq_raw[[i]], fq_trim[[i]], fq_filt[[i]])
+    dmap <- dada_merge_map(
+      dadaF[[i]],
+      derepF[[i]],
+      dadaR[[i]],
+      derepR[[i]],
+      merged[[i]]
+    )
+    merge_seq_idx <- match_to_seq_all(
+      merged[[i]]$sequence,
+      lookup,
+      rc = rc
+    )
+    smap$dada_idx <- smap$seq_idx <-
+      merge_seq_idx[dmap$merge_idx[smap$filt_idx]]
+    out[[i]] <- dplyr::transmute(
+      smap,
+      sample = sample[[i]],
+      raw_idx,
+      seq_idx,
+      flags = as.raw(
+        ifelse(is.na(trim_idx), 0, 0x01) +
+          ifelse(is.na(filt_idx), 0, 0x02) +
+          ifelse(is.na(dada_idx), 0, 0x04)
+      )
+    )
+  }
+  if (length(out) == 0L) {
+    return(empty_seq_map())
+  }
+  dplyr::bind_rows(out)
 }
 
 #' Merge forward and reverse sequence maps

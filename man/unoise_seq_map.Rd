@@ -7,16 +7,16 @@
 unoise_seq_map(sample, fq_raw, fq_trim, fq_merged, uc, seq_all, rc = FALSE)
 }
 \arguments{
-\item{sample}{(\code{character}) name of the sample}
+\item{sample}{(\code{character}) sample name(s)}
 
-\item{fq_raw}{(\code{character}) name of the raw FASTQ R1 file}
+\item{fq_raw}{(\code{character}) raw FASTQ R1 file path(s)}
 
-\item{fq_trim}{(\code{character}) name of the trimmed FASTQ R1 file}
+\item{fq_trim}{(\code{character}) trimmed FASTQ R1 file path(s)}
 
-\item{fq_merged}{(\code{character}) name of the merged and filtered FASTQ file}
+\item{fq_merged}{(\code{character}) merged and filtered FASTQ file path(s)}
 
-\item{uc}{(\code{uc_cluster}) result of \code{\link[=vsearch_cluster_unoise2]{vsearch_cluster_unoise2()}} for this
-sample}
+\item{uc}{(\code{uc_cluster} or named list of such) result of
+\code{\link[=vsearch_cluster_unoise2]{vsearch_cluster_unoise2()}} for the sample(s)}
 
 \item{seq_all}{(\code{character} vector of sequences,
 \code{\link[Biostrings:XStringSet-class]{XStringSet}}, or a readable FASTA path,
@@ -48,6 +48,10 @@ Analog of \code{\link[=seq_map]{seq_map()}} for the UNOISE path, where merging a
 filtering happen before denoising.
 }
 \details{
+Accepts a single sample or a chunk of samples. For a chunk, all unique
+centroid sequences in \code{uc} are matched to \code{seq_all} once, then each sample
+is processed against that shared lookup.
+
 Bit \code{0x02} (filter) is set when the raw read is present in the merged,
 quality-filtered FASTQ. Bit \code{0x04} (denoise & merge) is set when that
 merged sequence maps to an ASV in \code{uc}.

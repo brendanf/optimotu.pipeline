@@ -35,14 +35,16 @@ External tool wrappers:
 - `R/dada2_wrappers.R`, `R/dada2_map.R`, `R/dada2_chimera.R` (DADA2
   filtering/denoising/dereplication/merge options and per-read fate mapping,
   plus per-sample *de novo* chimera detection). `seq_map()` accepts `seq_all`
-  as sequences, an `XStringSet`, or a FASTA path (`tar_file`). `seq_idx` is
+  as sequences, an `XStringSet`, or a FASTA path (`tar_file`), and is
+  chunk-vectorized so unique ASVs are matched once per call. `seq_idx` is
   the current community-table id; after LULU that is the parent.
 - `R/vsearch.R` — vsearch wrappers including paired-read merging
   (`vsearch_fastq_merge_pairs()`) and UNOISE clustering
   (`vsearch_cluster_unoise2()`, which pipes `--fastx_uniques` into
   `--cluster_unoise`)
-- `R/unoise.R` — UNOISE per-read fate mapping (`unoise_seq_map()`); sequence
-  tables from `uc_cluster` objects use `make_mapped_sequence_table()`
+- `R/unoise.R` — UNOISE per-read fate mapping (`unoise_seq_map()`); also
+  chunk-vectorized. Sequence tables from `uc_cluster` objects use
+  `make_mapped_sequence_table()`, which batches matches across list elements.
 
 Denoising / read-quality post-processing:
 

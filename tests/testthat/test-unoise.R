@@ -245,3 +245,111 @@ test_that("UNOISE clustering, seqtable, and seq_map agree on synthetic ASVs", {
   expect_equal(sum(denoised), n_a + n_b)
   expect_true(all(is.na(smap$seq_idx[!denoised])))
 })
+
+test_that("unoise_seq_map vectorizes over samples and matches scalar calls", {
+  skip_if_no_vsearch()
+  make_sample <- function(n, seed, label) {
+    ids <- sprintf("%s%02d", label, seq_len(n))
+    pairs <- make_overlapping_pairs(n, seed, ids)
+    # Temp files must outlive this helper; create them in the test env.
+    r1 <- tempfile(fileext = ".fastq")
+    r2 <- tempfile(fileext = ".fastq")
+    merged <- tempfile(fileext = ".fastq")
+    raw <- tempfile(fileext = ".fastq")
+    trim <- tempfile(fileext = ".fastq")
+    withr::defer(
+      unlink(c(r1, r2, merged, raw, trim)),
+      envir = parent.frame(1L)
+    )
+    write_qual_fastq(pairs$fwd, r1)
+    write_qual_fastq(pairs$rev, r2)
+    write_qual_fastq(pairs$fwd, raw)
+    write_qual_fastq(pairs$fwd, trim)
+    vsearch_fastq_merge_pairs(
+      r1,
+      r2,
+      merged,
+      min_overlap = 16,
+      filter_options = merged_filter_options(maxEE = 1),
+      threads = 1,
+      shards = 1
+    )
+    uc <- vsearch_cluster_unoise2(
+      merged,
+      min_size = 8,
+      alpha = 2,
+      threads = 1,
+      shards = 1
+    )[[1]]
+    list(
+      sample = label,
+      raw = raw,
+      trim = trim,
+      merged = merged,
+      uc = uc,
+      merged_seq = pairs$merged
+    )
+  }
+  s1 <- make_sample(12L, 11L, "A")
+  s2 <- make_sample(10L, 22L, "B")
+  seq_all <- Biostrings::DNAStringSet(unique(c(
+    s1$uc$clusters$seq,
+    s2$uc$clusters$seq
+  )))
+  names(seq_all) <- seq_along(seq_all)
+
+  scalar <- dplyr::bind_rows(
+    unoise_seq_map(
+      s1$sample,
+      s1$raw,
+      s1$trim,
+      s1$merged,
+      s1$uc,
+      seq_all
+    ),
+    unoise_seq_map(
+      s2$sample,
+      s2$raw,
+      s2$trim,
+      s2$merged,
+      s2$uc,
+      seq_all
+    )
+  )
+  vectorized <- unoise_seq_map(
+    sample = c(s1$sample, s2$sample),
+    fq_raw = c(s1$raw, s2$raw),
+    fq_trim = c(s1$trim, s2$trim),
+    fq_merged = c(s1$merged, s2$merged),
+    uc = list(s1$uc, s2$uc),
+    seq_all = seq_all
+  )
+  expect_equal(vectorized, scalar)
+})
+
+test_that("unoise_seq_map handles empty merged FASTQ", {
+  skip_if_no_vsearch()
+  empty <- withr::local_tempfile(fileext = ".fastq")
+  writeLines(character(), empty)
+  raw <- withr::local_tempfile(fileext = ".fastq")
+  trim <- withr::local_tempfile(fileext = ".fastq")
+  pairs <- make_overlapping_pairs(2L, 1L, c("r1", "r2"))
+  write_qual_fastq(pairs$fwd, raw)
+  write_qual_fastq(pairs$fwd, trim)
+  uc <- vsearch_cluster_unoise2(empty, min_size = 8, threads = 1, shards = 1)[[
+    1
+  ]]
+  seq_all <- Biostrings::DNAStringSet(pairs$merged)
+  names(seq_all) <- "1"
+  smap <- unoise_seq_map(
+    sample = "empty",
+    fq_raw = raw,
+    fq_trim = trim,
+    fq_merged = empty,
+    uc = uc,
+    seq_all = seq_all
+  )
+  expect_equal(nrow(smap), 2L)
+  expect_true(all(is.na(smap$seq_idx)))
+  expect_true(all(bitwAnd(as.integer(smap$flags), 0x04) == 0L))
+})

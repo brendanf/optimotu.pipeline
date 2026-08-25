@@ -7,10 +7,21 @@
 # Map each input sequence ID to the dereplicated representative ID.
 # Re-runs vsearch --fastx_uniques (intentionally not stored by
 # vsearch_cluster_unoise2(), which pipes derep into UNOISE).
-vsearch_derep_uc <- function(seq, vsearch = find_vsearch()) {
+# When `merged_ids` is supplied, emptiness is taken from that vector so
+# sequence_size() is not repeated after a prior FASTQ name read.
+vsearch_derep_uc <- function(
+  seq,
+  vsearch = find_vsearch(),
+  merged_ids = NULL
+) {
   checkmate::assert_string(seq)
   checkmate::assert_file_exists(seq, "r")
-  if (sequence_size(seq) == 0L) {
+  empty <- if (is.null(merged_ids)) {
+    sequence_size(seq) == 0L
+  } else {
+    length(merged_ids) == 0L
+  }
+  if (isTRUE(empty)) {
     return(tibble::tibble(seq_id = character(), unique_id = character()))
   }
   derep_out <- withr::local_tempfile(pattern = "derep", fileext = ".fasta")
@@ -56,14 +67,14 @@ vsearch_derep_uc <- function(seq, vsearch = find_vsearch()) {
 }
 
 read_seq_ids <- function(seq) {
+  # Prefer the C++ name reader for FASTQ; fall back to Biostrings for FASTA.
+  if (grepl(fastq_regex, seq)) {
+    return(as.character(fastq_names(seq)))
+  }
   if (sequence_size(seq) == 0L) {
     return(character())
   }
-  seqs <- if (grepl(fastq_regex, seq)) {
-    Biostrings::readBStringSet(seq, format = "fastq")
-  } else {
-    Biostrings::readBStringSet(seq, format = "fasta")
-  }
+  seqs <- Biostrings::readBStringSet(seq, format = "fasta")
   sub("\\s.*", "", names(seqs))
 }
 
@@ -71,6 +82,10 @@ read_seq_ids <- function(seq) {
 #'
 #' Analog of [`seq_map()`] for the UNOISE path, where merging and quality
 #' filtering happen before denoising.
+#'
+#' Accepts a single sample or a chunk of samples. For a chunk, all unique
+#' centroid sequences in `uc` are matched to `seq_all` once, then each sample
+#' is processed against that shared lookup.
 #'
 #' Bit `0x02` (filter) is set when the raw read is present in the merged,
 #' quality-filtered FASTQ. Bit `0x04` (denoise & merge) is set when that
@@ -81,12 +96,12 @@ read_seq_ids <- function(seq) {
 #' between computation (dereplication is fast) and storage (the dereplication
 #' map is large).
 #'
-#' @param sample (`character`) name of the sample
-#' @param fq_raw (`character`) name of the raw FASTQ R1 file
-#' @param fq_trim (`character`) name of the trimmed FASTQ R1 file
-#' @param fq_merged (`character`) name of the merged and filtered FASTQ file
-#' @param uc (`uc_cluster`) result of [`vsearch_cluster_unoise2()`] for this
-#'   sample
+#' @param sample (`character`) sample name(s)
+#' @param fq_raw (`character`) raw FASTQ R1 file path(s)
+#' @param fq_trim (`character`) trimmed FASTQ R1 file path(s)
+#' @param fq_merged (`character`) merged and filtered FASTQ file path(s)
+#' @param uc (`uc_cluster` or named list of such) result of
+#'   [`vsearch_cluster_unoise2()`] for the sample(s)
 #' @param seq_all (`character` vector of sequences,
 #'   [`XStringSet`][Biostrings::XStringSet-class], or a readable FASTA path,
 #'   e.g. a `tar_file` target) unique ASV sequences
@@ -120,34 +135,67 @@ unoise_seq_map <- function(
   # avoid R CMD check NOTE: no visible binding for global variable
   raw_idx <- seq_idx <- trim_idx <- filt_idx <- dada_idx <- NULL
 
-  checkmate::assert_string(sample)
+  checkmate::assert_character(sample, min.len = 1L, any.missing = FALSE)
+  checkmate::assert_character(fq_raw, len = length(sample), any.missing = FALSE)
+  checkmate::assert_character(
+    fq_trim,
+    len = length(sample),
+    any.missing = FALSE
+  )
+  checkmate::assert_character(
+    fq_merged,
+    len = length(sample),
+    any.missing = FALSE
+  )
   checkmate::assert_file_exists(fq_raw, "r")
   checkmate::assert_file_exists(fq_trim, "r")
   checkmate::assert_file_exists(fq_merged, "r")
-  checkmate::assert_class(uc, "uc_cluster")
   checkmate::assert_flag(rc)
 
-  seq_map <- fastq_seq_map(fq_raw, fq_trim, fq_merged)
-  merged_ids <- read_seq_ids(fq_merged)
-  derep_map <- vsearch_derep_uc(fq_merged)
-  merged_seq_id <- merged_ids[seq_map$filt_idx]
-  unique_id <- derep_map$unique_id[match(merged_seq_id, derep_map$seq_id)]
-  clust_idx <- uc$map$clust_idx[match(unique_id, uc$map$seq_id)]
-  centroid_seq <- uc$clusters$seq[match(clust_idx, uc$clusters$clust_idx)]
-  seq_map$dada_idx <- seq_map$seq_idx <- match_to_seq_all(
-    centroid_seq,
-    seq_all,
-    rc = rc
+  if (inherits(uc, "uc_cluster")) {
+    checkmate::assert_true(length(sample) == 1L)
+    uc <- stats::setNames(list(uc), sample)
+  } else {
+    checkmate::assert_list(uc, len = length(sample))
+    for (u in uc) {
+      checkmate::assert_class(u, "uc_cluster")
+    }
+  }
+
+  queries <- unlist(
+    lapply(uc, \(u) as.character(u$clusters$seq)),
+    use.names = FALSE
   )
-  dplyr::transmute(
-    seq_map,
-    sample = sample,
-    raw_idx,
-    seq_idx,
-    flags = as.raw(
-      ifelse(is.na(trim_idx), 0, 0x01) +
-        ifelse(is.na(filt_idx), 0, 0x02) +
-        ifelse(is.na(dada_idx), 0, 0x04)
+  lookup <- seq_idx_lookup(queries, seq_all, rc = rc)
+
+  out <- vector("list", length(sample))
+  for (i in seq_along(sample)) {
+    smap <- fastq_seq_map(fq_raw[[i]], fq_trim[[i]], fq_merged[[i]])
+    merged_ids <- read_seq_ids(fq_merged[[i]])
+    derep_map <- vsearch_derep_uc(fq_merged[[i]], merged_ids = merged_ids)
+    u <- uc[[i]]
+    clust_seq_idx <- match_to_seq_all(u$clusters$seq, lookup, rc = rc)
+    names(clust_seq_idx) <- as.character(u$clusters$clust_idx)
+    merged_seq_id <- merged_ids[smap$filt_idx]
+    unique_id <- derep_map$unique_id[match(merged_seq_id, derep_map$seq_id)]
+    clust_idx <- u$map$clust_idx[match(unique_id, u$map$seq_id)]
+    smap$dada_idx <- smap$seq_idx <- unname(
+      clust_seq_idx[as.character(clust_idx)]
     )
-  )
+    out[[i]] <- dplyr::transmute(
+      smap,
+      sample = sample[[i]],
+      raw_idx,
+      seq_idx,
+      flags = as.raw(
+        ifelse(is.na(trim_idx), 0, 0x01) +
+          ifelse(is.na(filt_idx), 0, 0x02) +
+          ifelse(is.na(dada_idx), 0, 0x04)
+      )
+    )
+  }
+  if (length(out) == 0L) {
+    return(empty_seq_map())
+  }
+  dplyr::bind_rows(out)
 }

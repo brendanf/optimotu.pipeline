@@ -19,24 +19,24 @@ seq_map(
 )
 }
 \arguments{
-\item{sample}{(\code{character}) name of the sample}
+\item{sample}{(\code{character}) sample name(s)}
 
-\item{fq_raw}{(\code{character}) name of the raw fastq R1 file}
+\item{fq_raw}{(\code{character}) raw FASTQ R1 file path(s)}
 
-\item{fq_trim}{(\code{character}) name of the trimmed fastq R1 file}
+\item{fq_trim}{(\code{character}) trimmed FASTQ R1 file path(s)}
 
-\item{fq_filt}{(\code{character}) name of the filtered fastq R1 file}
+\item{fq_filt}{(\code{character}) filtered FASTQ R1 file path(s)}
 
-\item{dadaF}{(\code{\link[dada2:dada-class]{dada2::dada}}) denoised R1}
+\item{dadaF}{(\code{\link[dada2:dada-class]{dada2::dada}} or list of such) denoised R1}
 
-\item{derepF}{(\code{\link[dada2:derep-class]{dada2::derep}}) dereplicated R1}
+\item{derepF}{(\code{\link[dada2:derep-class]{dada2::derep}} or list of such) dereplicated R1}
 
-\item{dadaR}{(\code{\link[dada2:dada-class]{dada2::dada}}) denoised R2}
+\item{dadaR}{(\code{\link[dada2:dada-class]{dada2::dada}} or list of such) denoised R2}
 
-\item{derepR}{(\code{\link[dada2:dada-class]{dada2::dada}}) dereplicated R2}
+\item{derepR}{(\code{\link[dada2:derep-class]{dada2::derep}} or list of such) dereplicated R2}
 
-\item{merged}{(\code{data.frame} as returned by \code{dada2::mergePairs()}) result of
-merging \code{dadaF} and \code{dadaR}}
+\item{merged}{(\code{data.frame} as returned by \code{dada2::mergePairs()}, or a named
+list of such) result of merging \code{dadaF} and \code{dadaR}}
 
 \item{seq_all}{(\code{character} vector of sequences,
 \code{\link[Biostrings:XStringSet-class]{XStringSet}}, or a readable FASTA path,
@@ -64,5 +64,7 @@ Bits \code{0x10}--\code{0x80} are reserved for ASV-level filter results
 (\code{asv_map$result}: chimera/spike/model), not per-read fate flags.
 }
 \description{
-Map the fate of individual reads through merging to find unique reads
+Accepts a single sample or a chunk of samples. For a chunk, all unique
+sequences in \code{merged} are matched to \code{seq_all} once, then each sample is
+processed against that shared lookup.
 }

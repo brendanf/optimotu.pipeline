@@ -176,16 +176,9 @@ make_mapped_sequence_table.data.frame <- function(x, seqs, rc = FALSE) {
     checkmate::assert_logical(x$accept)
     x <- x[x$accept, ]
   }
-  if (checkmate::test_file_exists(seqs, "r")) {
-    seqs <- Biostrings::readDNAStringSet(seqs)
-  }
   out <- x[c("sequence", "abundance")]
   names(out) <- c("seq_idx", "nread")
-  if (isTRUE(rc)) {
-    out$seq_idx <- BiocGenerics::match(dada2::rc(out$seq_idx), seqs)
-  } else {
-    out$seq_idx <- BiocGenerics::match(out$seq_idx, seqs)
-  }
+  out$seq_idx <- match_to_seq_all(out$seq_idx, seqs, rc = rc)
   out
 }
 
@@ -194,13 +187,7 @@ make_mapped_sequence_table.data.frame <- function(x, seqs, rc = FALSE) {
 make_mapped_sequence_table.matrix <- function(x, seqs, rc = FALSE) {
   checkmate::assert_integerish(x)
   checkmate::assert_flag(rc)
-  if (isTRUE(rc)) {
-    colnames(x) <- dada2::rc(colnames(x))
-  }
-  if (checkmate::test_file_exists(seqs, "r")) {
-    seqs <- Biostrings::readDNAStringSet(seqs)
-  }
-  colnames(x) <- BiocGenerics::match(colnames(x), seqs)
+  colnames(x) <- match_to_seq_all(colnames(x), seqs, rc = rc)
   if (typeof(x) != "integer") {
     mode(x) <- "integer"
   }
@@ -223,20 +210,11 @@ make_mapped_sequence_table.uc_cluster <- function(x, seqs, rc = FALSE) {
   seq_idx <- nread <- NULL
   checkmate::assert_class(x, "uc_cluster")
   checkmate::assert_flag(rc)
-  if (checkmate::test_file_exists(seqs, "r")) {
-    seqs <- Biostrings::readDNAStringSet(seqs)
-  }
   if (nrow(x$clusters) == 0L) {
     return(tibble::tibble(seq_idx = integer(), nread = integer()))
   }
-  cluster_seq <- x$clusters$seq
-  if (isTRUE(rc)) {
-    cluster_seq <- as.character(Biostrings::reverseComplement(
-      Biostrings::DNAStringSet(cluster_seq)
-    ))
-  }
   tibble::tibble(
-    seq_idx = as.integer(BiocGenerics::match(cluster_seq, seqs)),
+    seq_idx = match_to_seq_all(x$clusters$seq, seqs, rc = rc),
     nread = as.integer(x$clusters$size)
   ) |>
     dplyr::filter(!is.na(seq_idx), nread > 0L)
@@ -247,10 +225,8 @@ make_mapped_sequence_table.uc_cluster <- function(x, seqs, rc = FALSE) {
 make_mapped_sequence_table.list <- function(x, seqs, rc = FALSE) {
   # avoid R CMD check note for undefined global variables due to NSE
   nread <- seq_idx <- NULL
+  checkmate::assert_flag(rc)
 
-  if (checkmate::test_file_exists(seqs, "r")) {
-    seqs <- Biostrings::readDNAStringSet(seqs)
-  }
   out <- if (length(x) == 0L) {
     tibble::tibble(
       sample = character(),
@@ -259,21 +235,43 @@ make_mapped_sequence_table.list <- function(x, seqs, rc = FALSE) {
     )
   } else if (checkmate::test_list(x, types = "data.frame")) {
     checkmate::assert_named(x)
+    queries <- unlist(
+      lapply(x, \(df) {
+        if ("accept" %in% names(df)) {
+          df <- df[df$accept, , drop = FALSE]
+        }
+        as.character(df$sequence)
+      }),
+      use.names = FALSE
+    )
+    lookup <- seq_idx_lookup(queries, seqs, rc = rc)
     purrr::map_dfr(
       x,
       make_mapped_sequence_table.data.frame,
-      seqs = seqs,
+      seqs = lookup,
       rc = rc,
       .id = "sample"
     )
   } else if (checkmate::test_list(x, types = "matrix")) {
-    purrr::map_dfr(x, make_mapped_sequence_table.matrix, seqs = seqs, rc = rc)
+    queries <- unlist(lapply(x, colnames), use.names = FALSE)
+    lookup <- seq_idx_lookup(queries, seqs, rc = rc)
+    purrr::map_dfr(
+      x,
+      make_mapped_sequence_table.matrix,
+      seqs = lookup,
+      rc = rc
+    )
   } else if (all(vapply(x, inherits, logical(1), "uc_cluster"))) {
     checkmate::assert_named(x)
+    queries <- unlist(
+      lapply(x, \(u) as.character(u$clusters$seq)),
+      use.names = FALSE
+    )
+    lookup <- seq_idx_lookup(queries, seqs, rc = rc)
     purrr::map_dfr(
       x,
       make_mapped_sequence_table.uc_cluster,
-      seqs = seqs,
+      seqs = lookup,
       rc = rc,
       .id = "sample"
     )

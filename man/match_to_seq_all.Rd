@@ -10,11 +10,13 @@ match_to_seq_all(sequences, seq_all, rc = FALSE)
 \item{sequences}{(\code{character}) query sequences, possibly with \code{NA}}
 
 \item{seq_all}{(\code{character} vector of sequences,
-\code{\link[Biostrings:XStringSet-class]{XStringSet}}, or a readable FASTA path)
+\code{\link[Biostrings:XStringSet-class]{XStringSet}}, a readable FASTA path, or a
+\code{\link[=seq_idx_lookup]{seq_idx_lookup()}} built for the same \code{rc})
 unique ASV sequences}
 
 \item{rc}{(\code{logical}) if \code{TRUE}, reverse-complement \code{sequences} before
-matching. Use when queries are reverse-oriented relative to \code{seq_all}.}
+matching. Use when queries are reverse-oriented relative to \code{seq_all}.
+Must match the \code{rc} baked into a \code{seq_idx_lookup}.}
 }
 \value{
 (\code{integer}) 1-based indices into \code{seq_all}; \code{NA} where there is no

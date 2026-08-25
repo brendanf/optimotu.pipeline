@@ -1,4 +1,7 @@
 # optimotu.pipeline (development version)
+* `seq_map()` and `unoise_seq_map()` are now vectorized across samples; these and
+  `make_mapped_sequence_table.list()` now avoid repeated work between samples,
+  leading to large speedups when many samples are chunked.
 * Split clustering job sizing: `min_ops` (default `1e6`) is the large/small
   parallel-efficiency cutoff, while `max_ops` (default `1e10`) packs both
   large and small taxa into execution groups. These are configured in

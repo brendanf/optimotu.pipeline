@@ -24,6 +24,93 @@ test_that("match_to_seq_all reverse-complements queries when rc is TRUE", {
   expect_true(is.na(match_to_seq_all(rc1, dss, rc = FALSE)))
 })
 
+test_that("seq_idx_lookup round-trips through match_to_seq_all", {
+  seqs <- c("ACGTAAAATTTT", "GGGGCCCCAAAA", "TTTTCCCCGGGG")
+  names(seqs) <- as.character(seq_along(seqs))
+  dss <- Biostrings::DNAStringSet(seqs)
+  queries <- c(seqs[[2]], NA_character_, seqs[[1]], seqs[[2]])
+  lookup <- seq_idx_lookup(queries, dss)
+  expect_s3_class(lookup, "seq_idx_lookup")
+  expect_equal(lookup$keys, c(seqs[[2]], seqs[[1]]))
+  expect_equal(match_to_seq_all(queries, lookup), c(2L, NA, 1L, 2L))
+  expect_equal(
+    match_to_seq_all(queries, lookup),
+    match_to_seq_all(queries, dss)
+  )
+})
+
+test_that("seq_idx_lookup guards rc consistency", {
+  seqs <- c("ACGTAAAATTTT", "GGGGCCCCAAAA")
+  dss <- Biostrings::DNAStringSet(seqs)
+  lookup <- seq_idx_lookup(seqs[[1]], dss, rc = FALSE)
+  expect_error(
+    match_to_seq_all(seqs[[1]], lookup, rc = TRUE),
+    "does not match seq_idx_lookup"
+  )
+  rc_query <- as.character(Biostrings::reverseComplement(dss[1]))
+  lookup_rc <- seq_idx_lookup(rc_query, dss, rc = TRUE)
+  expect_equal(match_to_seq_all(rc_query, lookup_rc, rc = TRUE), 1L)
+})
+
+test_that("Biostrings reverseComplement agrees with dada2::rc on IUPAC", {
+  skip_if_not_installed("dada2")
+  seqs <- c("ACGTMRWSYKVHDBN", "GGGGCCCCAAAATT")
+  bs <- as.character(Biostrings::reverseComplement(
+    Biostrings::DNAStringSet(seqs)
+  ))
+  d2 <- dada2::rc(seqs)
+  expect_equal(bs, d2)
+})
+
+test_that("make_mapped_sequence_table.list matches once across samples", {
+  seqs <- Biostrings::DNAStringSet(c(
+    "ACGTAAAATTTT",
+    "GGGGCCCCAAAA",
+    "TTTTCCCCGGGG"
+  ))
+  names(seqs) <- as.character(seq_along(seqs))
+  uc1 <- structure(
+    list(
+      clusters = tibble::tibble(
+        clust_idx = 0:1,
+        size = c(10L, 5L),
+        seq = as.character(seqs[1:2])
+      ),
+      map = tibble::tibble(clust_idx = integer(), seq_id = character())
+    ),
+    class = "uc_cluster"
+  )
+  uc2 <- structure(
+    list(
+      clusters = tibble::tibble(
+        clust_idx = 0L,
+        size = 7L,
+        seq = as.character(seqs[2])
+      ),
+      map = tibble::tibble(clust_idx = integer(), seq_id = character())
+    ),
+    class = "uc_cluster"
+  )
+  out <- make_mapped_sequence_table(
+    list(s1 = uc1, s2 = uc2),
+    seqs
+  )
+  expect_equal(
+    out,
+    tibble::tibble(
+      sample = c("s1", "s1", "s2"),
+      seq_idx = c(1L, 2L, 2L),
+      nread = c(10L, 5L, 7L)
+    )
+  )
+  out_rc <- make_mapped_sequence_table(
+    list(s1 = uc1),
+    Biostrings::reverseComplement(seqs),
+    rc = TRUE
+  )
+  expect_equal(out_rc$seq_idx, c(1L, 2L))
+})
+
 test_that("add_lulu_to_seq_map rewrites daughters and keeps denoise_idx", {
   seqmap <- tibble::tibble(
     sample = "s1",
