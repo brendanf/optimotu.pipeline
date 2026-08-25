@@ -152,8 +152,15 @@ commands.
 - Tests live in `tests/testthat/`.
 - Validate parser and wrapper behavior when changing options or tool interfaces.
 - LULU is tested extensively in `tests/testthat/test_lulu.R`.
-- Favor test runs in the same containerized environment used by the wider
-  OptimOTU ecosystem.
+- Run R and external tools (vsearch, cutadapt, etc.) in the development
+  Apptainer image
+  `../optimotu_targets/apptainer/OptimOTU_v7_dev.sif`, which has the current
+  working-tree `optimotu.pipeline` plus those tools. Example:
+  `apptainer exec ../optimotu_targets/apptainer/OptimOTU_v7_dev.sif R ...`
+  Set `TMPDIR` and `APPTAINER_TMPDIR` to an exec-capable directory such as
+  `$HOME/tmp` (host `/tmp` is `noexec`).
+- If the development image is not available or does not contain required
+  development package versions, prompt the user to rebuild it.
 - For behavior consumed by `optimotu_targets`, also verify integration in that
   repo when possible.
 
