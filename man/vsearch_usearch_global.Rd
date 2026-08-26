@@ -10,7 +10,8 @@ vsearch_usearch_global(
   threshold,
   global = TRUE,
   ncpu = local_cpus(),
-  id_is_int = FALSE
+  id_is_int = FALSE,
+  vsearch = find_vsearch()
 )
 }
 \arguments{
@@ -29,6 +30,8 @@ penalized equally.  Otherwise end gaps are not penalized.}
 
 \item{id_is_int}{(\code{logical} flag) if \code{TRUE}, return the sequence IDs as
 integers}
+
+\item{vsearch}{(\code{character} string) path to the vsearch executable}
 }
 \value{
 \code{tibble::tibble} with columns \code{seq_id}, \code{clust}, and \code{dist}, where

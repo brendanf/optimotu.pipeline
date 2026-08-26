@@ -4,7 +4,12 @@
 \alias{vsearch_cluster_smallmem}
 \title{"cluster_smallmem" function of vsearch}
 \usage{
-vsearch_cluster_smallmem(seq, threshold = 1, ncpu = local_cpus())
+vsearch_cluster_smallmem(
+  seq,
+  threshold = 1,
+  ncpu = local_cpus(),
+  vsearch = find_vsearch()
+)
 }
 \arguments{
 \item{seq}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
@@ -13,6 +18,8 @@ vsearch_cluster_smallmem(seq, threshold = 1, ncpu = local_cpus())
 \item{threshold}{(\code{numeric} scalar) identity threshold, in range 0.0-1.0}
 
 \item{ncpu}{(\code{integer} count) number of threads to use}
+
+\item{vsearch}{(\code{character} string) path to the vsearch executable}
 }
 \value{
 \code{tibble::tibble} with columns \code{query} and \code{hit}, where \code{query} is

@@ -12,6 +12,7 @@ vsearch_uchime_ref(
   id_is_int = FALSE,
   files = NULL,
   seq_idx = NULL,
+  vsearch = find_vsearch(),
   ...
 )
 }
@@ -39,6 +40,8 @@ path(s). Useful after moving inputs or for \code{targets} dependency tracking.}
 sequence stream (\code{NULL} means all sequences in order). Applies after
 concatenating multiple FASTA inputs, and supports duplicates and
 reordering.}
+
+\item{vsearch}{(\code{character}) path to the \code{vsearch} executable}
 
 \item{...}{currently unused; reserved for future extensions.}
 }

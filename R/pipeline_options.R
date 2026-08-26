@@ -410,32 +410,76 @@ supp_asv_taxonomy_file <- function(set_name) {
 }
 
 #### added_reference ####
+#' Apply added_reference fasta/table paths to options
+#' @param added_reference (`list`) with optional `fasta` and `table` entries
+#' @noRd
+apply_added_reference <- function(added_reference) {
+  checkmate::assert_list(added_reference)
+  added_reference <- unnest_yaml_list(added_reference)
+  checkmate::assert_string(added_reference$fasta, null.ok = TRUE)
+  checkmate::assert_string(added_reference$table, null.ok = TRUE)
+
+  if (xor(is.null(added_reference$fasta), is.null(added_reference$table))) {
+    stop(
+      "If one of 'added_reference: fasta' and 'added_reference: table' is ",
+      "given in 'pipeline_options.yaml', then both must be given.",
+      call. = FALSE
+    )
+  }
+  if (!is.null(added_reference$fasta)) {
+    checkmate::assert_file_exists(added_reference$fasta, access = "r")
+    checkmate::assert_file_exists(added_reference$table, access = "r")
+    options(
+      optimotu.pipeline.do_added_reference = TRUE,
+      optimotu.pipeline.added_reference_fasta = added_reference$fasta,
+      optimotu.pipeline.added_reference_table = added_reference$table
+    )
+  }
+}
+
+#' Whether an added_reference block is populated (not just an empty stub)
+#' @param added_reference (`list` or `NULL`)
+#' @return (`logical`)
+#' @noRd
+added_reference_is_populated <- function(added_reference) {
+  if (is.null(added_reference) || !is.list(added_reference)) {
+    return(FALSE)
+  }
+  added_reference <- unnest_yaml_list(added_reference)
+  !is.null(added_reference$fasta) || !is.null(added_reference$table)
+}
+
 #' @rdname parse_pipeline_options
 #' @keywords internal
 parse_added_reference <- function(pipeline_options) {
-  if (!is.null(pipeline_options$added_reference)) {
-    checkmate::assert_list(pipeline_options$added_reference)
-    added_reference <-
-      unnest_yaml_list(pipeline_options$added_reference)
-    checkmate::assert_string(added_reference$fasta, null.ok = TRUE)
-    checkmate::assert_string(added_reference$table, null.ok = TRUE)
-
-    if (xor(is.null(added_reference$fasta), is.null(added_reference$table))) {
-      stop(
-        "If one of 'added_reference_fasta' and 'added_reference_table' is ",
-        "given in 'pipeline_options.yaml', then both must be given."
-      )
-    }
-    if (!is.null(added_reference$fasta)) {
-      checkmate::assert_file_exists(added_reference$fasta, access = "r")
-      checkmate::assert_file_exists(added_reference$table, access = "r")
-      options(
-        optimotu.pipeline.do_added_reference = TRUE,
-        optimotu.pipeline.added_reference_fasta = added_reference$fasta,
-        optimotu.pipeline.added_reference_table = added_reference$table
-      )
-    }
+  if (is.null(pipeline_options$added_reference)) {
+    return(invisible())
   }
+  checkmate::assert_list(pipeline_options$added_reference)
+  if (!added_reference_is_populated(pipeline_options$added_reference)) {
+    return(invisible())
+  }
+  if (do_added_reference()) {
+    stop(
+      "added_reference is specified both at the top level and under ",
+      "taxonomy.protax. Prefer taxonomy.protax.added_reference.",
+      call. = FALSE
+    )
+  }
+  if (!do_protax()) {
+    stop(
+      "Top-level 'added_reference' is only valid with the Protax classifier ",
+      "(taxonomy.protax). Move it under taxonomy.protax.added_reference, or ",
+      "remove it.",
+      call. = FALSE
+    )
+  }
+  warning(
+    "Top-level 'added_reference' is deprecated; move it under ",
+    "taxonomy.protax.added_reference in pipeline_options.yaml.",
+    call. = FALSE
+  )
+  apply_added_reference(pipeline_options$added_reference)
 }
 
 #' @rdname pipeline_options
@@ -454,6 +498,37 @@ added_reference_fasta <- function() {
 #' @export
 added_reference_table <- function() {
   getOption("optimotu.pipeline.added_reference_table", NULL)
+}
+
+#### executables ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_executable_options <- function(pipeline_options) {
+  executables <- pipeline_options$executables
+  if (is.null(executables)) {
+    return(invisible())
+  }
+  checkmate::assert_list(executables)
+  executables <- unnest_yaml_list(executables)
+  if (length(executables) == 0L) {
+    return(invisible())
+  }
+  checkmate::assert_names(names(executables), type = "unique")
+  for (nm in names(executables)) {
+    checkmate::assert_string(executables[[nm]], min.chars = 1)
+  }
+  options(
+    optimotu.pipeline.executables = stats::setNames(
+      as.character(unlist(executables, use.names = FALSE)),
+      names(executables)
+    )
+  )
+}
+
+#' @rdname pipeline_options
+#' @export
+configured_executables <- function() {
+  getOption("optimotu.pipeline.executables", character())
 }
 
 #### parallelism ####
@@ -700,10 +775,19 @@ parse_unoise_options <- function(unoise_options) {
     unoise_options <- unnest_yaml_list(unoise_options)
   }
   checkmate::assert_list(unoise_options)
+  if ("merge" %in% names(unoise_options)) {
+    stop(
+      "'denoising.unoise.merge' has moved to the top-level 'merging:' ",
+      "section of pipeline_options.yaml. Use merging: min_overlap / ",
+      "max_mismatch instead of denoising.unoise.merge: min_overlap / ",
+      "max_diffs.",
+      call. = FALSE
+    )
+  }
   if (length(unoise_options) > 0L) {
     checkmate::assert_names(
       names(unoise_options),
-      subset.of = c("alpha", "minsize", "merge")
+      subset.of = c("alpha", "minsize")
     )
   }
   if ("alpha" %in% names(unoise_options)) {
@@ -715,25 +799,6 @@ parse_unoise_options <- function(unoise_options) {
     options(
       optimotu.pipeline.unoise_minsize = as.integer(unoise_options$minsize)
     )
-  }
-  if ("merge" %in% names(unoise_options)) {
-    merge_opts <- unnest_yaml_list(unoise_options$merge)
-    checkmate::assert_names(
-      names(merge_opts),
-      subset.of = c("min_overlap", "max_diffs")
-    )
-    if ("min_overlap" %in% names(merge_opts)) {
-      checkmate::assert_integerish(merge_opts$min_overlap, lower = 5, len = 1)
-      options(
-        optimotu.pipeline.unoise_merge_min_overlap = as.integer(
-          merge_opts$min_overlap
-        )
-      )
-    }
-    if ("max_diffs" %in% names(merge_opts)) {
-      checkmate::assert_number(merge_opts$max_diffs, lower = 0, finite = TRUE)
-      options(optimotu.pipeline.unoise_merge_max_diffs = merge_opts$max_diffs)
-    }
   }
 }
 
@@ -835,16 +900,68 @@ unoise_minsize <- function() {
   getOption("optimotu.pipeline.unoise_minsize", 8L)
 }
 
-#' @rdname pipeline_options
-#' @export
-unoise_merge_min_overlap <- function() {
-  getOption("optimotu.pipeline.unoise_merge_min_overlap", 16L)
+#### merging settings ####
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_merge_options <- function(pipeline_options) {
+  merging <- pipeline_options$merging
+  if (is.null(merging)) {
+    return(invisible())
+  }
+  checkmate::assert_list(merging)
+  merging <- unnest_yaml_list(merging)
+  checkmate::assert_names(
+    names(merging),
+    subset.of = c("min_overlap", "max_mismatch")
+  )
+  if ("min_overlap" %in% names(merging)) {
+    checkmate::assert_integerish(merging$min_overlap, lower = 5, len = 1)
+    options(
+      optimotu.pipeline.merge_min_overlap = as.integer(merging$min_overlap)
+    )
+  }
+  if ("max_mismatch" %in% names(merging)) {
+    checkmate::assert_number(merging$max_mismatch, lower = 0, finite = TRUE)
+    if (do_dada2() && merging$max_mismatch < 1) {
+      stop(
+        "merging.max_mismatch must be an integer count when ",
+        "denoising.method is 'dada2' (fractional mismatch rates are only ",
+        "supported for vsearch/UNOISE merging).",
+        call. = FALSE
+      )
+    }
+    options(optimotu.pipeline.merge_max_mismatch = merging$max_mismatch)
+  }
 }
 
 #' @rdname pipeline_options
 #' @export
-unoise_merge_max_diffs <- function() {
-  getOption("optimotu.pipeline.unoise_merge_max_diffs", 5)
+merge_min_overlap <- function() {
+  stored <- getOption("optimotu.pipeline.merge_min_overlap", NULL)
+  if (!is.null(stored)) {
+    return(stored)
+  }
+  switch(
+    denoising_method(),
+    dada2 = 10L,
+    unoise = 16L,
+    10L
+  )
+}
+
+#' @rdname pipeline_options
+#' @export
+merge_max_mismatch <- function() {
+  stored <- getOption("optimotu.pipeline.merge_max_mismatch", NULL)
+  if (!is.null(stored)) {
+    return(stored)
+  }
+  switch(
+    denoising_method(),
+    dada2 = 1,
+    unoise = 5,
+    1
+  )
 }
 
 #### filtering settings ####
@@ -1087,7 +1204,7 @@ parse_lulu_options <- function(pipeline_options) {
     )
   }
   ##### dist_config #####
-  lulu_dist_config <- parse_dist_config(lulu_options$dist_config)
+  lulu_dist_config <- resolve_section_dist_config(lulu_options$dist_config)
   options(optimotu.pipeline.lulu_dist_config = lulu_dist_config)
 }
 
@@ -1497,6 +1614,12 @@ parse_protax_options <- function(protax_options) {
   options(optimotu.pipeline.do_protax = TRUE)
   checkmate::assert_list(protax_options)
   protax_options <- unnest_yaml_list(protax_options)
+  if (length(protax_options) > 0L) {
+    checkmate::assert_names(
+      names(protax_options),
+      subset.of = c("aligned", "location", "ranks", "added_reference")
+    )
+  }
 
   ##### protax version #####
   if ("aligned" %in% names(protax_options)) {
@@ -1523,6 +1646,11 @@ parse_protax_options <- function(protax_options) {
 
   if ("ranks" %in% names(protax_options)) {
     parse_taxonomy_ranks(protax_options$ranks)
+  }
+
+  ##### added_reference #####
+  if ("added_reference" %in% names(protax_options)) {
+    apply_added_reference(protax_options$added_reference)
   }
 }
 
@@ -1854,7 +1982,7 @@ parse_cluster_options <- function(pipeline_options) {
         c("MCC", "RI", "ARI", "FMI", "MI", "AMI", "FM")
       )
     }
-    dist_config <- parse_dist_config(clustering$dist_config)
+    dist_config <- resolve_section_dist_config(clustering$dist_config)
     if (
       !is.null(clustering$force_denovo) &&
         !isFALSE(clustering$force_denovo)
@@ -2021,9 +2149,104 @@ parse_cluster_thresholds <- function(thresh_opts) {
 
 #' @rdname parse_pipeline_options
 #' @keywords internal
-parse_dist_config <- function(dist_config) {
+parse_top_dist_config <- function(pipeline_options) {
+  dist_config <- pipeline_options$dist_config
+  if (is.null(dist_config)) {
+    return(invisible())
+  }
   if (is.character(dist_config)) {
     dist_config <- list(method = dist_config)
+  } else {
+    checkmate::assert_list(dist_config)
+    dist_config <- unnest_yaml_list(dist_config)
+  }
+  options(optimotu.pipeline.top_dist_config = dist_config)
+}
+
+#' @rdname pipeline_options
+#' @export
+top_dist_config <- function() {
+  getOption("optimotu.pipeline.top_dist_config", NULL)
+}
+
+#' Merge top-level and section-level dist_config lists
+#'
+#' Section keys always win. Top-level keys are inherited only when the section
+#' omits `method` or specifies the same `method`, so parameters for one
+#' distance method never leak into another.
+#'
+#' @param section_dist (`list`, `character`, or `NULL`) section-level config
+#' @param top_dist (`list` or `NULL`) top-level config
+#' @return (`list`) merged raw dist_config
+#' @noRd
+merge_dist_config_lists <- function(
+  section_dist,
+  top_dist = top_dist_config()
+) {
+  if (is.character(section_dist)) {
+    section_dist <- list(method = section_dist)
+  } else if (!is.null(section_dist)) {
+    checkmate::assert_list(section_dist)
+    section_dist <- unnest_yaml_list(section_dist)
+  }
+  if (is.null(top_dist) || length(top_dist) == 0L) {
+    if (is.null(section_dist) || length(section_dist) == 0L) {
+      return(list(method = "usearch"))
+    }
+    if (is.null(section_dist$method)) {
+      section_dist$method <- "usearch"
+    }
+    return(section_dist)
+  }
+  if (is.null(section_dist) || length(section_dist) == 0L) {
+    if (is.null(top_dist$method)) {
+      top_dist$method <- "usearch"
+    }
+    return(top_dist)
+  }
+  section_method <- section_dist$method
+  top_method <- top_dist$method
+  if (
+    is.null(section_method) ||
+      (!is.null(top_method) && identical(section_method, top_method))
+  ) {
+    merged <- top_dist
+    for (nm in names(section_dist)) {
+      merged[[nm]] <- section_dist[[nm]]
+    }
+    if (is.null(merged$method)) {
+      merged$method <- "usearch"
+    }
+    return(merged)
+  }
+  # Different methods: do not inherit top-level parameters
+  if (is.null(section_dist$method)) {
+    section_dist$method <- "usearch"
+  }
+  section_dist
+}
+
+#' Resolve a section dist_config against the top-level default
+#' @param section_dist (`list`, `character`, or `NULL`)
+#' @return result of [parse_dist_config()]
+#' @noRd
+resolve_section_dist_config <- function(section_dist) {
+  parse_dist_config(merge_dist_config_lists(section_dist))
+}
+
+#' @rdname parse_pipeline_options
+#' @keywords internal
+parse_dist_config <- function(dist_config) {
+  if (is.null(dist_config) || length(dist_config) == 0L) {
+    dist_config <- list(method = "usearch")
+  } else if (is.character(dist_config)) {
+    dist_config <- list(method = dist_config)
+  } else {
+    checkmate::assert_list(dist_config)
+    dist_config <- unnest_yaml_list(dist_config)
+    if (is.null(dist_config$method)) {
+      dist_config$method <- "usearch"
+    }
   }
   dist_config <- c(list(quote(optimotu::dist_config)), dist_config)
   if (dist_config$method == "usearch" && !"usearch" %in% names(dist_config)) {
@@ -2431,12 +2654,14 @@ parse_pipeline_options <- function() {
   parse_duplicate_policy(pipeline_options)
   parse_custom_sample_table(pipeline_options)
   parse_supplemental_asv_options(pipeline_options)
-  parse_added_reference(pipeline_options) #TODO: this should go to taxonomy?
+  parse_executable_options(pipeline_options)
+  parse_top_dist_config(pipeline_options)
   parse_parallel_options(pipeline_options)
   parse_forward_primer(pipeline_options)
   parse_reverse_primer(pipeline_options)
   parse_trim_options(pipeline_options)
   parse_denoising_options(pipeline_options)
+  parse_merge_options(pipeline_options)
   parse_filter_options(pipeline_options)
   parse_uncross_options(pipeline_options)
   parse_amplicon_model_options(pipeline_options)
@@ -2447,6 +2672,7 @@ parse_pipeline_options <- function() {
     parse_protax_options(pipeline_options$protax)
   }
   parse_taxonomy_options(pipeline_options)
+  parse_added_reference(pipeline_options)
   parse_outgroup_options(pipeline_options)
   parse_cluster_options(pipeline_options)
   parse_guilds_options(pipeline_options)

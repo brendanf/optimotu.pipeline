@@ -1,6 +1,7 @@
 #' @title Indexing and random access extraction of gzipped FASTA and FASTQ files
 #'
 #' @param file (`character` filename) file to create an index for
+#' @param fastqindex (`character`) path to the `fastqindex` executable
 #'
 #' These functions are wrappers around the
 #' [`FastqIndEx`](https://dkfz-odcf.github.io/FastqIndEx/) utility.
@@ -9,8 +10,7 @@
 #' @return file name of the created index
 #' @describeIn fastx_gz Generate a gzip index file
 #' @export
-fastx_gz_index <- function(file) {
-  fastqindex <- find_executable("fastqindex")
+fastx_gz_index <- function(file, fastqindex = find_executable("fastqindex")) {
   checkmate::assert_file_exists(fastqindex, access = "x")
   index <- sprintf("%s.fqi", file)
   args <- c(

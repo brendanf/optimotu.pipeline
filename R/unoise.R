@@ -105,6 +105,7 @@ read_seq_ids <- function(seq) {
 #' @param denoise_map (`data.frame`) as returned by [make_denoise_map()] for
 #'   the same `uc` object(s); must include `denoise_idx` and `seq_idx`, and
 #'   `sample` when mapping more than one sample
+#' @param vsearch (`character`) path to the `vsearch` executable
 #'
 #' @return `data.frame` with columns:
 #'  - `sample` (character) the sample name
@@ -127,7 +128,8 @@ unoise_read_map <- function(
   fq_trim,
   fq_merged,
   uc,
-  denoise_map
+  denoise_map,
+  vsearch = find_vsearch()
 ) {
   # avoid R CMD check NOTE: no visible binding for global variable
   raw_idx <- seq_idx <- trim_idx <- filt_idx <- denoise_local <- NULL
@@ -148,6 +150,7 @@ unoise_read_map <- function(
   checkmate::assert_file_exists(fq_trim, "r")
   checkmate::assert_file_exists(fq_merged, "r")
   checkmate::assert_data_frame(denoise_map)
+  checkmate::assert_file_exists(vsearch, "x")
 
   if (inherits(uc, "uc_cluster")) {
     checkmate::assert_true(length(sample) == 1L)
@@ -163,7 +166,11 @@ unoise_read_map <- function(
   for (i in seq_along(sample)) {
     smap <- fastq_seq_map(fq_raw[[i]], fq_trim[[i]], fq_merged[[i]])
     merged_ids <- read_seq_ids(fq_merged[[i]])
-    derep_map <- vsearch_derep_uc(fq_merged[[i]], merged_ids = merged_ids)
+    derep_map <- vsearch_derep_uc(
+      fq_merged[[i]],
+      vsearch = vsearch,
+      merged_ids = merged_ids
+    )
     u <- uc[[i]]
     dm_i <- denoise_map_for_sample(denoise_map, sample[[i]], length(sample))
     merged_seq_id <- merged_ids[smap$filt_idx]

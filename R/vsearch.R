@@ -17,6 +17,7 @@ find_vsearch <- function() {
 #' @param ncpu (`integer` count) number of threads to use
 #' @param id_is_int (`logical` flag) if `TRUE`, return the sequence IDs as
 #' integers
+#' @param vsearch (`character` string) path to the vsearch executable
 #'
 #' @return `tibble::tibble` with columns `seq_id`, `clust`, and `dist`, where
 #' `seq_id` is the name of a sequence from `query`, `clust` is the closest match
@@ -28,9 +29,11 @@ vsearch_usearch_global <- function(
   threshold,
   global = TRUE,
   ncpu = local_cpus(),
-  id_is_int = FALSE
+  id_is_int = FALSE,
+  vsearch = find_vsearch()
 ) {
   checkmate::check_flag(id_is_int)
+  checkmate::assert_file_exists(vsearch, "x")
   if (is.character(query) && length(query) == 1 && file.exists(query)) {
     tquery <- query
   } else {
@@ -48,7 +51,7 @@ vsearch_usearch_global <- function(
   # fmt: skip
   uc <- system(
     paste(
-      find_vsearch(),
+      vsearch,
       "--usearch_global", tquery,
       "--db", tref,
       "--id", threshold,
@@ -105,6 +108,7 @@ vsearch_usearch_global <- function(
 #' sequence stream (`NULL` means all sequences in order). Applies after
 #' concatenating multiple FASTA inputs, and supports duplicates and
 #' reordering.
+#' @param vsearch (`character`) path to the `vsearch` executable
 #' @param ... currently unused; reserved for future extensions.
 #' @return if `id_only` is FALSE, a `tibble::tibble` with columns `seq_id` (or
 #' `seq_idx` if `id_is_int` is TRUE) and `seq`, where `seq_id` (`seq_idx`) is
@@ -121,6 +125,7 @@ vsearch_uchime_ref <- function(
   id_is_int = FALSE,
   files = NULL,
   seq_idx = NULL,
+  vsearch = find_vsearch(),
   ...
 ) {
   # avoid R CMD check NOTE for undeclared global variables due to NSE
@@ -130,6 +135,7 @@ vsearch_uchime_ref <- function(
   checkmate::assert_integerish(ncpu, lower = 1, min.len = 1, max.len = 1)
   checkmate::assert_flag(id_only)
   checkmate::assert_flag(id_is_int)
+  checkmate::assert_file_exists(vsearch, "x")
 
   if (is.list(seq_idx) && length(seq_idx) > 1L) {
     stop(
@@ -175,7 +181,7 @@ vsearch_uchime_ref <- function(
   }
   tchimeras <- withr::local_tempfile(pattern = "chimeras", fileext = ".fasta")
   vs <- system2(
-    find_vsearch(),
+    vsearch,
     # fmt: skip
     args = c(
       "--uchime_ref", tquery,
@@ -244,11 +250,18 @@ vsearch_usearch_global_closed_ref <- function(query, ref, threshold, ...) {
 #' `character` vector, or file name) sequences to cluster
 #' @param threshold (`numeric` scalar) identity threshold, in range 0.0-1.0
 #' @param ncpu (`integer` count) number of threads to use
+#' @param vsearch (`character` string) path to the vsearch executable
 #' @return `tibble::tibble` with columns `query` and `hit`, where `query` is
 #' the name of a sequence from `seq`, and `hit` is the name of the sequence
 #' which is the centroid of the cluster containing `query`
 #' @export
-vsearch_cluster_smallmem <- function(seq, threshold = 1, ncpu = local_cpus()) {
+vsearch_cluster_smallmem <- function(
+  seq,
+  threshold = 1,
+  ncpu = local_cpus(),
+  vsearch = find_vsearch()
+) {
+  checkmate::assert_file_exists(vsearch, "x")
   if (is.character(seq) && length(seq) == 1 && file.exists(seq)) {
     tout <- seq
   } else {
@@ -258,7 +271,7 @@ vsearch_cluster_smallmem <- function(seq, threshold = 1, ncpu = local_cpus()) {
   # fmt: skip
   uc <- system(
     paste(
-      find_vsearch(),
+      vsearch,
       "--cluster_smallmem", tout,
       "--usersort",
       "--id", threshold,
@@ -408,6 +421,7 @@ nomismatch_hits_vsearch <- function(
 #' sequence stream (`NULL` means all sequences in order). Applies after
 #' concatenating multiple FASTA inputs, and supports duplicates and
 #' reordering.
+#' @param vsearch (`character`) path to the `vsearch` executable
 #' @param ... currently unused; reserved for future extensions.
 #' @return `tibble::tibble` with columns `seq_id` (or `seq_idx` if `id_is_int`
 #' is TRUE), `rank`, `parent_taxonomy`, `taxon`, and `prob`, where `seq_id`
@@ -425,6 +439,7 @@ sintax <- function(
   hash = NULL,
   files = NULL,
   seq_idx = NULL,
+  vsearch = find_vsearch(),
   ...
 ) {
   # avoid R CMD check NOTE about global variables due to NSE
@@ -438,6 +453,7 @@ sintax <- function(
   )
   checkmate::assert_file_exists(ref, access = "r")
   checkmate::assert_count(ncpu, null.ok = TRUE)
+  checkmate::assert_file_exists(vsearch, "x")
   if (is.list(seq_idx) && length(seq_idx) > 1L) {
     stop(
       "`seq_idx` must not be a list with more than one partition.",
@@ -473,14 +489,14 @@ sintax <- function(
     }
     return(empty_out)
   }
-  version <- processx::run(find_vsearch(), "--version")$stderr |>
+  version <- processx::run(vsearch, "--version")$stderr |>
     sub("vsearch v([0-9.]+).+", "\\1", x = _) |>
     strsplit(split = ".", fixed = TRUE) |>
     unlist() |>
     as.integer()
   has_random <- version[1] > 2L || (version[1] == 2L && version[2] >= 28L)
   result <- processx::run(
-    find_vsearch(),
+    vsearch,
     # fmt: skip
     c(
       "--sintax", tout,

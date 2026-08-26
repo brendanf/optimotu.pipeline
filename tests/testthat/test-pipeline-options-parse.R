@@ -65,6 +65,12 @@ test_that("parse_custom_sample_table accepts FALSE and valid path", {
 test_that("parse_added_reference requires both files and sets options", {
   old <- options()
   withr::defer(options(old), testthat::teardown_env())
+  options(
+    optimotu.pipeline.do_protax = TRUE,
+    optimotu.pipeline.do_added_reference = FALSE,
+    optimotu.pipeline.added_reference_fasta = NULL,
+    optimotu.pipeline.added_reference_table = NULL
+  )
 
   fasta <- withr::local_tempfile(fileext = ".fa")
   table <- withr::local_tempfile(fileext = ".xlsx")
@@ -72,14 +78,19 @@ test_that("parse_added_reference requires both files and sets options", {
   writeLines("placeholder", table)
 
   expect_error(
-    optimotu.pipeline:::parse_added_reference(
-      list(added_reference = list(fasta = fasta))
+    suppressWarnings(
+      optimotu.pipeline:::parse_added_reference(
+        list(added_reference = list(fasta = fasta))
+      )
     ),
     "both must be given"
   )
 
-  optimotu.pipeline:::parse_added_reference(
-    list(added_reference = list(list(fasta = fasta), list(table = table)))
+  expect_warning(
+    optimotu.pipeline:::parse_added_reference(
+      list(added_reference = list(list(fasta = fasta), list(table = table)))
+    ),
+    "deprecated"
   )
   expect_true(optimotu.pipeline::do_added_reference())
   expect_equal(optimotu.pipeline::added_reference_fasta(), fasta)
@@ -381,8 +392,6 @@ test_that("parse_denoising_options defaults to dada2 and accepts unoise", {
   expect_true(optimotu.pipeline::do_unoise())
   expect_equal(optimotu.pipeline::unoise_alpha(), 2)
   expect_equal(optimotu.pipeline::unoise_minsize(), 8L)
-  expect_equal(optimotu.pipeline::unoise_merge_min_overlap(), 16L)
-  expect_equal(optimotu.pipeline::unoise_merge_max_diffs(), 5)
 
   optimotu.pipeline:::parse_denoising_options(
     list(
@@ -391,16 +400,13 @@ test_that("parse_denoising_options defaults to dada2 and accepts unoise", {
         pool = "sample",
         unoise = list(
           alpha = 1.5,
-          minsize = 4L,
-          merge = list(min_overlap = 20L, max_diffs = 3)
+          minsize = 4L
         )
       )
     )
   )
   expect_equal(optimotu.pipeline::unoise_alpha(), 1.5)
   expect_equal(optimotu.pipeline::unoise_minsize(), 4L)
-  expect_equal(optimotu.pipeline::unoise_merge_min_overlap(), 20L)
-  expect_equal(optimotu.pipeline::unoise_merge_max_diffs(), 3)
 
   expect_error(
     optimotu.pipeline:::parse_denoising_options(list(denoising = "nope")),
@@ -417,6 +423,164 @@ test_that("parse_denoising_options defaults to dada2 and accepts unoise", {
       list(denoising = list(method = "unoise", pool = "project"))
     ),
     "only 'sample' is implemented"
+  )
+  expect_error(
+    optimotu.pipeline:::parse_denoising_options(
+      list(
+        denoising = list(
+          method = "unoise",
+          unoise = list(merge = list(min_overlap = 20L))
+        )
+      )
+    ),
+    "moved to the top-level 'merging:'"
+  )
+})
+
+test_that("parse_merge_options uses method-specific defaults", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+
+  options(
+    optimotu.pipeline.denoising_method = "dada2",
+    optimotu.pipeline.merge_min_overlap = NULL,
+    optimotu.pipeline.merge_max_mismatch = NULL
+  )
+  expect_equal(optimotu.pipeline::merge_min_overlap(), 10L)
+  expect_equal(optimotu.pipeline::merge_max_mismatch(), 1)
+
+  options(optimotu.pipeline.denoising_method = "unoise")
+  expect_equal(optimotu.pipeline::merge_min_overlap(), 16L)
+  expect_equal(optimotu.pipeline::merge_max_mismatch(), 5)
+
+  options(optimotu.pipeline.denoising_method = "dada2")
+  optimotu.pipeline:::parse_merge_options(
+    list(merging = list(min_overlap = 12L, max_mismatch = 2))
+  )
+  expect_equal(optimotu.pipeline::merge_min_overlap(), 12L)
+  expect_equal(optimotu.pipeline::merge_max_mismatch(), 2)
+
+  expect_error(
+    optimotu.pipeline:::parse_merge_options(
+      list(merging = list(max_mismatch = 0.1))
+    ),
+    "integer count"
+  )
+
+  options(optimotu.pipeline.denoising_method = "unoise")
+  options(optimotu.pipeline.merge_max_mismatch = NULL)
+  optimotu.pipeline:::parse_merge_options(
+    list(merging = list(max_mismatch = 0.05))
+  )
+  expect_equal(optimotu.pipeline::merge_max_mismatch(), 0.05)
+})
+
+test_that("merge_dist_config_lists inherits same-method keys only", {
+  expect_equal(
+    optimotu.pipeline:::merge_dist_config_lists(NULL, NULL),
+    list(method = "usearch")
+  )
+  expect_equal(
+    optimotu.pipeline:::merge_dist_config_lists(
+      NULL,
+      list(method = "hamming")
+    ),
+    list(method = "hamming")
+  )
+  expect_equal(
+    optimotu.pipeline:::merge_dist_config_lists(
+      list(method = "usearch", usearch = "bin/usearch"),
+      list(method = "usearch")
+    ),
+    list(method = "usearch", usearch = "bin/usearch")
+  )
+  expect_equal(
+    optimotu.pipeline:::merge_dist_config_lists(
+      list(method = "wfa2", match = 0),
+      list(method = "usearch", usearch = "bin/usearch")
+    ),
+    list(method = "wfa2", match = 0)
+  )
+  expect_equal(
+    optimotu.pipeline:::merge_dist_config_lists(
+      list(usearch = "bin/usearch"),
+      list(method = "usearch")
+    ),
+    list(method = "usearch", usearch = "bin/usearch")
+  )
+})
+
+test_that("parse_executable_options stores configured paths", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+  options(optimotu.pipeline.executables = NULL)
+
+  optimotu.pipeline:::parse_executable_options(
+    list(executables = list(usearch = "bin/usearch", vsearch = "vsearch"))
+  )
+  expect_equal(
+    optimotu.pipeline::configured_executables(),
+    c(usearch = "bin/usearch", vsearch = "vsearch")
+  )
+})
+
+test_that("added_reference under taxonomy.protax and deprecated top-level", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+  options(
+    optimotu.pipeline.do_added_reference = FALSE,
+    optimotu.pipeline.added_reference_fasta = NULL,
+    optimotu.pipeline.added_reference_table = NULL,
+    optimotu.pipeline.do_protax = FALSE
+  )
+
+  fasta <- withr::local_tempfile(fileext = ".fasta")
+  table <- withr::local_tempfile(fileext = ".xlsx")
+  writeLines(">s1\nACGT", fasta)
+  # empty file is enough for assert_file_exists
+  file.create(table)
+
+  optimotu.pipeline:::parse_protax_options(
+    list(
+      aligned = FALSE,
+      location = tempdir(),
+      added_reference = list(fasta = fasta, table = table)
+    )
+  )
+  expect_true(optimotu.pipeline::do_added_reference())
+  expect_equal(optimotu.pipeline::added_reference_fasta(), fasta)
+  expect_equal(optimotu.pipeline::added_reference_table(), table)
+
+  options(
+    optimotu.pipeline.do_added_reference = FALSE,
+    optimotu.pipeline.added_reference_fasta = NULL,
+    optimotu.pipeline.added_reference_table = NULL,
+    optimotu.pipeline.do_protax = TRUE
+  )
+  expect_warning(
+    optimotu.pipeline:::parse_added_reference(
+      list(added_reference = list(fasta = fasta, table = table))
+    ),
+    "deprecated"
+  )
+  expect_true(optimotu.pipeline::do_added_reference())
+
+  options(
+    optimotu.pipeline.do_added_reference = FALSE,
+    optimotu.pipeline.do_protax = FALSE
+  )
+  expect_error(
+    optimotu.pipeline:::parse_added_reference(
+      list(added_reference = list(fasta = fasta, table = table))
+    ),
+    "only valid with the Protax classifier"
+  )
+
+  # empty stub is ignored
+  expect_silent(
+    optimotu.pipeline:::parse_added_reference(
+      list(added_reference = list(fasta = NULL, table = NULL))
+    )
   )
 })
 

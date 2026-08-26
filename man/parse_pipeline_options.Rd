@@ -9,12 +9,14 @@
 \alias{assert_supplemental_header_ids}
 \alias{parse_supplemental_asv_options}
 \alias{parse_added_reference}
+\alias{parse_executable_options}
 \alias{parse_parallel_options}
 \alias{parse_forward_primer}
 \alias{parse_reverse_primer}
 \alias{parse_trim_options}
 \alias{parse_unoise_options}
 \alias{parse_denoising_options}
+\alias{parse_merge_options}
 \alias{parse_filter_options}
 \alias{parse_uncross_options}
 \alias{parse_lulu_options}
@@ -29,6 +31,7 @@
 \alias{parse_outgroup_options}
 \alias{parse_cluster_options}
 \alias{parse_cluster_thresholds}
+\alias{parse_top_dist_config}
 \alias{parse_dist_config}
 \alias{parse_guilds_options}
 \alias{parse_otu_table_options}
@@ -52,6 +55,8 @@ parse_supplemental_asv_options(pipeline_options)
 
 parse_added_reference(pipeline_options)
 
+parse_executable_options(pipeline_options)
+
 parse_parallel_options(pipeline_options)
 
 parse_forward_primer(pipeline_options)
@@ -63,6 +68,8 @@ parse_trim_options(pipeline_options)
 parse_unoise_options(unoise_options)
 
 parse_denoising_options(pipeline_options)
+
+parse_merge_options(pipeline_options)
 
 parse_filter_options(pipeline_options)
 
@@ -91,6 +98,8 @@ parse_outgroup_options(pipeline_options)
 parse_cluster_options(pipeline_options)
 
 parse_cluster_thresholds(thresh_opts)
+
+parse_top_dist_config(pipeline_options)
 
 parse_dist_config(dist_config)
 

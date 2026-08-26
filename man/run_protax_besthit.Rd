@@ -15,6 +15,7 @@ run_protax_besthit(
   files = NULL,
   seq_idx = NULL,
   ncpu = local_cpus(),
+  executable = find_executable(command),
   ...
 )
 
@@ -55,6 +56,9 @@ those stored in the index.}
 logical sequence stream (\code{NULL} means all sequences in order).}
 
 \item{ncpu}{(\code{integer}) maximum number of parallel workers over query chunks.}
+
+\item{executable}{(\code{character}) path to the \code{dist_best} or \code{dist_bipart}
+executable}
 
 \item{...}{ignored; reserved for dependency-tracking literals/hashes.}
 

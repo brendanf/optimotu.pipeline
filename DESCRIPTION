@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for Environmental DNA Metabarcoding
-Version: 0.6.3.9016
+Version: 0.6.3.9018
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -79,3 +79,4 @@ Remotes:
     bioc::S4Vectors
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.0
+RoxygenNote: 7.3.3

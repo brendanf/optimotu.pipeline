@@ -4,7 +4,15 @@
 \alias{hmmsearch}
 \title{Search for subsequences matching one or more HMMs in a set of sequences}
 \usage{
-hmmsearch(seqs, hmm, files = NULL, seq_idx = NULL, ncpu = local_cpus(), ...)
+hmmsearch(
+  seqs,
+  hmm,
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  hmmsearch = find_hmmsearch(),
+  ...
+)
 }
 \arguments{
 \item{seqs}{(\code{\link[Biostrings:XStringSet-class]{XStringSet}}, \code{character}
@@ -29,6 +37,8 @@ request order.}
 \item{ncpu}{(\code{integer}) maximum number of parallel \code{hmmsearch} processes.
 The selected sequences are split into up to \code{ncpu} contiguous chunks of
 nearly equal size (fewer when there are fewer sequences than \code{ncpu}).}
+
+\item{hmmsearch}{(\code{character}) path to the \code{hmmsearch} executable}
 
 \item{...}{ignored; reserved for \code{targets} dependency tracking (e.g. file
 hashes) without changing behavior.}

@@ -460,6 +460,7 @@ trim_primer <- function(seqs, primer, ...) {
 #' @param primer_R1 (`character`) primer specification for R1
 #' @param primer_R2 (`character`) primer specification for R2
 #' @param ncpu (`integer`) number of CPU threads to use
+#' @param cutadapt (`character`) path to the `cutadapt` executable
 #' @param ... additional arguments for dependency tracking
 #' @return a `character` vector with the path to the trimmed output files
 #' @export
@@ -471,6 +472,7 @@ trim_raw_pairs <- function(
   primer_R1,
   primer_R2,
   ncpu = local_cpus(),
+  cutadapt = find_cutadapt(),
   ...
 ) {
   logfile_name <- sprintf("logs/trim_%s_%s.log", seqrun, orient)
@@ -494,6 +496,7 @@ trim_raw_pairs <- function(
         primer_R2 = ifelse(orient == "fwd", primer_R2, primer_R1),
         options = update(trim_options, .y),
         ncpu = ncpu,
+        cutadapt = cutadapt,
         logfile = logfile
       ) |>
         unlist(),

@@ -5,7 +5,15 @@
 \title{Search for subsequences matching one or more nucleotide HMMs in a set of
 sequences}
 \usage{
-nhmmer(seqs, hmm, files = NULL, seq_idx = NULL, ncpu = local_cpus(), ...)
+nhmmer(
+  seqs,
+  hmm,
+  files = NULL,
+  seq_idx = NULL,
+  ncpu = local_cpus(),
+  nhmmer = find_nhmmer(),
+  ...
+)
 }
 \arguments{
 \item{seqs}{(\code{\link[Biostrings:XStringSet-class]{XStringSet}}, \code{character}
@@ -30,6 +38,8 @@ request order.}
 \item{ncpu}{(\code{integer}) number of threads passed to nhmmer (\code{--cpu}).
 Parallelism is only inside nhmmer; the query is not split across
 processes.}
+
+\item{nhmmer}{(\code{character}) path to the \code{nhmmer} executable}
 
 \item{...}{ignored; reserved for \code{targets} dependency tracking (e.g. file
 hashes) without changing behavior.}

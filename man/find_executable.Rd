@@ -13,7 +13,15 @@ find_executable(executable)
 (\code{character} string) the full path to the executable.
 }
 \description{
-This function tries to find an executable in the system. It first checks the
-environment variables, then the system path, and finally the current working
-directory.
+This function tries to find an executable in the system. It first checks
+any path configured under \verb{executables:} in \code{pipeline_options.yaml}, then
+the environment variables, then the system path, and finally the current
+working directory / \code{OPTIMOTU_BIN_DIR}.
+}
+\details{
+Because resolution depends on R options set by
+\code{\link[=parse_pipeline_options]{parse_pipeline_options()}}, call this on the main process at plan
+definition time and inject the result into target commands with \verb{!!}
+(for example \code{vsearch = !!find_vsearch()}). Do not rely on default
+arguments that call \verb{find_*()} to run on \code{crew} workers.
 }

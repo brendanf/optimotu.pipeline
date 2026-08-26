@@ -11,7 +11,7 @@ epa_ng(
   outdir = tempfile(),
   model,
   ncpu,
-  exec = find_epa_ng(),
+  epa_ng = find_epa_ng(),
   redo = TRUE,
   strip_inserts = FALSE
 )
@@ -36,7 +36,7 @@ various programs, including IQ-TREE, RAxML, and FastTree.}
 
 \item{ncpu}{(\code{integer}) number of threads to use}
 
-\item{exec}{(\code{character}) path to the \code{epa-ng} executable}
+\item{epa_ng}{(\code{character}) path to the \code{epa-ng} executable}
 
 \item{redo}{(\code{logical}) whether to overwrite existing output files}
 

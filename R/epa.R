@@ -1,5 +1,15 @@
+#' Try to find the epa-ng executable
+#' @return (`character` string) the full path to the epa-ng executable.
+#' @export
 find_epa_ng <- function() {
   find_executable("epa-ng")
+}
+
+#' Try to find the gappa executable
+#' @return (`character` string) the full path to the gappa executable.
+#' @export
+find_gappa <- function() {
+  find_executable("gappa")
 }
 
 #' Run EPA-ng
@@ -16,7 +26,7 @@ find_epa_ng <- function() {
 #' containing the model specification.  EPA-ng can parse output files from
 #' various programs, including IQ-TREE, RAxML, and FastTree.
 #' @param ncpu (`integer`) number of threads to use
-#' @param exec (`character`) path to the `epa-ng` executable
+#' @param epa_ng (`character`) path to the `epa-ng` executable
 #' @param redo (`logical`) whether to overwrite existing output files
 #' @param strip_inserts (`logical`) whether to strip insertions (lower-case
 #' characters) from the query sequences before running EPA-ng
@@ -30,7 +40,7 @@ epa_ng <- function(
   outdir = tempfile(),
   model,
   ncpu,
-  exec = find_epa_ng(),
+  epa_ng = find_epa_ng(),
   redo = TRUE,
   strip_inserts = FALSE
 ) {
@@ -169,7 +179,7 @@ epa_ng <- function(
     args <- c(args, "--threads", ncpu)
   }
 
-  processx::run(exec, args = args, echo_cmd = TRUE, stdout = "")
+  processx::run(epa_ng, args = args, echo_cmd = TRUE, stdout = "")
   outfile <- file.path(outdir, "epa_result.jplace")
   checkmate::assert_file_exists(outfile, "r")
   outfile
@@ -332,6 +342,7 @@ parse_iqtree_model <- function(file = NULL, text = NULL) {
 #' output files
 #' @param verbose (`logical`) whether to print verbose output
 #' @param id_is_int (`logical`) whether the sequence IDs are integers
+#' @param gappa (`character`) path to the `gappa` executable
 #' @return (`data.frame`) with columns:
 #' - `seq_id` (character) the sequence ID
 #' - `rank` (ordered factor) the taxonomic rank
@@ -350,9 +361,10 @@ gappa_assign <- function(
   ncpu = NULL,
   allow_file_overwriting = TRUE,
   verbose = FALSE,
-  id_is_int = FALSE
+  id_is_int = FALSE,
+  gappa = find_gappa()
 ) {
-  gappa <- find_executable("gappa")
+  checkmate::assert_file_exists(gappa, "x")
   args <- c("examine", "assign", "--per-query-results")
   checkmate::assert_flag(id_is_int)
 

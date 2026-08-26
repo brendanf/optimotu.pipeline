@@ -115,14 +115,21 @@ families include:
   `clustering.max_batch_ops`; omitted values default from `dist_config`
   method and are messaged at parse time.
 - external command wrappers and sequence IO helpers
+- Tool paths from `find_executable()` / `find_*()` must be resolved at plan
+  definition time and passed into helpers (defaults remain for interactive
+  use). Target scripts should inject with `!!`.
 - DADA2 wrapper/option classes and per-read fate mapping (`dada2_wrappers.R`,
   `dada2_map.R`, `dada2_chimera.R`)
 - UNOISE (vsearch) merge/cluster wrappers and per-read mapping (`vsearch.R`,
   `unoise.R`), configured through `parse_denoising_options()` /
-  `parse_filter_options()` (`do_unoise()`, `do_dada2()`, `denoising_method()`)
+  `parse_merge_options()` / `parse_filter_options()` (`do_unoise()`,
+  `do_dada2()`, `denoising_method()`, `merge_min_overlap()`,
+  `merge_max_mismatch()`)
 - Shared denoise maps and read maps (`make_denoise_map()`,
   `denoise_map_to_seqtable()`, `dada2_read_map()`, `unoise_read_map()`,
   `merge_read_maps()`, `with_read_map_annotate()`)
+- Top-level `dist_config:` / `executables:` / `merging:` options; Protax
+  `added_reference` lives under `taxonomy.protax`
 - LULU secondary-clustering entry points (`lulu_long.R`), configured through
   `parse_lulu_options()`, including `add_lulu_to_read_map()` for fate maps
   and `with_read_map_annotate()` to wrap those steps in target commands

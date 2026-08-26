@@ -4,7 +4,15 @@
 \alias{seq_cluster_protax}
 \title{Single-linkage clustering of aligned sequences}
 \usage{
-seq_cluster_protax(aln_seq, aln_index, which, thresh, aln_len)
+seq_cluster_protax(
+  aln_seq,
+  aln_index,
+  which,
+  thresh,
+  aln_len,
+  dist_matrix = find_executable("dist_matrix"),
+  dist_bipart = find_executable("dist_bipart")
+)
 }
 \arguments{
 \item{aln_seq}{(\code{character}) file name of gzipped FASTA file containing
@@ -19,6 +27,10 @@ sequences to cluster}
 i.e., 0.0 to 100.0}
 
 \item{aln_len}{(\code{integer}) width of alignment}
+
+\item{dist_matrix}{(\code{character}) path to the \code{dist_matrix} executable}
+
+\item{dist_bipart}{(\code{character}) path to the \code{dist_bipart} executable}
 }
 \value{
 a \code{data.frame} with columns \code{seq_id}, \code{cluster}, and \code{dist}

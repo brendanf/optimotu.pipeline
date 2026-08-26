@@ -13,6 +13,7 @@ hmmalign(
   files = NULL,
   seq_idx = NULL,
   ncpu = local_cpus(),
+  hmmalign = find_hmmalign(),
   ...
 )
 }
@@ -56,6 +57,8 @@ building an index.}
 \item{ncpu}{(\code{integer}) maximum number of parallel \code{hmmalign} processes.
 The selected sequences are split into up to \code{ncpu} contiguous chunks of
 nearly equal size (fewer when there are fewer sequences than \code{ncpu}).}
+
+\item{hmmalign}{(\code{character}) path to the \code{hmmalign} executable}
 
 \item{...}{ignored; reserved for \code{targets} dependency tracking (e.g. file
 hashes) without changing behavior.}

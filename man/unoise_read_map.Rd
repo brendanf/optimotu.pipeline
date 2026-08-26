@@ -4,7 +4,15 @@
 \alias{unoise_read_map}
 \title{Map the fate of individual reads through UNOISE merge and denoising}
 \usage{
-unoise_read_map(sample, fq_raw, fq_trim, fq_merged, uc, denoise_map)
+unoise_read_map(
+  sample,
+  fq_raw,
+  fq_trim,
+  fq_merged,
+  uc,
+  denoise_map,
+  vsearch = find_vsearch()
+)
 }
 \arguments{
 \item{sample}{(\code{character}) sample name(s)}
@@ -21,6 +29,8 @@ unoise_read_map(sample, fq_raw, fq_trim, fq_merged, uc, denoise_map)
 \item{denoise_map}{(\code{data.frame}) as returned by \code{\link[=make_denoise_map]{make_denoise_map()}} for
 the same \code{uc} object(s); must include \code{denoise_idx} and \code{seq_idx}, and
 \code{sample} when mapping more than one sample}
+
+\item{vsearch}{(\code{character}) path to the \code{vsearch} executable}
 }
 \value{
 \code{data.frame} with columns:

@@ -12,6 +12,7 @@ trim_raw_pairs(
   primer_R1,
   primer_R2,
   ncpu = local_cpus(),
+  cutadapt = find_cutadapt(),
   ...
 )
 }
@@ -31,6 +32,8 @@ options for cutadapt}
 \item{primer_R2}{(\code{character}) primer specification for R2}
 
 \item{ncpu}{(\code{integer}) number of CPU threads to use}
+
+\item{cutadapt}{(\code{character}) path to the \code{cutadapt} executable}
 
 \item{...}{additional arguments for dependency tracking}
 }

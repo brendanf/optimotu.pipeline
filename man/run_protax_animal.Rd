@@ -16,6 +16,7 @@ run_protax_animal(
   files = NULL,
   seq_idx = NULL,
   ncpu = local_cpus(),
+  executable = find_executable(if (info) "classify_info" else "classify_v2"),
   ...
 )
 }
@@ -54,6 +55,9 @@ those stored in the index.}
 logical sequence stream (\code{NULL} means all sequences in order).}
 
 \item{ncpu}{(\code{integer}) maximum number of parallel classify workers.}
+
+\item{executable}{(\code{character}) path to the \code{classify_info} or \code{classify_v2}
+executable}
 
 \item{...}{ignored; reserved for dependency-tracking literals/hashes.}
 }

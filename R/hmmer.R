@@ -52,6 +52,7 @@ find_nhmmer <- function() {
 #' @param ncpu (`integer`) maximum number of parallel `hmmalign` processes.
 #'   The selected sequences are split into up to `ncpu` contiguous chunks of
 #'   nearly equal size (fewer when there are fewer sequences than `ncpu`).
+#' @param hmmalign (`character`) path to the `hmmalign` executable
 #' @param ... ignored; reserved for `targets` dependency tracking (e.g. file
 #'   hashes) without changing behavior.
 #' @return `character` vector of output file path(s) actually written: length
@@ -67,6 +68,7 @@ hmmalign <- function(
   files = NULL,
   seq_idx = NULL,
   ncpu = local_cpus(),
+  hmmalign = find_hmmalign(),
   ...
 ) {
   checkmate::assert_string(hmm)
@@ -85,6 +87,7 @@ hmmalign <- function(
   checkmate::assert_choice(outformat, c("A2M", "a2m", "afa", "AFA"))
   checkmate::assert_flag(compress)
   checkmate::assert_count(ncpu)
+  checkmate::assert_file_exists(hmmalign, access = "x")
   indexed_like <- inherits(seqs, "fastqindexr_index") ||
     seq_batch_is_fqi_path_set(seqs)
   if (!is.null(files) && !indexed_like) {
@@ -93,8 +96,6 @@ hmmalign <- function(
       call. = FALSE
     )
   }
-  exec <- find_hmmalign()
-  checkmate::assert_file_exists(exec, access = "x")
   tmp_parent <- environment()
   tseqs <- seq_batch_make_chunk_files(
     seqs = seqs,
@@ -145,7 +146,7 @@ hmmalign <- function(
   deline <- vector("list", n)
   for (i in seq_len(n)) {
     hmmer[[i]] <- processx::process$new(
-      command = exec,
+      command = hmmalign,
       args = args[i, ],
       supervise = TRUE
     )
@@ -355,6 +356,7 @@ empty_dna_tblout <- function() {
 #' @param ncpu (`integer`) maximum number of parallel `hmmsearch` processes.
 #'   The selected sequences are split into up to `ncpu` contiguous chunks of
 #'   nearly equal size (fewer when there are fewer sequences than `ncpu`).
+#' @param hmmsearch (`character`) path to the `hmmsearch` executable
 #' @param ... ignored; reserved for `targets` dependency tracking (e.g. file
 #'   hashes) without changing behavior.
 #' @return a [`tibble`][tibble::tibble()] listing the HMM hits. Empty sequence
@@ -366,11 +368,13 @@ hmmsearch <- function(
   files = NULL,
   seq_idx = NULL,
   ncpu = local_cpus(),
+  hmmsearch = find_hmmsearch(),
   ...
 ) {
   checkmate::assert_string(hmm)
   checkmate::assert_file_exists(hmm, access = "r")
   checkmate::assert_count(ncpu)
+  checkmate::assert_file_exists(hmmsearch, access = "x")
   indexed_like <- inherits(seqs, "fastqindexr_index") ||
     seq_batch_is_fqi_path_set(seqs)
   if (!is.null(files) && !indexed_like) {
@@ -379,8 +383,6 @@ hmmsearch <- function(
       call. = FALSE
     )
   }
-  exec <- find_hmmsearch()
-  checkmate::assert_file_exists(exec, access = "x")
   tmp_parent <- environment()
   tseqs <- seq_batch_make_chunk_files(
     seqs = seqs,
@@ -410,7 +412,7 @@ hmmsearch <- function(
   hmmer <- vector("list", n)
   for (i in seq_len(n)) {
     hmmer[[i]] <- processx::process$new(
-      command = exec,
+      command = hmmsearch,
       args = args[i, ],
       supervise = TRUE
     )
@@ -445,6 +447,7 @@ hmmsearch <- function(
 #' @param ncpu (`integer`) number of threads passed to nhmmer (`--cpu`).
 #'   Parallelism is only inside nhmmer; the query is not split across
 #'   processes.
+#' @param nhmmer (`character`) path to the `nhmmer` executable
 #' @param ... ignored; reserved for `targets` dependency tracking (e.g. file
 #'   hashes) without changing behavior.
 #' @return a [`tibble`][tibble::tibble()] like [hmmsearch()] tblout parsing.
@@ -456,11 +459,13 @@ nhmmer <- function(
   files = NULL,
   seq_idx = NULL,
   ncpu = local_cpus(),
+  nhmmer = find_nhmmer(),
   ...
 ) {
   checkmate::assert_string(hmm)
   checkmate::assert_file_exists(hmm, access = "r")
   checkmate::assert_count(ncpu)
+  checkmate::assert_file_exists(nhmmer, access = "x")
   if (is.list(seq_idx) && length(seq_idx) > 1L) {
     stop(
       "`seq_idx` must not be a list with more than one partition.",
@@ -475,8 +480,6 @@ nhmmer <- function(
       call. = FALSE
     )
   }
-  exec <- find_nhmmer()
-  checkmate::assert_file_exists(exec, access = "x")
   tmp_parent <- environment()
   qfiles <- seq_batch_make_chunk_files(
     seqs = seqs,
@@ -507,7 +510,7 @@ nhmmer <- function(
     tseqs
   )
   processx::run(
-    command = exec,
+    command = nhmmer,
     args = args,
     error_on_status = TRUE
   )

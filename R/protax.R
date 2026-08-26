@@ -186,6 +186,8 @@ empty_protax_animal_output <- function(id_is_int = FALSE, info = FALSE) {
 #' @param seq_idx (`NULL` or `integer`) optional 1-based indices into the
 #'   logical sequence stream (`NULL` means all sequences in order).
 #' @param ncpu (`integer`) maximum number of parallel classify workers.
+#' @param executable (`character`) path to the `classify_info` or `classify_v2`
+#' executable
 #' @param ... ignored; reserved for dependency-tracking literals/hashes.
 #' @return a `data.frame` with columns `seq_id`, `rank`, `taxonomy`, `prob`,
 #' and if `info` is `TRUE`, `best_id`, `best_dist`, `second_id`, `second_dist`
@@ -202,6 +204,7 @@ run_protax_animal <- function(
   files = NULL,
   seq_idx = NULL,
   ncpu = local_cpus(),
+  executable = find_executable(if (info) "classify_info" else "classify_v2"),
   ...
 ) {
   checkmate::assert_count(ncpu)
@@ -217,7 +220,7 @@ run_protax_animal <- function(
   scs <- file.path(modeldir, "model.scs")
   checkmate::assert_file_exists(scs, access = "r")
   checkmate::assert_flag(info)
-  executable <- find_executable(if (info) "classify_info" else "classify_v2")
+  checkmate::assert_file_exists(executable, access = "x")
   checkmate::check_number(min_p, lower = 0, upper = 1, finite = TRUE)
   checkmate::check_number(rep_p, lower = 0, upper = min_p, finite = TRUE)
   checkmate::assert_flag(strip_inserts)
@@ -280,7 +283,7 @@ run_protax_animal <- function(
       stdout = outfiles[i]
     )
   }
-  protax_exit_status = 0L
+  protax_exit_status <- 0L
   output <- vector("list", n)
 
   empty_output <- empty_protax_animal_output(id_is_int, info)
@@ -327,6 +330,8 @@ run_protax_animal <- function(
 #' @param seq_idx (`NULL` or `integer`) optional 1-based indices into the
 #'   logical sequence stream (`NULL` means all sequences in order).
 #' @param ncpu (`integer`) maximum number of parallel workers over query chunks.
+#' @param executable (`character`) path to the `dist_best` or `dist_bipart`
+#' executable
 #' @param ... ignored; reserved for dependency-tracking literals/hashes.
 #' @return a `data.frame` with columns `seq_id` (or `seq_idx` if
 #' `query_id_is_int` is `TRUE`), `ref_id` (or `ref_idx` if `ref_id_is_int` is
@@ -344,6 +349,7 @@ run_protax_besthit <- function(
   files = NULL,
   seq_idx = NULL,
   ncpu = local_cpus(),
+  executable = find_executable(command),
   ...
 ) {
   checkmate::assert_count(ncpu)
@@ -351,7 +357,7 @@ run_protax_besthit <- function(
   checkmate::assert_flag(ref_id_is_int)
   checkmate::assert_file_exists(aln_ref, access = "r")
   n_ref <- length(aln_ref)
-  executable <- find_executable(command)
+  checkmate::assert_file_exists(executable, access = "x")
   checkmate::assert_character(options)
 
   indexed_like <- inherits(aln_query, "fastqindexr_index") ||
@@ -417,7 +423,7 @@ run_protax_besthit <- function(
       stdout = outfiles[i]
     )
   }
-  besthit_exit_status = 0L
+  besthit_exit_status <- 0L
   output <- vector("list", n_query)
   for (i in seq_len(n_query)) {
     besthit[[i]]$wait()
@@ -577,15 +583,27 @@ protax_besthit_closedref <- function(
 #' @param thresh (`numeric`) clustering similarity threshold as a percentage,
 #' i.e., 0.0 to 100.0
 #' @param aln_len (`integer`) width of alignment
+#' @param dist_matrix (`character`) path to the `dist_matrix` executable
+#' @param dist_bipart (`character`) path to the `dist_bipart` executable
 #' @return a `data.frame` with columns `seq_id`, `cluster`, and `dist`
 #' @export
-seq_cluster_protax <- function(aln_seq, aln_index, which, thresh, aln_len) {
+seq_cluster_protax <- function(
+  aln_seq,
+  aln_index,
+  which,
+  thresh,
+  aln_len,
+  dist_matrix = find_executable("dist_matrix"),
+  dist_bipart = find_executable("dist_bipart")
+) {
   checkmate::assert_file_exists(aln_seq, "r")
   checkmate::assert(
     checkmate::check_file_exists(aln_index, "r"),
     checkmate::check_class(aln_index, "fastqindexr_index"),
     combine = "or"
   )
+  checkmate::assert_file_exists(dist_matrix, "x")
+  checkmate::assert_file_exists(dist_bipart, "x")
   nslice <- floor(sqrt(local_cpus() - 1))
   allseq <- fastqindexr::extract_sequences(
     index = aln_index,
@@ -626,7 +644,7 @@ seq_cluster_protax <- function(aln_seq, aln_index, which, thresh, aln_len) {
   system2("mkfifo", distmx)
   for (j in seq_len(nslice)) {
     system2(
-      find_executable("dist_matrix"),
+      dist_matrix,
       # fmt: skip
       args = c(
         "-l", aln_len,
@@ -641,7 +659,7 @@ seq_cluster_protax <- function(aln_seq, aln_index, which, thresh, aln_len) {
     if (j < nslice) {
       for (k in (2 * j + 1):(2 * nslice)) {
         system2(
-          find_executable("dist_bipart"),
+          dist_bipart,
           # fmt: skip
           args = c(
             "-l", aln_len,

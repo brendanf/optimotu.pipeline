@@ -6,7 +6,7 @@
 \alias{fastx_gz_random_access_extract}
 \title{Indexing and random access extraction of gzipped FASTA and FASTQ files}
 \usage{
-fastx_gz_index(file)
+fastx_gz_index(file, fastqindex = find_executable("fastqindex"))
 
 fastx_gz_extract(
   infile,
@@ -31,7 +31,9 @@ fastx_gz_random_access_extract(
 )
 }
 \arguments{
-\item{file}{(\code{character} filename) file to create an index for
+\item{file}{(\code{character} filename) file to create an index for}
+
+\item{fastqindex}{(\code{character}) path to the \code{fastqindex} executable
 
 These functions are wrappers around the
 \href{https://dkfz-odcf.github.io/FastqIndEx/}{\code{FastqIndEx}} utility.}

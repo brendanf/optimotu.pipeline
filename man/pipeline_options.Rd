@@ -17,6 +17,7 @@
 \alias{do_added_reference}
 \alias{added_reference_fasta}
 \alias{added_reference_table}
+\alias{configured_executables}
 \alias{max_workers}
 \alias{min_workers}
 \alias{workers_per_seqrun}
@@ -33,8 +34,8 @@
 \alias{denoising_pool}
 \alias{unoise_alpha}
 \alias{unoise_minsize}
-\alias{unoise_merge_min_overlap}
-\alias{unoise_merge_max_diffs}
+\alias{merge_min_overlap}
+\alias{merge_max_mismatch}
 \alias{dada2_maxEE}
 \alias{do_tag_jump}
 \alias{tag_jump_f}
@@ -82,6 +83,7 @@
 \alias{do_outgroup}
 \alias{outgroup_reference}
 \alias{outgroup_taxonomy}
+\alias{top_dist_config}
 \alias{cluster_thresholds}
 \alias{do_optimize_thresholds}
 \alias{do_optimize_thresholds_self}
@@ -137,6 +139,8 @@ added_reference_fasta()
 
 added_reference_table()
 
+configured_executables()
+
 max_workers()
 
 min_workers()
@@ -169,9 +173,9 @@ unoise_alpha()
 
 unoise_minsize()
 
-unoise_merge_min_overlap()
+merge_min_overlap()
 
-unoise_merge_max_diffs()
+merge_max_mismatch()
 
 dada2_maxEE()
 
@@ -266,6 +270,8 @@ do_outgroup()
 outgroup_reference()
 
 outgroup_taxonomy()
+
+top_dist_config()
 
 cluster_thresholds()
 

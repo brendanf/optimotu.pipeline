@@ -12,7 +12,8 @@ gappa_assign(
   ncpu = NULL,
   allow_file_overwriting = TRUE,
   verbose = FALSE,
-  id_is_int = FALSE
+  id_is_int = FALSE,
+  gappa = find_gappa()
 )
 }
 \arguments{
@@ -39,6 +40,8 @@ output files}
 \item{verbose}{(\code{logical}) whether to print verbose output}
 
 \item{id_is_int}{(\code{logical}) whether the sequence IDs are integers}
+
+\item{gappa}{(\code{character}) path to the \code{gappa} executable}
 }
 \value{
 (\code{data.frame}) with columns:

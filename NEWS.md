@@ -1,4 +1,18 @@
 # optimotu.pipeline (development version)
+* Promote read-pair merging to a top-level `merging:` section
+  (`min_overlap`, `max_mismatch`) with method-specific defaults (dada2:
+  10/1; unoise: 16/5). Remove `denoising.unoise.merge` /
+  `unoise_merge_*()`; configs that still use the old location get a clear
+  error. Fractional `max_mismatch` is rejected for dada2.
+* Add top-level `dist_config:` inherited by `lulu` and `clustering`
+  (section keys win; same-method inheritance only). Omitting
+  `dist_config` in a section no longer errors; default is `usearch`.
+* Add top-level `executables:` map consulted first by `find_executable()`,
+  so every tool lookup can be overridden from `pipeline_options.yaml`.
+* Move `added_reference` under `taxonomy.protax.added_reference`. Top-level
+  `added_reference` remains accepted with a deprecation warning when
+  populated; empty stubs are ignored; a populated top-level block with a
+  non-Protax classifier now errors.
 * Breaking: rename per-read fate map API to be denoiser-neutral.
   `seq_map()` → `dada2_read_map()`, `unoise_seq_map()` → `unoise_read_map()`,
   `merge_seq_maps()` → `merge_read_maps()`, `add_lulu_to_seq_map()` →
@@ -39,8 +53,9 @@
   plus `make_mapped_sequence_table()` methods for `uc_cluster` objects.
 * Add optional `denoising:` section in `pipeline_options.yaml` (`method`, `pool`,
   `unoise` sub-options) with accessors `denoising_method()`, `do_dada2()`,
-  `do_unoise()`, `unoise_alpha()`, `unoise_minsize()`, and merge-overlap
-  accessors. Default remains DADA2 when the section is omitted.
+  `do_unoise()`, `unoise_alpha()`, `unoise_minsize()`. Pair-merge settings now
+  live in top-level `merging:` (see above). Default remains DADA2 when the
+  section is omitted.
 * Extend `filtering:` to cover both paired-read (DADA2 `maxEE_R1`/`maxEE_R2`)
   and merged-read (UNOISE `maxEE`, `maxEE_rate`, `maxNs`, `maxLen`, `minLen`)
   keys, with warnings when keys do not apply to the selected denoiser.
