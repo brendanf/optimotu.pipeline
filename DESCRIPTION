@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for Environmental DNA Metabarcoding
-Version: 0.6.3.9015
+Version: 0.6.3.9016
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -16,7 +16,6 @@ Description: Provides tools to configure and run reproducible environmental
     and orchestration of downstream pipeline steps.
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.3.3
 SystemRequirements: zlib
 Depends:
     R (>= 4.2.0)
@@ -79,3 +78,4 @@ Remotes:
     bioc::IRanges,
     bioc::S4Vectors
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0

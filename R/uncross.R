@@ -65,37 +65,39 @@ remove_tag_jumps <- function(seqtable, f, p, id_col = "seq") {
   out
 }
 
-#' Add uncrossing information to a sequence map
+#' Add uncrossing information to a read map
 #'
 #' Sets bit `0x08` when the read's current `seq_idx` is present in `uncross`
 #' for that sample and `is_tag_jump` is `FALSE`. Join-miss and tag-jumps both
-#' leave `0x08` unset. Extra columns on `seqmap` (e.g. `denoise_idx`) are
+#' leave `0x08` unset. Extra columns on `read_map` (e.g. `prelulu_idx`) are
 #' preserved.
 #'
 #' When `uncross` includes `seq_idx` (the default after
 #' [remove_tag_jumps()]), the join uses that column. Otherwise keys are rebuilt
 #' from `seqtable_raw` by row position.
 #'
-#' Call this after [add_lulu_to_seq_map()] so `seq_idx` is the LULU parent
+#' Call this after [add_lulu_to_read_map()] so `seq_idx` is the LULU parent
 #' when LULU is enabled.
 #'
-#' @param seqmap (`data.frame`) sequence map, as returned by `seq_map()`
+#' @param read_map (`data.frame`) read map, as returned by [dada2_read_map()]
+#'   or [unoise_read_map()]
 #' @param seqtable_raw (`data.frame`) sequence table passed to
 #'   [remove_tag_jumps()]. Used to rebuild join keys when `uncross` does not
 #'   contain `seq_idx`.
 #' @param uncross (`data.frame`) uncrossing information, as returned by
 #' `remove_tag_jumps()`.
-#' @return `data.frame` with the same columns as `seqmap`, but with the `flags`
-#' column updated to include the `is_tag_jump` information from `uncross`.
-#' @seealso [with_seqmap_annotate()], [add_lulu_to_seq_map()]
+#' @return `data.frame` with the same columns as `read_map`, but with the
+#'   `flags` column updated to include the `is_tag_jump` information from
+#'   `uncross`.
+#' @seealso [with_read_map_annotate()], [add_lulu_to_read_map()]
 #' @export
-add_uncross_to_seq_map <- function(seqmap, seqtable_raw, uncross) {
+add_uncross_to_read_map <- function(read_map, seqtable_raw, uncross) {
   # avoid R CMD check NOTE for undeclared globals
   flags <- is_tag_jump <- seq_idx <- NULL
 
-  checkmate::assert_data_frame(seqmap)
+  checkmate::assert_data_frame(read_map)
   checkmate::assert_names(
-    names(seqmap),
+    names(read_map),
     must.include = c("sample", "seq_idx", "flags")
   )
   checkmate::assert_data_frame(uncross)
@@ -120,7 +122,7 @@ add_uncross_to_seq_map <- function(seqmap, seqtable_raw, uncross) {
   }
 
   dplyr::left_join(
-    seqmap,
+    read_map,
     uncross_keys,
     by = c("sample", "seq_idx")
   ) |>

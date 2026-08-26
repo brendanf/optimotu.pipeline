@@ -151,6 +151,10 @@ make_long_sequence_table.list <- function(x, rc = FALSE) {
 #' Convert an object into a long (i.e. sparse) sequence occurrence table where
 #' sequences are stored as integer indices to a master list
 #'
+#' Thin wrapper around [make_denoise_map()] followed by
+#' [denoise_map_to_seqtable()]. Prefer those helpers when both a community
+#' table and a per-read fate map are needed for the same denoising result.
+#'
 #' @param x (`data.frame` as returned by `dada2::mergePairs()`, integer
 #' matrix as returned by `dada2::makeSequenceTable()`, `uc_cluster` as
 #' returned by [`vsearch_cluster_unoise2()`], or a list of one of these.)
@@ -160,125 +164,10 @@ make_long_sequence_table.list <- function(x, rc = FALSE) {
 #' complemented.
 #'
 #' @return a `data.frame` with columns `sample`, `seq_idx`, and `nread`
+#' @seealso [make_denoise_map()], [denoise_map_to_seqtable()]
 #' @export
-
 make_mapped_sequence_table <- function(x, seqs, rc = FALSE) {
-  UseMethod("make_mapped_sequence_table", x)
-}
-
-#' @rdname make_mapped_sequence_table
-#' @exportS3Method
-make_mapped_sequence_table.data.frame <- function(x, seqs, rc = FALSE) {
-  checkmate::assert_data_frame(x, col.names = "named")
-  checkmate::assert_names(names(x), must.include = c("sequence", "abundance"))
-  checkmate::assert_flag(rc)
-  if ("accept" %in% names(x)) {
-    checkmate::assert_logical(x$accept)
-    x <- x[x$accept, ]
-  }
-  out <- x[c("sequence", "abundance")]
-  names(out) <- c("seq_idx", "nread")
-  out$seq_idx <- match_to_seq_all(out$seq_idx, seqs, rc = rc)
-  out
-}
-
-#' @rdname make_mapped_sequence_table
-#' @exportS3Method
-make_mapped_sequence_table.matrix <- function(x, seqs, rc = FALSE) {
-  checkmate::assert_integerish(x)
-  checkmate::assert_flag(rc)
-  colnames(x) <- match_to_seq_all(colnames(x), seqs, rc = rc)
-  if (typeof(x) != "integer") {
-    mode(x) <- "integer"
-  }
-  x[x == 0L] <- NA_integer_
-  as.data.frame(x) |>
-    tibble::rownames_to_column("sample") |>
-    tidyr::pivot_longer(
-      -1,
-      names_to = "seq_idx",
-      names_transform = as.integer,
-      values_to = "nread",
-      values_drop_na = TRUE
-    )
-}
-
-#' @rdname make_mapped_sequence_table
-#' @exportS3Method
-make_mapped_sequence_table.uc_cluster <- function(x, seqs, rc = FALSE) {
-  # avoid R CMD check note for undefined global variables due to NSE
-  seq_idx <- nread <- NULL
-  checkmate::assert_class(x, "uc_cluster")
-  checkmate::assert_flag(rc)
-  if (nrow(x$clusters) == 0L) {
-    return(tibble::tibble(seq_idx = integer(), nread = integer()))
-  }
-  tibble::tibble(
-    seq_idx = match_to_seq_all(x$clusters$seq, seqs, rc = rc),
-    nread = as.integer(x$clusters$size)
-  ) |>
-    dplyr::filter(!is.na(seq_idx), nread > 0L)
-}
-
-#' @rdname make_mapped_sequence_table
-#' @exportS3Method
-make_mapped_sequence_table.list <- function(x, seqs, rc = FALSE) {
-  # avoid R CMD check note for undefined global variables due to NSE
-  nread <- seq_idx <- NULL
-  checkmate::assert_flag(rc)
-
-  out <- if (length(x) == 0L) {
-    tibble::tibble(
-      sample = character(),
-      seq_idx = integer(),
-      nread = integer()
-    )
-  } else if (checkmate::test_list(x, types = "data.frame")) {
-    checkmate::assert_named(x)
-    queries <- unlist(
-      lapply(x, \(df) {
-        if ("accept" %in% names(df)) {
-          df <- df[df$accept, , drop = FALSE]
-        }
-        as.character(df$sequence)
-      }),
-      use.names = FALSE
-    )
-    lookup <- seq_idx_lookup(queries, seqs, rc = rc)
-    purrr::map_dfr(
-      x,
-      make_mapped_sequence_table.data.frame,
-      seqs = lookup,
-      rc = rc,
-      .id = "sample"
-    )
-  } else if (checkmate::test_list(x, types = "matrix")) {
-    queries <- unlist(lapply(x, colnames), use.names = FALSE)
-    lookup <- seq_idx_lookup(queries, seqs, rc = rc)
-    purrr::map_dfr(
-      x,
-      make_mapped_sequence_table.matrix,
-      seqs = lookup,
-      rc = rc
-    )
-  } else if (all(vapply(x, inherits, logical(1), "uc_cluster"))) {
-    checkmate::assert_named(x)
-    queries <- unlist(
-      lapply(x, \(u) as.character(u$clusters$seq)),
-      use.names = FALSE
-    )
-    lookup <- seq_idx_lookup(queries, seqs, rc = rc)
-    purrr::map_dfr(
-      x,
-      make_mapped_sequence_table.uc_cluster,
-      seqs = lookup,
-      rc = rc,
-      .id = "sample"
-    )
-  } else {
-    stop("cannot determine entry type in make_mapped_sequence_table.list")
-  }
-  dplyr::summarize(out, nread = sum(nread), .by = c(sample, seq_idx))
+  denoise_map_to_seqtable(make_denoise_map(x, seqs, rc = rc))
 }
 
 #### deduplication ####

@@ -62,7 +62,7 @@ test_that("Biostrings reverseComplement agrees with dada2::rc on IUPAC", {
   expect_equal(bs, d2)
 })
 
-test_that("make_mapped_sequence_table.list matches once across samples", {
+test_that("make_denoise_map.list matches once and projects to seqtable", {
   seqs <- Biostrings::DNAStringSet(c(
     "ACGTAAAATTTT",
     "GGGGCCCCAAAA",
@@ -91,10 +91,17 @@ test_that("make_mapped_sequence_table.list matches once across samples", {
     ),
     class = "uc_cluster"
   )
-  out <- make_mapped_sequence_table(
-    list(s1 = uc1, s2 = uc2),
-    seqs
+  dm <- make_denoise_map(list(s1 = uc1, s2 = uc2), seqs)
+  expect_equal(
+    dm,
+    tibble::tibble(
+      sample = c("s1", "s1", "s2"),
+      denoise_idx = c(0L, 1L, 0L),
+      seq_idx = c(1L, 2L, 2L),
+      nread = c(10L, 5L, 7L)
+    )
   )
+  out <- denoise_map_to_seqtable(dm)
   expect_equal(
     out,
     tibble::tibble(
@@ -102,6 +109,10 @@ test_that("make_mapped_sequence_table.list matches once across samples", {
       seq_idx = c(1L, 2L, 2L),
       nread = c(10L, 5L, 7L)
     )
+  )
+  expect_equal(
+    make_mapped_sequence_table(list(s1 = uc1, s2 = uc2), seqs),
+    out
   )
   out_rc <- make_mapped_sequence_table(
     list(s1 = uc1),
@@ -111,8 +122,45 @@ test_that("make_mapped_sequence_table.list matches once across samples", {
   expect_equal(out_rc$seq_idx, c(1L, 2L))
 })
 
-test_that("add_lulu_to_seq_map rewrites daughters and keeps denoise_idx", {
-  seqmap <- tibble::tibble(
+test_that("make_denoise_map.data.frame keeps pre-accept row indices", {
+  merged <- tibble::tibble(
+    sequence = c("AAA", "CCC", "GGG"),
+    abundance = c(10L, 5L, 1L),
+    accept = c(TRUE, FALSE, TRUE)
+  )
+  seqs <- Biostrings::DNAStringSet(c("AAA", "CCC", "GGG"))
+  names(seqs) <- as.character(seq_along(seqs))
+  dm <- make_denoise_map(merged, seqs)
+  expect_equal(dm$denoise_idx, c(1L, 3L))
+  expect_equal(dm$seq_idx, c(1L, 3L))
+  expect_equal(dm$nread, c(10L, 1L))
+})
+
+test_that("make_denoise_map retains unmatched seq_idx rows", {
+  uc <- structure(
+    list(
+      clusters = tibble::tibble(
+        clust_idx = 0:1,
+        size = c(10L, 5L),
+        seq = c("ACGTAAAATTTT", "NNNNNNNNNNNN")
+      ),
+      map = tibble::tibble(clust_idx = integer(), seq_id = character())
+    ),
+    class = "uc_cluster"
+  )
+  seqs <- Biostrings::DNAStringSet("ACGTAAAATTTT")
+  names(seqs) <- "1"
+  dm <- make_denoise_map(uc, seqs)
+  expect_equal(dm$denoise_idx, 0:1)
+  expect_equal(dm$seq_idx, c(1L, NA_integer_))
+  expect_equal(
+    denoise_map_to_seqtable(dm),
+    tibble::tibble(seq_idx = 1L, nread = 10L)
+  )
+})
+
+test_that("add_lulu_to_read_map rewrites daughters and keeps prelulu_idx", {
+  read_map <- tibble::tibble(
     sample = "s1",
     raw_idx = 1:4,
     seq_idx = c(1L, 2L, 1L, NA_integer_),
@@ -122,14 +170,14 @@ test_that("add_lulu_to_seq_map rewrites daughters and keeps denoise_idx", {
     seq_idx = c(1L, 2L),
     lulu_idx = c(1L, 1L)
   )
-  out <- add_lulu_to_seq_map(seqmap, lulu_map)
-  expect_named(out, c("sample", "raw_idx", "seq_idx", "denoise_idx", "flags"))
+  out <- add_lulu_to_read_map(read_map, lulu_map)
+  expect_named(out, c("sample", "raw_idx", "seq_idx", "prelulu_idx", "flags"))
   expect_equal(out$seq_idx, c(1L, 1L, 1L, NA_integer_))
-  expect_equal(out$denoise_idx, c(1L, 2L, 1L, NA_integer_))
-  expect_equal(out$flags, seqmap$flags)
-  expect_true(out$denoise_idx[1] == out$seq_idx[1])
-  expect_true(out$denoise_idx[2] != out$seq_idx[2])
-  expect_true(is.na(out$denoise_idx[4]))
+  expect_equal(out$prelulu_idx, c(1L, 2L, 1L, NA_integer_))
+  expect_equal(out$flags, read_map$flags)
+  expect_true(out$prelulu_idx[1] == out$seq_idx[1])
+  expect_true(out$prelulu_idx[2] != out$seq_idx[2])
+  expect_true(is.na(out$prelulu_idx[4]))
 })
 
 test_that("remove_tag_jumps keeps seq_idx and add_uncross joins LULU daughters", {
@@ -144,7 +192,7 @@ test_that("remove_tag_jumps keeps seq_idx and add_uncross joins LULU daughters",
   expect_equal(uncross$sample, seqtable$sample)
   expect_equal(uncross$is_tag_jump, c(FALSE, TRUE, TRUE, FALSE))
 
-  seqmap <- tibble::tibble(
+  read_map <- tibble::tibble(
     sample = "s1",
     raw_idx = 1:4,
     seq_idx = c(1L, 2L, NA_integer_, 3L),
@@ -154,16 +202,16 @@ test_that("remove_tag_jumps keeps seq_idx and add_uncross joins LULU daughters",
     seq_idx = c(1L, 2L, 3L),
     lulu_idx = c(1L, 1L, 3L)
   )
-  annotated <- seqmap |>
-    add_lulu_to_seq_map(lulu_map) |>
-    add_uncross_to_seq_map(seqtable, uncross)
+  annotated <- read_map |>
+    add_lulu_to_read_map(lulu_map) |>
+    add_uncross_to_read_map(seqtable, uncross)
 
-  expect_true("denoise_idx" %in% names(annotated))
+  expect_true("prelulu_idx" %in% names(annotated))
   # parent of 1 survived uncross
   expect_equal(bitwAnd(as.integer(annotated$flags[1]), 0x08), 0x08)
   # daughter 2 joins via parent 1 and also survives
   expect_equal(annotated$seq_idx[2], 1L)
-  expect_equal(annotated$denoise_idx[2], 2L)
+  expect_equal(annotated$prelulu_idx[2], 2L)
   expect_equal(bitwAnd(as.integer(annotated$flags[2]), 0x08), 0x08)
   # never denoised: no 0x04, no 0x08
   expect_equal(bitwAnd(as.integer(annotated$flags[3]), 0x04), 0L)
@@ -173,7 +221,7 @@ test_that("remove_tag_jumps keeps seq_idx and add_uncross joins LULU daughters",
   expect_equal(bitwAnd(as.integer(annotated$flags[4]), 0x08), 0L)
 })
 
-test_that("add_uncross_to_seq_map falls back to positional keys", {
+test_that("add_uncross_to_read_map falls back to positional keys", {
   seqtable <- tibble::tibble(
     sample = c("s1", "s2"),
     seq_idx = c(1L, 1L),
@@ -187,87 +235,90 @@ test_that("add_uncross_to_seq_map falls back to positional keys", {
     "uncross",
     "is_tag_jump"
   )]
-  seqmap <- tibble::tibble(
+  read_map <- tibble::tibble(
     sample = c("s1", "s2"),
     raw_idx = 1L,
     seq_idx = 1L,
     flags = as.raw(0x07),
-    denoise_idx = 1L
+    prelulu_idx = 1L
   )
-  out <- add_uncross_to_seq_map(seqmap, seqtable, uncross_noid)
-  expect_equal(out$denoise_idx, c(1L, 1L))
+  out <- add_uncross_to_read_map(read_map, seqtable, uncross_noid)
+  expect_equal(out$prelulu_idx, c(1L, 1L))
   expect_equal(bitwAnd(as.integer(out$flags[1]), 0x08), 0x08)
   expect_equal(bitwAnd(as.integer(out$flags[2]), 0x08), 0L)
 })
 
-test_that("with_seqmap_annotate is a no-op when LULU and UNCROSS are off", {
+test_that("with_read_map_annotate is a no-op when LULU and UNCROSS are off", {
   withr::local_options(
     optimotu.pipeline.do_lulu = FALSE,
     optimotu.pipeline.do_tag_jump = FALSE
   )
-  expr <- quote(seq_map(x))
-  expect_identical(with_seqmap_annotate(expr), expr)
+  expr <- quote(dada2_read_map(x))
+  expect_identical(with_read_map_annotate(expr), expr)
 })
 
-test_that("with_seqmap_annotate pipes LULU then UNCROSS without evaluating", {
+test_that("with_read_map_annotate pipes LULU then UNCROSS without evaluating", {
   withr::local_options(
     optimotu.pipeline.do_lulu = TRUE,
     optimotu.pipeline.do_tag_jump = TRUE
   )
-  got <- with_seqmap_annotate(quote(seq_map(x)))
+  got <- with_read_map_annotate(quote(dada2_read_map(x)))
   expect_true(is.call(got))
   expect_equal(
     got,
     quote(
-      seq_map(x) |>
-        optimotu.pipeline::add_lulu_to_seq_map(lulu_asv_map) |>
-        optimotu.pipeline::add_uncross_to_seq_map(seqtable_lulu, uncross)
+      dada2_read_map(x) |>
+        optimotu.pipeline::add_lulu_to_read_map(lulu_asv_map) |>
+        optimotu.pipeline::add_uncross_to_read_map(seqtable_lulu, uncross)
     )
   )
 })
 
-test_that("with_seqmap_annotate pipes LULU only", {
+test_that("with_read_map_annotate pipes LULU only", {
   withr::local_options(
     optimotu.pipeline.do_lulu = TRUE,
     optimotu.pipeline.do_tag_jump = FALSE
   )
   expect_equal(
-    with_seqmap_annotate(quote(seq_map(x))),
+    with_read_map_annotate(quote(dada2_read_map(x))),
     quote(
-      seq_map(x) |>
-        optimotu.pipeline::add_lulu_to_seq_map(lulu_asv_map)
+      dada2_read_map(x) |>
+        optimotu.pipeline::add_lulu_to_read_map(lulu_asv_map)
     )
   )
 })
 
-test_that("with_seqmap_annotate defaults UNCROSS seqtable without LULU", {
+test_that("with_read_map_annotate defaults UNCROSS seqtable without LULU", {
   withr::local_options(
     optimotu.pipeline.do_lulu = FALSE,
     optimotu.pipeline.do_tag_jump = TRUE
   )
   expect_equal(
-    with_seqmap_annotate(quote(seq_map(x))),
+    with_read_map_annotate(quote(dada2_read_map(x))),
     quote(
-      seq_map(x) |>
-        optimotu.pipeline::add_uncross_to_seq_map(seqtable_raw, uncross)
+      dada2_read_map(x) |>
+        optimotu.pipeline::add_uncross_to_read_map(seqtable_raw, uncross)
     )
   )
 })
 
-test_that("with_seqmap_annotate accepts an explicit seqtable expression", {
+test_that("with_read_map_annotate accepts an explicit seqtable expression", {
   withr::local_options(
     optimotu.pipeline.do_lulu = TRUE,
     optimotu.pipeline.do_tag_jump = TRUE
   )
   expect_equal(
-    with_seqmap_annotate(
-      quote(seq_map(x)),
+    with_read_map_annotate(
+      quote(dada2_read_map(x)),
       seqtable = quote(seqtable_pre_uncross)
     ),
     quote(
-      seq_map(x) |>
-        optimotu.pipeline::add_lulu_to_seq_map(lulu_asv_map) |>
-        optimotu.pipeline::add_uncross_to_seq_map(seqtable_pre_uncross, uncross)
+      dada2_read_map(x) |>
+        optimotu.pipeline::add_lulu_to_read_map(lulu_asv_map) |>
+        optimotu.pipeline::add_uncross_to_read_map(
+          seqtable_pre_uncross,
+          uncross
+        )
     )
   )
 })

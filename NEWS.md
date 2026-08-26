@@ -1,7 +1,21 @@
 # optimotu.pipeline (development version)
-* `seq_map()` and `unoise_seq_map()` are now vectorized across samples; these and
-  `make_mapped_sequence_table.list()` now avoid repeated work between samples,
-  leading to large speedups when many samples are chunked.
+* Breaking: rename per-read fate map API to be denoiser-neutral.
+  `seq_map()` → `dada2_read_map()`, `unoise_seq_map()` → `unoise_read_map()`,
+  `merge_seq_maps()` → `merge_read_maps()`, `add_lulu_to_seq_map()` →
+  `add_lulu_to_read_map()`, `add_uncross_to_seq_map()` →
+  `add_uncross_to_read_map()`, `with_seqmap_annotate()` →
+  `with_read_map_annotate()`. LULU's pre-parent column is renamed from
+  `denoise_idx` to `prelulu_idx`.
+* Add `make_denoise_map()` / `denoise_map_to_seqtable()` so matching against
+  `seq_all` happens once per sample chunk; both community tables and read
+  maps consume that shared map. `dada2_read_map()` and `unoise_read_map()`
+  now take `denoise_map` instead of `seq_all`/`rc`.
+  `make_mapped_sequence_table()` is a thin wrapper over these helpers.
+* `seq_map()` (now named `dada2_read_map()`) and `unoise_seq_map()` (now
+  named `unoise_read_map()`) are now vectorized across samples; these and
+  `make_mapped_sequence_table.list()` (per-chunk lookup now in
+  `make_denoise_map()`) avoid repeated work between samples, leading to
+  large speedups when many samples are chunked.
 * Split clustering job sizing: `min_ops` (default `1e6`) is the large/small
   parallel-efficiency cutoff, while `max_ops` (default `1e10`) packs both
   large and small taxa into execution groups. These are configured in
@@ -20,7 +34,8 @@
 * Add vsearch UNOISE as an alternative ASV denoiser: `vsearch_fastq_merge_pairs()`
   (empty FASTQ inputs are skipped; `shards` is clamped to the number of files;
   gzipped output is written via vsearch stdout `-`, not a file named `--`),
-  `merged_filter_options()`, `vsearch_cluster_unoise2()`, and `unoise_seq_map()`,
+  `merged_filter_options()`, `vsearch_cluster_unoise2()`, and
+  `unoise_seq_map()` (now named `unoise_read_map()`),
   plus `make_mapped_sequence_table()` methods for `uc_cluster` objects.
 * Add optional `denoising:` section in `pipeline_options.yaml` (`method`, `pool`,
   `unoise` sub-options) with accessors `denoising_method()`, `do_dada2()`,

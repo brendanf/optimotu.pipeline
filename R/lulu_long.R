@@ -414,26 +414,26 @@ lulu_table <- function(
 #'
 #' Rewrites `seq_idx` from the denoise-time ASV id to the LULU parent id so it
 #' matches post-LULU community tables (`seqtable_lulu`, `seqtable_uncross`).
-#' The original denoise-time id is kept as `denoise_idx`. A LULU daughter is
-#' `!is.na(denoise_idx) && denoise_idx != seq_idx`. No flag bit is set; bits
+#' The original denoise-time id is kept as `prelulu_idx`. A LULU daughter is
+#' `!is.na(prelulu_idx) && prelulu_idx != seq_idx`. No flag bit is set; bits
 #' `0x10`--`0x80` are reserved for ASV-level filter results.
 #'
 #' Never-denoised rows (`seq_idx` `NA`) are left unchanged. Denoise ids missing
 #' from `lulu_map` keep their original `seq_idx`.
 #'
-#' @param seqmap (`data.frame`) sequence map, as returned by [seq_map()] or
-#'   [unoise_seq_map()]
+#' @param read_map (`data.frame`) read map, as returned by [dada2_read_map()]
+#'   or [unoise_read_map()]
 #' @param lulu_map (`data.frame`) output of [lulu_map()], with columns
 #'   `seq_idx` and `lulu_idx`
-#' @return `data.frame` with the same columns as `seqmap`, plus `denoise_idx`
+#' @return `data.frame` with the same columns as `read_map`, plus `prelulu_idx`
 #'   (integer). `seq_idx` is the LULU parent where a mapping exists.
-#' @seealso [with_seqmap_annotate()], [add_uncross_to_seq_map()]
+#' @seealso [with_read_map_annotate()], [add_uncross_to_read_map()]
 #' @export
-add_lulu_to_seq_map <- function(seqmap, lulu_map) {
-  denoise_idx <- seq_idx <- lulu_idx <- NULL
-  checkmate::assert_data_frame(seqmap)
+add_lulu_to_read_map <- function(read_map, lulu_map) {
+  prelulu_idx <- seq_idx <- lulu_idx <- NULL
+  checkmate::assert_data_frame(read_map)
   checkmate::assert_names(
-    names(seqmap),
+    names(read_map),
     must.include = c("sample", "raw_idx", "seq_idx", "flags")
   )
   checkmate::assert_data_frame(lulu_map)
@@ -441,15 +441,15 @@ add_lulu_to_seq_map <- function(seqmap, lulu_map) {
     names(lulu_map),
     must.include = c("seq_idx", "lulu_idx")
   )
-  seqmap |>
-    dplyr::mutate(denoise_idx = seq_idx) |>
+  read_map |>
+    dplyr::mutate(prelulu_idx = seq_idx) |>
     dplyr::left_join(
       dplyr::distinct(lulu_map, seq_idx, lulu_idx),
       by = "seq_idx"
     ) |>
     dplyr::mutate(seq_idx = dplyr::coalesce(lulu_idx, seq_idx)) |>
     dplyr::select(-lulu_idx) |>
-    dplyr::relocate(denoise_idx, .after = seq_idx)
+    dplyr::relocate(prelulu_idx, .after = seq_idx)
 }
 
 #' Compute pairwise distances for LULU

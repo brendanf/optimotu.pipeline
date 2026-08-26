@@ -34,24 +34,29 @@ External tool wrappers:
 - `R/hmmer.R`, `R/infernal.R`, `R/epa.R`, `R/protax.R`, `R/bayesant.R`
 - `R/dada2_wrappers.R`, `R/dada2_map.R`, `R/dada2_chimera.R` (DADA2
   filtering/denoising/dereplication/merge options and per-read fate mapping,
-  plus per-sample *de novo* chimera detection). `seq_map()` accepts `seq_all`
-  as sequences, an `XStringSet`, or a FASTA path (`tar_file`), and is
-  chunk-vectorized so unique ASVs are matched once per call. `seq_idx` is
-  the current community-table id; after LULU that is the parent.
+  plus per-sample *de novo* chimera detection). `dada2_read_map()` takes a
+  shared `denoise_map` from `make_denoise_map()` rather than matching
+  `seq_all` itself. `seq_idx` is the current community-table id; after LULU
+  that is the parent.
 - `R/vsearch.R` — vsearch wrappers including paired-read merging
   (`vsearch_fastq_merge_pairs()`) and UNOISE clustering
   (`vsearch_cluster_unoise2()`, which pipes `--fastx_uniques` into
   `--cluster_unoise`)
-- `R/unoise.R` — UNOISE per-read fate mapping (`unoise_seq_map()`); also
-  chunk-vectorized. Sequence tables from `uc_cluster` objects use
-  `make_mapped_sequence_table()`, which batches matches across list elements.
+- `R/unoise.R` — UNOISE per-read fate mapping (`unoise_read_map()`); also
+  takes a shared `denoise_map`. Sequence tables from `uc_cluster` objects
+  use `make_denoise_map()` / `denoise_map_to_seqtable()`.
+- `R/denoise_map.R` — shared denoiser-local-id → `seq_idx` map
+  (`make_denoise_map()`, `denoise_map_to_seqtable()`). One `seq_all` match
+  per chunk feeds both community tables and read maps.
+- `R/read_map.R` — denoiser-neutral read-map helpers (`seq_idx_lookup()`,
+  `match_to_seq_all()`, `merge_read_maps()`, `with_read_map_annotate()`)
 
 Denoising / read-quality post-processing:
 
 - `R/numt.R` — detection of Nuclear Mitochondrial Paralogs (NUMTs) from
   `hmmalign()`/A2M alignment output
 - `R/uncross.R` — removal of suspected tag-jump/cross-talk from sequence
-  tables; `add_uncross_to_seq_map()` sets fate-map bit `0x08` (survived
+  tables; `add_uncross_to_read_map()` sets fate-map bit `0x08` (survived
   UNCROSS). Join after LULU remap so `seq_idx` is the parent. Bits
   `0x10`--`0x80` are reserved for `asv_map$result`, not read flags.
 
@@ -59,8 +64,8 @@ Secondary clustering / OTU curation:
 
 - `R/lulu_long.R` — LULU secondary denoising (Frøslev et al. 2017), merges
   putative artifact OTUs into parent OTUs post-clustering.
-  `add_lulu_to_seq_map()` rewrites per-read `seq_idx` to the parent and
-  stores `denoise_idx` (no extra flag bit). `lulu_map_lowmem()` must run
+  `add_lulu_to_read_map()` rewrites per-read `seq_idx` to the parent and
+  stores `prelulu_idx` (no extra flag bit). `lulu_map_lowmem()` must run
   with `retrieval = "none"`; on crew workers it reads deps from the
   target subpipeline rather than `tar_meta()` / `tar_read()`.
 - `src/lulu.cpp` — native backend for LULU's pairwise comparisons
@@ -115,9 +120,12 @@ families include:
 - UNOISE (vsearch) merge/cluster wrappers and per-read mapping (`vsearch.R`,
   `unoise.R`), configured through `parse_denoising_options()` /
   `parse_filter_options()` (`do_unoise()`, `do_dada2()`, `denoising_method()`)
+- Shared denoise maps and read maps (`make_denoise_map()`,
+  `denoise_map_to_seqtable()`, `dada2_read_map()`, `unoise_read_map()`,
+  `merge_read_maps()`, `with_read_map_annotate()`)
 - LULU secondary-clustering entry points (`lulu_long.R`), configured through
-  `parse_lulu_options()`, including `add_lulu_to_seq_map()` for fate maps
-  and `with_seqmap_annotate()` to wrap those steps in target commands
+  `parse_lulu_options()`, including `add_lulu_to_read_map()` for fate maps
+  and `with_read_map_annotate()` to wrap those steps in target commands
 
 Changes to exported option helpers are high-risk because downstream
 `optimotu_targets` scripts often quote/unquote these calls inside target
@@ -146,8 +154,9 @@ commands.
 - change NUMT or tag-jump/cross-talk filtering:
   - `R/numt.R`, `R/uncross.R`
 - change per-read fate maps (FASTA/`rc` matching, LULU remap, UNCROSS bits):
-  - `R/dada2_map.R`, `R/unoise.R`, `add_lulu_to_seq_map()`,
-    `add_uncross_to_seq_map()`, `with_seqmap_annotate()`
+  - `R/denoise_map.R`, `R/read_map.R`, `R/dada2_map.R`, `R/unoise.R`,
+    `add_lulu_to_read_map()`, `add_uncross_to_read_map()`,
+    `with_read_map_annotate()`
 
 ## 5) Testing workflow
 

@@ -166,7 +166,7 @@ test_that("vsearch_cluster_unoise2 returns empty uc_cluster for empty files", {
   )
 })
 
-test_that("UNOISE clustering, seqtable, and seq_map agree on synthetic ASVs", {
+test_that("UNOISE clustering, seqtable, and read_map agree on synthetic ASVs", {
   skip_if_no_vsearch()
   n_a <- 12L
   n_b <- 10L
@@ -217,10 +217,9 @@ test_that("UNOISE clustering, seqtable, and seq_map agree on synthetic ASVs", {
 
   seq_all <- Biostrings::DNAStringSet(unique(c(centroids, pairs_c$merged)))
   names(seq_all) <- seq_along(seq_all)
-  seqtable <- make_mapped_sequence_table(
-    stats::setNames(list(uc), "sample1"),
-    seq_all
-  )
+  dm <- make_denoise_map(stats::setNames(list(uc), "sample1"), seq_all)
+  expect_true(all(dm$denoise_idx %in% uc$clusters$clust_idx))
+  seqtable <- denoise_map_to_seqtable(dm)
   expect_named(seqtable, c("sample", "seq_idx", "nread"))
   expect_equal(seqtable$sample, rep("sample1", nrow(seqtable)))
   idx_a <- as.integer(BiocGenerics::match(pairs_a$merged, seq_all))
@@ -230,13 +229,13 @@ test_that("UNOISE clustering, seqtable, and seq_map agree on synthetic ASVs", {
   expect_equal(as.integer(nread_a), n_a)
   expect_equal(as.integer(nread_b), n_b)
 
-  smap <- unoise_seq_map(
+  smap <- unoise_read_map(
     sample = "sample1",
     fq_raw = raw,
     fq_trim = trim,
     fq_merged = merged,
     uc = uc,
-    seq_all = seq_all
+    denoise_map = dm
   )
   expect_equal(nrow(smap), n_a + n_b + n_c)
   expect_equal(smap$sample, rep("sample1", nrow(smap)))
@@ -246,7 +245,7 @@ test_that("UNOISE clustering, seqtable, and seq_map agree on synthetic ASVs", {
   expect_true(all(is.na(smap$seq_idx[!denoised])))
 })
 
-test_that("unoise_seq_map vectorizes over samples and matches scalar calls", {
+test_that("unoise_read_map vectorizes over samples and matches scalar calls", {
   skip_if_no_vsearch()
   make_sample <- function(n, seed, label) {
     ids <- sprintf("%s%02d", label, seq_len(n))
@@ -297,37 +296,39 @@ test_that("unoise_seq_map vectorizes over samples and matches scalar calls", {
     s2$uc$clusters$seq
   )))
   names(seq_all) <- seq_along(seq_all)
+  uc_list <- stats::setNames(list(s1$uc, s2$uc), c(s1$sample, s2$sample))
+  dm <- make_denoise_map(uc_list, seq_all)
 
   scalar <- dplyr::bind_rows(
-    unoise_seq_map(
+    unoise_read_map(
       s1$sample,
       s1$raw,
       s1$trim,
       s1$merged,
       s1$uc,
-      seq_all
+      dm
     ),
-    unoise_seq_map(
+    unoise_read_map(
       s2$sample,
       s2$raw,
       s2$trim,
       s2$merged,
       s2$uc,
-      seq_all
+      dm
     )
   )
-  vectorized <- unoise_seq_map(
+  vectorized <- unoise_read_map(
     sample = c(s1$sample, s2$sample),
     fq_raw = c(s1$raw, s2$raw),
     fq_trim = c(s1$trim, s2$trim),
     fq_merged = c(s1$merged, s2$merged),
     uc = list(s1$uc, s2$uc),
-    seq_all = seq_all
+    denoise_map = dm
   )
   expect_equal(vectorized, scalar)
 })
 
-test_that("unoise_seq_map handles empty merged FASTQ", {
+test_that("unoise_read_map handles empty merged FASTQ", {
   skip_if_no_vsearch()
   empty <- withr::local_tempfile(fileext = ".fastq")
   writeLines(character(), empty)
@@ -341,13 +342,14 @@ test_that("unoise_seq_map handles empty merged FASTQ", {
   ]]
   seq_all <- Biostrings::DNAStringSet(pairs$merged)
   names(seq_all) <- "1"
-  smap <- unoise_seq_map(
+  dm <- make_denoise_map(uc, seq_all)
+  smap <- unoise_read_map(
     sample = "empty",
     fq_raw = raw,
     fq_trim = trim,
     fq_merged = empty,
     uc = uc,
-    seq_all = seq_all
+    denoise_map = dm
   )
   expect_equal(nrow(smap), 2L)
   expect_true(all(is.na(smap$seq_idx)))

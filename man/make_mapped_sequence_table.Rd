@@ -2,22 +2,10 @@
 % Please edit documentation in R/sequence_table.R
 \name{make_mapped_sequence_table}
 \alias{make_mapped_sequence_table}
-\alias{make_mapped_sequence_table.data.frame}
-\alias{make_mapped_sequence_table.matrix}
-\alias{make_mapped_sequence_table.uc_cluster}
-\alias{make_mapped_sequence_table.list}
 \title{Convert an object into a long (i.e. sparse) sequence occurrence table where
 sequences are stored as integer indices to a master list}
 \usage{
 make_mapped_sequence_table(x, seqs, rc = FALSE)
-
-\method{make_mapped_sequence_table}{data.frame}(x, seqs, rc = FALSE)
-
-\method{make_mapped_sequence_table}{matrix}(x, seqs, rc = FALSE)
-
-\method{make_mapped_sequence_table}{uc_cluster}(x, seqs, rc = FALSE)
-
-\method{make_mapped_sequence_table}{list}(x, seqs, rc = FALSE)
 }
 \arguments{
 \item{x}{(\code{data.frame} as returned by \code{dada2::mergePairs()}, integer
@@ -34,6 +22,10 @@ complemented.}
 a \code{data.frame} with columns \code{sample}, \code{seq_idx}, and \code{nread}
 }
 \description{
-Convert an object into a long (i.e. sparse) sequence occurrence table where
-sequences are stored as integer indices to a master list
+Thin wrapper around \code{\link[=make_denoise_map]{make_denoise_map()}} followed by
+\code{\link[=denoise_map_to_seqtable]{denoise_map_to_seqtable()}}. Prefer those helpers when both a community
+table and a per-read fate map are needed for the same denoising result.
+}
+\seealso{
+\code{\link[=make_denoise_map]{make_denoise_map()}}, \code{\link[=denoise_map_to_seqtable]{denoise_map_to_seqtable()}}
 }
