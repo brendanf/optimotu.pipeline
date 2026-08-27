@@ -148,7 +148,7 @@ vsearch_uchime_ref <- function(
     seq_batch_is_fqi_path_set(query)
   if (!is.null(files) && !indexed_like) {
     stop(
-      "`files` is only valid when `query` is a fastqindexr_index or .fqi paths.",
+      "`files` is only valid when `query` is a fastqindexr_index or .fqi/.qs2 paths.",
       call. = FALSE
     )
   }
@@ -464,7 +464,7 @@ sintax <- function(
     seq_batch_is_fqi_path_set(query)
   if (!is.null(files) && !indexed_like) {
     stop(
-      "`files` is only valid when `query` is a fastqindexr_index or .fqi paths.",
+      "`files` is only valid when `query` is a fastqindexr_index or .fqi/.qs2 paths.",
       call. = FALSE
     )
   }

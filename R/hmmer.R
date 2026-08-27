@@ -92,7 +92,7 @@ hmmalign <- function(
     seq_batch_is_fqi_path_set(seqs)
   if (!is.null(files) && !indexed_like) {
     stop(
-      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi paths.",
+      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi/.qs2 paths.",
       call. = FALSE
     )
   }
@@ -379,7 +379,7 @@ hmmsearch <- function(
     seq_batch_is_fqi_path_set(seqs)
   if (!is.null(files) && !indexed_like) {
     stop(
-      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi paths.",
+      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi/.qs2 paths.",
       call. = FALSE
     )
   }
@@ -476,7 +476,7 @@ nhmmer <- function(
     seq_batch_is_fqi_path_set(seqs)
   if (!is.null(files) && !indexed_like) {
     stop(
-      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi paths.",
+      "`files` is only valid when `seqs` is a fastqindexr_index or .fqi/.qs2 paths.",
       call. = FALSE
     )
   }

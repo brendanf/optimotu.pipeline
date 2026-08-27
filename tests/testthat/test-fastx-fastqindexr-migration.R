@@ -510,3 +510,49 @@ test_that("seq_cluster_protax accepts fastqindexr_index", {
   expect_s3_class(out, "data.frame")
   expect_true(all(c("seq_id", "cluster", "dist") %in% names(out)))
 })
+
+test_that("write_fastqindexr_index qs2 round-trips through extract helpers", {
+  skip_if_not_installed("qs2")
+  skip_if_not(nzchar(Sys.which("md5sum")), "md5sum not on PATH")
+  seq <- c("ACGT", "TGCA", "GGGG", "CCCC")
+  ids <- c("q1", "q2", "q3", "q4")
+  infile <- make_oneline_fasta_gz(seq, ids)
+  idx <- fastqindexr::create_index(files = infile, type = "fasta")
+  qs2_path <- tempfile(fileext = ".qs2")
+  expect_equal(write_fastqindexr_index(idx, qs2_path), qs2_path)
+  expect_true(file.exists(qs2_path))
+
+  req <- c(4L, 1L, 4L)
+  out_obj <- tempfile(fileext = ".fasta")
+  out_qs2 <- tempfile(fileext = ".fasta")
+  fastx_gz_extract(infile = infile, index = idx, i = req, outfile = out_obj)
+  fastx_gz_extract(
+    infile = infile,
+    index = qs2_path,
+    i = req,
+    outfile = out_qs2
+  )
+  expect_equal(
+    as.character(Biostrings::readDNAStringSet(out_qs2)),
+    as.character(Biostrings::readDNAStringSet(out_obj))
+  )
+  expect_equal(
+    fastx_gz_hash(infile = infile, index = qs2_path, start = 2L, n = 2L),
+    fastx_gz_hash(infile = infile, index = idx, start = 2L, n = 2L)
+  )
+  expect_true(optimotu.pipeline:::is_fastqindexr_index_path_set(qs2_path))
+  expect_true(optimotu.pipeline:::seq_batch_is_fqi_path_set(qs2_path))
+})
+
+test_that("bayesant accepts ignored hash via ...", {
+  expect_true("..." %in% names(formals(bayesant)))
+  missing_model <- tempfile(fileext = ".rds")
+  expect_error(
+    bayesant(
+      query = c(a = "ACGT"),
+      model = missing_model,
+      hash = "unused"
+    ),
+    "does not exist"
+  )
+})

@@ -463,10 +463,10 @@ add_lulu_to_read_map <- function(read_map, lulu_map) {
 #' integers, and should be the 1-based index of the sequence in the file.
 #' @param seqall_index (`character` or `fastqindexr_index`, or `NULL`) file path
 #' or [`fastqindexr_index`][fastqindexr::create_index()] object for
-#' `seqall_file`, as from [fastx_gz_index()] or
-#' [fastqindexr::create_index()]. Not supported for
-#' multiple input files; in that case the files will be fully read into memory
-#' one at a time.
+#' `seqall_file`, as from [write_fastqindexr_index()], [fastx_gz_index()], or
+#' [fastqindexr::create_index()]. Character paths may be `.fqi` or `.qs2`.
+#' Not supported for multiple input files; in that case the files will be
+#' fully read into memory one at a time.
 #' @param seqtable (`data.frame`) the long-format table to denoise. Must have
 #' columns `seq_idx` (`integer`) and `nread` (`integer`), where `seq_idx` refers
 #' to the index of sequences in `seqall_file`. Additional columns
@@ -502,6 +502,12 @@ lulu_distmx <- function(
       checkmate::check_class(seqall_index, "fastqindexr_index"),
       combine = "or"
     )
+    if (is.character(seqall_index)) {
+      seqall_index <- load_fastqindexr_index(
+        seqall_index,
+        files = seqall_file
+      )
+    }
     seqs <- fastqindexr::extract_sequences(
       index = seqall_index,
       seq_idx = seqtable$seq_idx,

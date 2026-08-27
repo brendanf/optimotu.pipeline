@@ -12,7 +12,8 @@ bayesant(
   n_top_taxa = 20,
   min_prob = 0.01,
   file = NULL,
-  seq_idx = NULL
+  seq_idx = NULL,
+  ...
 )
 }
 \arguments{
@@ -33,13 +34,17 @@ to use.  If a file name, it must be in .rds, .qs, or .qs2 format.}
 
 \item{file}{(\code{character} vector) optional per-file paths overriding those
 stored in the index, if \code{query} is a
-\code{\link[fastqindexr:create_index]{fastqindexr_index}} object or \code{.fqi}
-path(s). Useful after moving inputs or for \code{targets} dependency tracking.}
+\code{\link[fastqindexr:create_index]{fastqindexr_index}} object or \code{.fqi} /
+\code{.qs2} path(s). Useful after moving inputs or for \code{targets} dependency
+tracking.}
 
 \item{seq_idx}{(\code{integer} vector) optional 1-based indices into the logical
 sequence stream (\code{NULL} means all sequences in order). Applies after
 concatenating multiple FASTA inputs, and supports duplicates and
 reordering.}
+
+\item{...}{ignored; reserved for \code{targets} dependency tracking (e.g.
+\code{hash = seqbatch_hash}) without changing behavior.}
 }
 \value{
 a \code{data.frame} with columns \code{seq_id} (or \code{seq_idx} if \code{id_is_int} is

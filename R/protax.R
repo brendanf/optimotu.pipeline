@@ -231,7 +231,7 @@ run_protax_animal <- function(
     seq_batch_is_fqi_path_set(aln_seqs)
   if (!is.null(files) && !indexed_like) {
     stop(
-      "`files` is only valid when `aln_seqs` is a fastqindexr_index or .fqi paths.",
+      "`files` is only valid when `aln_seqs` is a fastqindexr_index or .fqi/.qs2 paths.",
       call. = FALSE
     )
   }
@@ -364,7 +364,7 @@ run_protax_besthit <- function(
     seq_batch_is_fqi_path_set(aln_query)
   if (!is.null(files) && !indexed_like) {
     stop(
-      "`files` is only valid when `aln_query` is a fastqindexr_index or .fqi paths.",
+      "`files` is only valid when `aln_query` is a fastqindexr_index or .fqi/.qs2 paths.",
       call. = FALSE
     )
   }

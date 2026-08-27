@@ -11,17 +11,11 @@
 #' @keywords internal
 NULL
 
-#' Whether `x` is a character vector of existing `.fqi` index paths
+#' Whether `x` is a character vector of existing `.fqi` or `.qs2` index paths
 #'
 #' @noRd
 seq_batch_is_fqi_path_set <- function(x) {
-  if (!is.character(x) || anyNA(x)) {
-    return(FALSE)
-  }
-  if (!all(file.exists(x))) {
-    return(FALSE)
-  }
-  all(grepl("\\.fqi$", x, ignore.case = TRUE))
+  is_fastqindexr_index_path_set(x)
 }
 
 #' Total FASTA record count across paths (for `seq_idx` validation)
@@ -52,12 +46,12 @@ seq_batch_n_fasta_path_records <- function(infiles) {
 #'   `data.frame`, or `fastqindexr_index`)
 #'   Source sequences. `character` vectors may be literal sequences (in which
 #'   case they should typically be named) or file paths; files may be either
-#'   FASTA (possibly gzipped) or `.fqi` indexes for
-#'   [`fastqindexr::read_fqi_index()`].
+#'   FASTA (possibly gzipped) or `.fqi` / `.qs2` indexes.
 #' @param files (`character` vector) optional per-file paths overriding those
 #'   stored in the index, if `seqs` is a
-#'   [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi`
-#'   path(s). Useful after moving inputs or for `targets` dependency tracking.
+#'   [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi` /
+#'   `.qs2` path(s). Useful after moving inputs or for `targets` dependency
+#'   tracking.
 #' @param seq_idx (`integer` vector) optional 1-based indices into the logical
 #'   sequence stream (`NULL` means all sequences in order). Applies after
 #'   concatenating multiple FASTA inputs, and supports duplicates and
@@ -79,11 +73,7 @@ seq_batch_make_chunk_files <- function(
 ) {
   index_obj <- NULL
   if (seq_batch_is_fqi_path_set(seqs)) {
-    seqs <- fastqindexr::read_fqi_index(
-      fqi_path = seqs,
-      files = files,
-      type = "auto"
-    )
+    seqs <- load_fastqindexr_index(seqs, files = files)
     # fall through to next block
   }
   if (inherits(seqs, "fastqindexr_index")) {
@@ -181,12 +171,12 @@ seq_batch_make_chunk_files <- function(
 #'   `data.frame`, or `fastqindexr_index`)
 #'   Source sequences. `character` vectors may be literal sequences (in which
 #'   case they should typically be named) or file paths; files may be either
-#'   FASTA (possibly gzipped) or `.fqi` indexes for
-#'   [`fastqindexr::read_fqi_index()`].
+#'   FASTA (possibly gzipped) or `.fqi` / `.qs2` indexes.
 #' @param files (`character` vector) optional per-file paths overriding those
 #'   stored in the index, if `seqs` is a
-#'   [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi`
-#'   path(s). Useful after moving inputs or for `targets` dependency tracking.
+#'   [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi` /
+#'   `.qs2` path(s). Useful after moving inputs or for `targets` dependency
+#'   tracking.
 #' @param seq_idx (`integer` vector) optional 1-based indices into the logical
 #'   sequence stream (`NULL` means all sequences in order). Applies after
 #'   concatenating multiple FASTA inputs, and supports duplicates and
@@ -202,11 +192,7 @@ seq_batch_character <- function(
   checkmate::assert_integerish(seq_idx, null.ok = TRUE)
 
   if (seq_batch_is_fqi_path_set(seqs)) {
-    seqs <- fastqindexr::read_fqi_index(
-      fqi_path = seqs,
-      files = files,
-      type = "auto"
-    )
+    seqs <- load_fastqindexr_index(seqs, files = files)
   }
 
   if (inherits(seqs, "fastqindexr_index")) {

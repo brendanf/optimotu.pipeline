@@ -7,7 +7,7 @@
 \method{update}{merged_filter_options}(object, new_options, ...)
 }
 \arguments{
-\item{object}{(\code{\link[=merged_filter_options]{merged_filter_options}}) existing
+\item{object}{(\code{\link{merged_filter_options}}) existing
 merged filter options object to modify}
 
 \item{new_options}{(named \code{list}, single-row \code{data.frame}, named

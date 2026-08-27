@@ -26,10 +26,10 @@ are ignored.}
 
 \item{seqall_index}{(\code{character} or \code{fastqindexr_index}, or \code{NULL}) file path
 or \code{\link[fastqindexr:create_index]{fastqindexr_index}} object for
-\code{seqall_file}, as from \code{\link[=fastx_gz_index]{fastx_gz_index()}} or
-\code{\link[fastqindexr:create_index]{fastqindexr::create_index()}}. Not supported for
-multiple input files; in that case the files will be fully read into memory
-one at a time.}
+\code{seqall_file}, as from \code{\link[=write_fastqindexr_index]{write_fastqindexr_index()}}, \code{\link[=fastx_gz_index]{fastx_gz_index()}}, or
+\code{\link[fastqindexr:create_index]{fastqindexr::create_index()}}. Character paths may be \code{.fqi} or \code{.qs2}.
+Not supported for multiple input files; in that case the files will be
+fully read into memory one at a time.}
 
 \item{threshold}{(\code{numeric} scalar) maximum pairwise distance to report
 between two sequences.}

@@ -1,4 +1,12 @@
 # optimotu.pipeline (development version)
+* Add `write_fastqindexr_index()` and treat `.qs2` paths like `.fqi` in
+  `fastx_gz_extract()` / `fastx_gz_hash()`, seq-batch helpers, and
+  `lulu_distmx()`, so plan scripts can store indexes as qs2 files and pass
+  literal paths without targets tracking. Reading a large index from qs2
+  takes tens of milliseconds instead of tens of seconds, which dominated
+  per-batch runtime when every batch reloaded the `.fqi` index.
+  `bayesant()` gains `...` for dependency-tracking arguments such as
+  `hash = seqbatch_hash`.
 * Promote read-pair merging to a top-level `merging:` section
   (`min_overlap`, `max_mismatch`) with method-specific defaults (dada2:
   10/1; unoise: 16/5). Remove `denoising.unoise.merge` /

@@ -10,12 +10,15 @@
 #' @param min_prob (`numeric`) the minimum probability to return
 #' @param file (`character` vector) optional per-file paths overriding those
 #' stored in the index, if `query` is a
-#' [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi`
-#' path(s). Useful after moving inputs or for `targets` dependency tracking.
+#' [`fastqindexr_index`][fastqindexr::create_index()] object or `.fqi` /
+#' `.qs2` path(s). Useful after moving inputs or for `targets` dependency
+#' tracking.
 #' @param seq_idx (`integer` vector) optional 1-based indices into the logical
 #' sequence stream (`NULL` means all sequences in order). Applies after
 #' concatenating multiple FASTA inputs, and supports duplicates and
 #' reordering.
+#' @param ... ignored; reserved for `targets` dependency tracking (e.g.
+#'   `hash = seqbatch_hash`) without changing behavior.
 #' @return a `data.frame` with columns `seq_id` (or `seq_idx` if `id_is_int` is
 #' `TRUE`), `rank`, `parent_taxonomy`, `taxon`, and `prob`, where `seq_id`
 #' (`seq_idx`) is the ID of a sequence from `query`, `rank` is the taxonomic
@@ -33,7 +36,8 @@ bayesant <- function(
   n_top_taxa = 20,
   min_prob = 0.01,
   file = NULL,
-  seq_idx = NULL
+  seq_idx = NULL,
+  ...
 ) {
   checkmate::assert_count(ncpu)
   checkmate::assert_flag(id_is_int)
@@ -46,7 +50,8 @@ bayesant <- function(
     seq_batch_is_fqi_path_set(query)
   if (!is.null(file) && !indexed_like) {
     stop(
-      "`file` is only valid when `query` is a fastqindexr_index or .fqi paths.",
+      "`file` is only valid when `query` is a fastqindexr_index or ",
+      ".fqi/.qs2 paths.",
       call. = FALSE
     )
   }

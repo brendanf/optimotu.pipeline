@@ -81,9 +81,10 @@ Reporting helpers:
 Sequence/file helpers:
 
 - `R/sequence_helpers.R`, `R/sequence_table.R`, `R/fastx_split_combine.R`,
-  `R/fastq_index.R`, `R/seq_batch_input.R` (shared internals for indexed /
-  sequential sequence batching used by `hmmalign()` and future tool wrappers),
-  `R/write_and_return_file.R`
+  `R/fastq_index.R` (`write_fastqindexr_index()` for qs2 index files;
+  `.qs2` / `.fqi` paths accepted by extract helpers), `R/seq_batch_input.R`
+  (shared internals for indexed / sequential sequence batching used by
+  `hmmalign()` and future tool wrappers), `R/write_and_return_file.R`
 
 Small utilities:
 

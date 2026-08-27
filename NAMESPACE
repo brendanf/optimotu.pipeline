@@ -352,13 +352,18 @@ export(vsearch_usearch_global_closed_ref)
 export(with_read_map_annotate)
 export(workers_per_seqrun)
 export(write_and_return_file)
+export(write_fastqindexr_index)
 export(write_sequence)
 export(write_tabular_outputs)
 importFrom(Rcpp,sourceCpp)
-importFrom(dplyr,all_of)
-importFrom(dplyr,any_of)
-importFrom(dplyr,everything)
-importFrom(dplyr,one_of)
-importFrom(rlang,.data)
-importFrom(rlang,`:=`)
+importFrom(dplyr,
+  all_of,
+  any_of,
+  everything,
+  one_of
+)
+importFrom(rlang,
+  .data,
+  `:=`
+)
 useDynLib(optimotu.pipeline, .registration = TRUE)
