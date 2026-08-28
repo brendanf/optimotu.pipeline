@@ -1,4 +1,6 @@
 # optimotu.pipeline (development version)
+* Add `compression_level` to `cutadapt_options()` and
+  `cutadapt_paired_options()`, with default value 6.
 * Add `write_fastqindexr_index()` and treat `.qs2` paths like `.fqi` in
   `fastx_gz_extract()` / `fastx_gz_hash()`, seq-batch helpers, and
   `lulu_distmx()`, so plan scripts can store indexes as qs2 files and pass

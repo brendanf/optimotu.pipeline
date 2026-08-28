@@ -7,7 +7,7 @@
 \method{update}{dada2_filter_options}(object, new_options, ...)
 }
 \arguments{
-\item{object}{(\code{\link{dada2_filter_options}}) existing
+\item{object}{(\code{\link[=dada2_filter_options]{dada2_filter_options}}) existing
 dada2 filter options object to modify}
 
 \item{new_options}{(named \code{list}, single-row \code{data.frame}, named

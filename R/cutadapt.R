@@ -20,7 +20,8 @@ cutadapt_paired_option_names <- c(
   "truncQ_R1",
   "truncQ_R2",
   "cut_R1",
-  "cut_R2"
+  "cut_R2",
+  "compression_level"
 )
 
 #' Options for cutadapt paired-end filtering and trimming
@@ -44,6 +45,8 @@ cutadapt_paired_option_names <- c(
 #' @param cut_R2 (`integer`) number of bases to unconditinoally cut from the 5'
 #' (if positive) or 3' (if negative) end of read 2 prior to adapter trimming;
 #' or a vector of two integers with different signs for both ends
+#' @param compression_level (`integer`) compression level for the output file;
+#' options are 1-9
 #' @return an object of class `cutadapt_paired_options`
 #' @export
 cutadapt_paired_options <- function(
@@ -58,7 +61,8 @@ cutadapt_paired_options <- function(
   truncQ_R1 = 2,
   truncQ_R2 = 2,
   cut_R1 = NULL,
-  cut_R2 = NULL
+  cut_R2 = NULL,
+  compression_level = 6
 ) {
   checkmate::assert_number(max_err, lower = 0, null.ok = TRUE)
   checkmate::assert_count(min_overlap, positive = TRUE, null.ok = TRUE)
@@ -85,6 +89,8 @@ cutadapt_paired_options <- function(
   )
   checkmate::assert_integerish(cut_R1, min.len = 1, max.len = 2, null.ok = TRUE)
   checkmate::assert_integerish(cut_R2, min.len = 1, max.len = 2, null.ok = TRUE)
+  checkmate::assert_count(compression_level, positive = TRUE, null.ok = TRUE)
+  checkmate::assert_choice(compression_level, 1:9, null.ok = TRUE)
   structure(
     list(
       max_err = max_err,
@@ -97,7 +103,8 @@ cutadapt_paired_options <- function(
       truncQ_R1 = truncQ_R1,
       truncQ_R2 = truncQ_R2,
       cut_R1 = cut_R1,
-      cut_R2 = cut_R2
+      cut_R2 = cut_R2,
+      compression_level = compression_level
     ),
     class = "cutadapt_paired_options"
   )
@@ -176,6 +183,9 @@ cutadapt_paired_filter_trim <- function(
   if (!is.null(options$cut_R2)) {
     args <- c(args, t(data.frame("-U", round(options$cut_R2))))
   }
+  if (!is.null(options$compression_level)) {
+    args <- c(args, "--compression-level", options$compression_level)
+  }
   if (!is.null(ncpu)) {
     checkmate::assert_count(ncpu, positive = TRUE)
     args <- c(args, "-j", ncpu)
@@ -219,7 +229,8 @@ cutadapt_option_names <- c(
   "min_length",
   "max_length",
   "truncQ",
-  "cut"
+  "cut",
+  "compression_level"
 )
 
 #' Options for cutadapt single-read filtering and trimming
@@ -238,6 +249,8 @@ cutadapt_option_names <- c(
 #' @param cut (`integer`) number of bases to unconditionally cut from the 5' (if
 #' positive) or 3' (if negative) end of the read prior to adapter trimming; or
 #' a vector of two integers with different signs for both ends
+#' @param compression_level (`integer`) compression level for the output file;
+#' options are 1-9
 #' @return an object of class `cutadapt_options`
 #' @export
 cutadapt_options <- function(
@@ -250,7 +263,8 @@ cutadapt_options <- function(
   min_length = NULL,
   max_length = NULL,
   truncQ = NULL,
-  cut = NULL
+  cut = NULL,
+  compression_level = 6
 ) {
   checkmate::assert_number(max_err, lower = 0, null.ok = TRUE)
   checkmate::assert_count(min_overlap, positive = TRUE, null.ok = TRUE)
@@ -266,6 +280,8 @@ cutadapt_options <- function(
   checkmate::assert_count(max_length, positive = TRUE, null.ok = TRUE)
   checkmate::assert_integerish(truncQ, min.len = 1, max.len = 2, null.ok = TRUE)
   checkmate::assert_integerish(cut, min.len = 1, max.len = 2, null.ok = TRUE)
+  checkmate::assert_count(compression_level, positive = TRUE, null.ok = TRUE)
+  checkmate::assert_choice(compression_level, 1:9, null.ok = TRUE)
   structure(
     list(
       max_err = max_err,
@@ -277,7 +293,8 @@ cutadapt_options <- function(
       min_length = min_length,
       max_length = max_length,
       truncQ = truncQ,
-      cut = cut
+      cut = cut,
+      compression_level = compression_level
     ),
     class = "cutadapt_options"
   )
@@ -410,6 +427,9 @@ cutadapt_filter_trim <- function(
   }
   if (!is.null(options$cut)) {
     args <- c(args, t(data.frame("-u", round(options$cut))))
+  }
+  if (!is.null(options$compression_level)) {
+    args <- c(args, "--compression-level", options$compression_level)
   }
   if (!is.null(ncpu)) {
     checkmate::assert_count(ncpu, positive = TRUE)
