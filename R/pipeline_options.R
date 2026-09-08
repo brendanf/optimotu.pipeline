@@ -1971,7 +1971,8 @@ parse_cluster_options <- function(pipeline_options) {
         "dist_config",
         "force_denovo",
         "min_parallel_ops",
-        "max_batch_ops"
+        "max_batch_ops",
+        "memory_budget_mb"
       )
     )
     parse_cluster_thresholds(clustering$thresholds)
@@ -2019,14 +2020,73 @@ parse_cluster_options <- function(pipeline_options) {
       min_is_default = min_is_default,
       max_is_default = max_is_default
     )
+    memory_budget_mb <- resolve_cluster_memory_budget_mb(
+      clustering$memory_budget_mb,
+      method = method,
+      do_optimize = do_optimize_thresholds()
+    )
     options(
       optimotu.pipeline.clustering_measure = clustering$measure,
       optimotu.pipeline.clustering_dist_config = dist_config,
       optimotu.pipeline.clustering_force_denovo = clustering$force_denovo,
       optimotu.pipeline.clustering_min_parallel_ops = min_parallel_ops,
-      optimotu.pipeline.clustering_max_batch_ops = max_batch_ops
+      optimotu.pipeline.clustering_max_batch_ops = max_batch_ops,
+      optimotu.pipeline.clustering_memory_budget_mb = memory_budget_mb
     )
   }
+}
+
+#' Default / validate clustering.memory_budget_mb
+#'
+#' `NULL` or omitted: `"auto"` when threshold optimization is enabled and the
+#' distance method is native (wfa2/edlib/hybrid/hamming); otherwise `NULL`
+#' (USEARCH and `dist_file` cannot honour a budget). Explicit values are
+#' passed through after validation.
+#'
+#' @param value (`NULL`, `"auto"`, or positive number) user setting
+#' @param method (`character(1)`) distance method name
+#' @param do_optimize (`logical(1)`) whether threshold optimization is on
+#' @return `NULL`, `"auto"`, or a positive finite number
+#' @keywords internal
+#' @noRd
+resolve_cluster_memory_budget_mb <- function(
+  value,
+  method,
+  do_optimize = FALSE
+) {
+  checkmate::assert_string(method)
+  checkmate::assert_flag(do_optimize)
+  if (is.null(value)) {
+    if (
+      isTRUE(do_optimize) &&
+        method %in% c("wfa2", "edlib", "hybrid", "hamming")
+    ) {
+      return("auto")
+    }
+    return(NULL)
+  }
+  if (is.character(value) && length(value) == 1L) {
+    value <- tolower(value)
+    checkmate::assert_choice(value, "auto")
+    if (method %in% c("usearch", "file")) {
+      stop(
+        "clustering.memory_budget_mb = \"auto\" is not supported with ",
+        "dist_config method '",
+        method,
+        "' (file: pipeline_options.yaml)"
+      )
+    }
+    return("auto")
+  }
+  checkmate::assert_number(value, lower = 1, finite = TRUE)
+  if (method %in% c("usearch", "file")) {
+    stop(
+      "clustering.memory_budget_mb is not supported with dist_config method '",
+      method,
+      "' (file: pipeline_options.yaml)"
+    )
+  }
+  value
 }
 
 #' @rdname parse_pipeline_options
@@ -2047,7 +2107,12 @@ parse_cluster_thresholds <- function(thresh_opts) {
   if (is.character(thresh_opts)) {
     checkmate::assert_file_exists(thresh_opts, "r")
     options(
-      optimotu.pipeline.clustering_thresholds = thresh_opts
+      optimotu.pipeline.clustering_thresholds = thresh_opts,
+      optimotu.pipeline.do_optimize_thresholds = FALSE,
+      optimotu.pipeline.do_optimize_thresholds_self = FALSE,
+      optimotu.pipeline.do_optimize_thresholds_reference = FALSE,
+      optimotu.pipeline.do_optimize_thresholds_file = FALSE,
+      optimotu.pipeline.optimize_thresholds_file = NULL
     )
   } else {
     checkmate::assert_list(thresh_opts)
@@ -2368,6 +2433,12 @@ cluster_min_taxa <- function() {
 #' @export
 cluster_min_refseq <- function() {
   getOption("optimotu.pipeline.clustering_min_refseq", 2 * cluster_min_taxa())
+}
+
+#' @rdname pipeline_options
+#' @export
+cluster_memory_budget_mb <- function() {
+  getOption("optimotu.pipeline.clustering_memory_budget_mb", NULL)
 }
 
 #### guilds settings ####

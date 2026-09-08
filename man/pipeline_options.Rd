@@ -100,6 +100,7 @@
 \alias{cluster_dist_step}
 \alias{cluster_min_taxa}
 \alias{cluster_min_refseq}
+\alias{cluster_memory_budget_mb}
 \alias{do_guilds}
 \alias{do_wide_otu_table}
 \alias{rarefy_number}
@@ -304,6 +305,8 @@ cluster_dist_step()
 cluster_min_taxa()
 
 cluster_min_refseq()
+
+cluster_memory_budget_mb()
 
 do_guilds()
 

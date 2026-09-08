@@ -671,3 +671,131 @@ test_that("parse_cluster_options reads min_parallel_ops and max_batch_ops", {
     "max_batch_ops must be greater than or equal to"
   )
 })
+
+test_that("parse_cluster_thresholds handles self, file, and load-only modes", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+
+  train_fa <- withr::local_tempfile(fileext = ".fasta")
+  writeLines(c(">s1;tax=k:Fungi,p:Asco", "ACGT"), train_fa)
+
+  optimotu.pipeline:::parse_cluster_thresholds(
+    list(train_data = "self", min_conf = 0.6, dist_max = 0.3)
+  )
+  expect_true(do_optimize_thresholds())
+  expect_true(do_optimize_thresholds_self())
+  expect_false(do_optimize_thresholds_reference())
+  expect_false(do_optimize_thresholds_file())
+  expect_equal(cluster_min_conf(), 0.6)
+  expect_equal(cluster_dist_max(), 0.3)
+
+  optimotu.pipeline:::parse_cluster_thresholds(
+    list(train_data = "reference", min_taxa = 3L)
+  )
+  expect_true(do_optimize_thresholds())
+  expect_true(do_optimize_thresholds_reference())
+  expect_false(do_optimize_thresholds_self())
+  expect_false(do_optimize_thresholds_file())
+  expect_equal(cluster_min_taxa(), 3)
+
+  optimotu.pipeline:::parse_cluster_thresholds(
+    list(train_data = train_fa, file = "output/optima.tsv")
+  )
+  expect_true(do_optimize_thresholds())
+  expect_true(do_optimize_thresholds_file())
+  expect_equal(optimize_thresholds_file(), train_fa)
+  expect_equal(cluster_thresholds(), "output/optima.tsv")
+
+  load_tsv <- withr::local_tempfile(fileext = ".tsv")
+  writeLines("rank\tthreshold", load_tsv)
+  options(
+    optimotu.pipeline.do_optimize_thresholds = NULL,
+    optimotu.pipeline.do_optimize_thresholds_self = NULL,
+    optimotu.pipeline.do_optimize_thresholds_reference = NULL,
+    optimotu.pipeline.do_optimize_thresholds_file = NULL,
+    optimotu.pipeline.optimize_thresholds_file = NULL
+  )
+  optimotu.pipeline:::parse_cluster_thresholds(load_tsv)
+  expect_false(isTRUE(do_optimize_thresholds()))
+  expect_equal(cluster_thresholds(), load_tsv)
+
+  options(
+    optimotu.pipeline.do_optimize_thresholds = NULL,
+    optimotu.pipeline.clustering_thresholds = NULL
+  )
+  optimotu.pipeline:::parse_cluster_thresholds(list(file = load_tsv))
+  expect_false(isTRUE(do_optimize_thresholds()))
+  expect_equal(cluster_thresholds(), load_tsv)
+})
+
+test_that("parse_cluster_options resolves memory_budget_mb defaults", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+
+  suppressMessages(
+    optimotu.pipeline:::parse_cluster_options(
+      list(
+        clustering = list(
+          thresholds = list(train_data = "self"),
+          dist_config = "wfa2"
+        )
+      )
+    )
+  )
+  expect_identical(cluster_memory_budget_mb(), "auto")
+
+  suppressMessages(
+    optimotu.pipeline:::parse_cluster_options(
+      list(
+        clustering = list(
+          thresholds = list(train_data = "self"),
+          dist_config = "usearch"
+        )
+      )
+    )
+  )
+  expect_null(cluster_memory_budget_mb())
+
+  suppressMessages(
+    optimotu.pipeline:::parse_cluster_options(
+      list(
+        clustering = list(
+          thresholds = list(train_data = "self"),
+          dist_config = "wfa2",
+          memory_budget_mb = 256
+        )
+      )
+    )
+  )
+  expect_equal(cluster_memory_budget_mb(), 256)
+
+  expect_error(
+    suppressMessages(
+      optimotu.pipeline:::parse_cluster_options(
+        list(
+          clustering = list(
+            thresholds = list(train_data = "self"),
+            dist_config = "usearch",
+            memory_budget_mb = "auto"
+          )
+        )
+      )
+    ),
+    "not supported with dist_config method 'usearch'"
+  )
+
+  # Load-only thresholds: no auto budget even for native methods
+  load_tsv <- withr::local_tempfile(fileext = ".tsv")
+  writeLines("rank\tthreshold", load_tsv)
+  suppressMessages(
+    optimotu.pipeline:::parse_cluster_options(
+      list(
+        clustering = list(
+          thresholds = load_tsv,
+          dist_config = "wfa2"
+        )
+      )
+    )
+  )
+  expect_null(cluster_memory_budget_mb())
+})

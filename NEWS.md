@@ -1,8 +1,15 @@
 # optimotu.pipeline (development version)
+* Add `clustering.memory_budget_mb` (`NULL`, positive MB, or `"auto"`) parsed
+  into `cluster_memory_budget_mb()` and passed through to
+  `optimotu::optimize_thresholds()`. Default is `"auto"` when threshold
+  optimization is on with a native distance method; `NULL` for USEARCH/file.
 * Add `fasta_header_seq_ids()` to extract `seq_id` from SINTAX/BOLD/UNITE/
   BayesANT FASTA headers for threshold training with
   `optimotu::optimize_thresholds(seq_names = ...)`, avoiding a duplicate
   annotated reference FASTA.
+* Load-only `clustering.thresholds` file paths now clear optimize-mode flags
+  so a prior optimizing parse in the same session cannot leave optimization
+  enabled.
 * Add `compression_level` to `cutadapt_options()` and
   `cutadapt_paired_options()`, with default value 6.
 * Add `write_fastqindexr_index()` and treat `.qs2` paths like `.fqi` in
