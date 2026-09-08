@@ -91,7 +91,9 @@ Small utilities:
 - `R/sample_key.R` — derive a sample key from a file name
 - `R/external.R` — locate external executables on the system
 - `R/distribute_tasks.R` — greedy-algorithm task binning
-- `R/parse_taxonomy.R` — parse taxonomy from TSV files
+- `R/parse_taxonomy.R` — parse taxonomy from TSV/FASTA headers;
+  `fasta_header_seq_ids()` extracts bare IDs from annotated headers for
+  `optimotu::optimize_thresholds(seq_names = ...)`
 - `R/util.R` — misc helpers (SLURM/Snakemake/local execution detection, CPU
   count)
 

@@ -70,6 +70,33 @@ test_that("is_bayesant_header detects BayesANT format", {
   expect_false(optimotu.pipeline:::is_bayesant_header(unite_headers))
 })
 
+test_that("fasta_header_seq_ids extracts IDs for all supported formats", {
+  expect_equal(
+    fasta_header_seq_ids(sintax_headers),
+    c("seq1", "seq2")
+  )
+  expect_equal(
+    fasta_header_seq_ids(bold_headers),
+    c("BOLD:ABC123", "BOLD:DEF456")
+  )
+  expect_equal(
+    fasta_header_seq_ids(unite_headers),
+    c("SH123456.01FU", "SH789012.01FU")
+  )
+  expect_equal(
+    fasta_header_seq_ids(bayesant_headers),
+    c("seqBA1", "seqBA2")
+  )
+  expect_equal(fasta_header_seq_ids(character()), character())
+})
+
+test_that("fasta_header_seq_ids errors on unrecognized headers", {
+  expect_error(
+    fasta_header_seq_ids(c("just_an_id", "another_plain_id")),
+    "Unrecognized sequence header format"
+  )
+})
+
 test_that("parse_sintax_header returns seq_id and rank columns", {
   ranks <- tax_ranks()
   out <- optimotu.pipeline:::parse_sintax_header(sintax_headers)

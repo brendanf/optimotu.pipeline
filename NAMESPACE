@@ -138,6 +138,7 @@ export(epa_taxonomy)
 export(epa_tree)
 export(fasta_combine)
 export(fasta_deline)
+export(fasta_header_seq_ids)
 export(fasta_rename)
 export(fasta_split)
 export(fastq_combine)
@@ -356,10 +357,14 @@ export(write_fastqindexr_index)
 export(write_sequence)
 export(write_tabular_outputs)
 importFrom(Rcpp,sourceCpp)
-importFrom(dplyr,all_of)
-importFrom(dplyr,any_of)
-importFrom(dplyr,everything)
-importFrom(dplyr,one_of)
-importFrom(rlang,.data)
-importFrom(rlang,`:=`)
+importFrom(dplyr,
+  all_of,
+  any_of,
+  everything,
+  one_of
+)
+importFrom(rlang,
+  .data,
+  `:=`
+)
 useDynLib(optimotu.pipeline, .registration = TRUE)
