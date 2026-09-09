@@ -630,6 +630,14 @@ test_that("parse_cluster_options reads min_parallel_ops and max_batch_ops", {
     optimotu.pipeline:::cluster_ops_defaults("edlib"),
     list(min_parallel_ops = 1e4, max_batch_ops = 1e8)
   )
+  expect_equal(
+    optimotu.pipeline:::cluster_ops_defaults("ksw2"),
+    list(min_parallel_ops = 1e4, max_batch_ops = 1e8)
+  )
+  expect_equal(
+    optimotu.pipeline:::cluster_ops_defaults("hybrid"),
+    list(min_parallel_ops = 1e4, max_batch_ops = 1e8)
+  )
 
   msgs <- testthat::capture_messages(
     optimotu.pipeline:::parse_cluster_options(
@@ -744,6 +752,15 @@ test_that("parse_cluster_options resolves memory_budget_mb defaults", {
   )
   expect_identical(cluster_memory_budget_mb(), "auto")
 
+  expect_identical(
+    optimotu.pipeline:::resolve_cluster_memory_budget_mb(
+      NULL,
+      method = "ksw2",
+      do_optimize = TRUE
+    ),
+    "auto"
+  )
+
   suppressMessages(
     optimotu.pipeline:::parse_cluster_options(
       list(
@@ -798,4 +815,35 @@ test_that("parse_cluster_options resolves memory_budget_mb defaults", {
     )
   )
   expect_null(cluster_memory_budget_mb())
+})
+
+test_that("cluster_clust_config and cluster_parallel_config return calls", {
+  expect_identical(
+    cluster_clust_config("hamming"),
+    quote(optimotu::clust_slink())
+  )
+  expect_identical(
+    cluster_clust_config("wfa2"),
+    quote(optimotu::clust_tree())
+  )
+  expect_identical(
+    cluster_clust_config("ksw2"),
+    quote(optimotu::clust_tree())
+  )
+  expect_identical(
+    cluster_parallel_config(4L, "hamming"),
+    quote(optimotu::parallel_merge(threads = 4L))
+  )
+  expect_identical(
+    cluster_parallel_config(2L, "usearch"),
+    quote(optimotu::parallel_concurrent(threads = 2L))
+  )
+  expect_identical(
+    cluster_parallel_config(2L, "ksw2"),
+    quote(optimotu::parallel_concurrent(threads = 2L))
+  )
+  expect_identical(
+    cluster_parallel_config(local_cpus(), "hamming"),
+    quote(optimotu::parallel_merge(threads = local_cpus()))
+  )
 })

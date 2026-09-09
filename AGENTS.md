@@ -116,7 +116,12 @@ families include:
   `min_ops` is the large/small parallel cutoff; `max_ops` packs both
   into execution groups. YAML keys are `clustering.min_parallel_ops` and
   `clustering.max_batch_ops`; omitted values default from `dist_config`
-  method and are messaged at parse time.
+  method and are messaged at parse time. Slow defaults apply to
+  wfa2/edlib/ksw2/hybrid; fast defaults to hamming/usearch.
+  `cluster_clust_config()` / `cluster_parallel_config()` return unevaluated
+  calls (`!!` at plan time): SLINK + `parallel_merge` for Hamming and tree
+  + `parallel_concurrent` otherwise (not YAML-configurable). `threads` is
+  captured unevaluated so `local_cpus()` runs on the worker.
 - external command wrappers and sequence IO helpers
 - Tool paths from `find_executable()` / `find_*()` must be resolved at plan
   definition time and passed into helpers (defaults remain for interactive

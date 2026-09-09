@@ -1878,16 +1878,16 @@ outgroup_taxonomy <- function() {
 
 #' Default clustering job-size thresholds for a distance method
 #'
-#' Hamming and USEARCH are treated as fast methods; WFA2, Edlib, and hybrid
-#' alignment are ~100x slower per comparison, so both thresholds are 100x
-#' smaller.
+#' Hamming and USEARCH are treated as fast methods; WFA2, Edlib, KSW2, and
+#' hybrid alignment are ~100x slower per comparison, so both thresholds are
+#' 100x smaller.
 #'
 #' @param method (`character` scalar) `dist_config` method name
 #' @return named `list` with `min_parallel_ops` and `max_batch_ops`
 #' @keywords internal
 cluster_ops_defaults <- function(method) {
   checkmate::assert_string(method)
-  if (method %in% c("wfa2", "edlib", "hybrid")) {
+  if (method %in% c("wfa2", "edlib", "ksw2", "hybrid")) {
     list(min_parallel_ops = 1e4, max_batch_ops = 1e8)
   } else {
     list(min_parallel_ops = 1e6, max_batch_ops = 1e10)
@@ -2039,9 +2039,9 @@ parse_cluster_options <- function(pipeline_options) {
 #' Default / validate clustering.memory_budget_mb
 #'
 #' `NULL` or omitted: `"auto"` when threshold optimization is enabled and the
-#' distance method is native (wfa2/edlib/hybrid/hamming); otherwise `NULL`
-#' (USEARCH and `dist_file` cannot honour a budget). Explicit values are
-#' passed through after validation.
+#' distance method is native (wfa2/edlib/ksw2/hybrid/hamming); otherwise
+#' `NULL` (USEARCH and `dist_file` cannot honour a budget). Explicit values
+#' are passed through after validation.
 #'
 #' @param value (`NULL`, `"auto"`, or positive number) user setting
 #' @param method (`character(1)`) distance method name
@@ -2059,7 +2059,7 @@ resolve_cluster_memory_budget_mb <- function(
   if (is.null(value)) {
     if (
       isTRUE(do_optimize) &&
-        method %in% c("wfa2", "edlib", "hybrid", "hamming")
+        method %in% c("wfa2", "edlib", "ksw2", "hybrid", "hamming")
     ) {
       return("auto")
     }
@@ -2379,6 +2379,58 @@ cluster_dist_config <- function() {
     "optimotu.pipeline.clustering_dist_config",
     optimotu::dist_usearch()
   )
+}
+
+#' Clustering algorithm config for the active distance method
+#'
+#' Hamming uses [optimotu::clust_slink()]; other methods use
+#' [optimotu::clust_tree()]. Returns an unevaluated call so it can be `!!`
+#' spliced at plan definition time (when [cluster_dist_config()] is
+#' available) and evaluated on the worker. Not a YAML option.
+#'
+#' @param method (`character(1)`) distance method; defaults to
+#'   [cluster_dist_config()]`$method`
+#' @return a `call` to [optimotu::clust_slink()] or [optimotu::clust_tree()]
+#' @rdname pipeline_options
+#' @export
+cluster_clust_config <- function(method = cluster_dist_config()$method) {
+  checkmate::assert_string(method)
+  if (identical(method, "hamming")) {
+    quote(optimotu::clust_slink())
+  } else {
+    quote(optimotu::clust_tree())
+  }
+}
+
+#' Parallelization config for the active distance method
+#'
+#' Hamming uses [optimotu::parallel_merge()]; other methods use
+#' [optimotu::parallel_concurrent()]. Returns an unevaluated call: the
+#' distance method is resolved at plan definition time via
+#' [cluster_dist_config()], while `threads` is captured unevaluated so
+#' [local_cpus()] can run on the worker. Not a YAML option. Callers that
+#' need a special USEARCH thread count should keep that branch outside
+#' this helper.
+#'
+#' @param threads worker thread count, typically [local_cpus()] (captured
+#'   unevaluated)
+#' @param method (`character(1)`) distance method; defaults to
+#'   [cluster_dist_config()]`$method`
+#' @return a `call` to [optimotu::parallel_merge()] or
+#'   [optimotu::parallel_concurrent()]
+#' @rdname pipeline_options
+#' @export
+cluster_parallel_config <- function(
+  threads,
+  method = cluster_dist_config()$method
+) {
+  checkmate::assert_string(method)
+  threads <- substitute(threads)
+  if (identical(method, "hamming")) {
+    bquote(optimotu::parallel_merge(threads = .(threads)))
+  } else {
+    bquote(optimotu::parallel_concurrent(threads = .(threads)))
+  }
 }
 
 #' @rdname pipeline_options

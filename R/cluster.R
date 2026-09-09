@@ -510,9 +510,13 @@ small_predenovo_taxon_table <- function(
 #' @param dist_config (`list`) a list of configuration options for the
 #' distance calculation, as returned by [optimotu::dist_config()].
 #' @param clust_config (`list`) a list of configuration options for the
-#' clustering, as returned by [optimotu::clust_config()].
+#' clustering, as returned by [optimotu::clust_config()]. When `NULL`,
+#' [cluster_clust_config()] is evaluated (SLINK for Hamming, tree
+#' otherwise).
 #' @param parallel_config (`list`) a list of configuration options for the
-#' parallelization, as returned by [optimotu::parallel_config()].
+#' parallelization, as returned by [optimotu::parallel_config()]. When
+#' `NULL`, [cluster_parallel_config()] is evaluated (merge for Hamming,
+#' concurrent otherwise).
 #'
 #' @return (`data.frame`) a table of taxonomic assignments with columns `seq_id`
 #' and one column for each rank in `tax_ranks`; ranks from `parent_rank` and up
@@ -528,11 +532,20 @@ do_denovo_cluster <- function(
   tax_ranks,
   denovo_thresholds,
   dist_config,
-  clust_config = optimotu::clust_tree(),
-  parallel_config = optimotu::parallel_concurrent(
-    optimotu.pipeline::local_cpus()
-  )
+  clust_config = NULL,
+  parallel_config = NULL
 ) {
+  if (is.null(clust_config)) {
+    clust_config <- eval(cluster_clust_config(method = dist_config$method))
+  }
+  if (is.null(parallel_config)) {
+    parallel_config <- eval(
+      cluster_parallel_config(
+        threads = local_cpus(),
+        method = dist_config$method
+      )
+    )
+  }
   super_ranks <- superranks(rank, tax_ranks)
   sub_ranks <- subranks(rank, tax_ranks)
   checkmate::assert_file_exists(seq_file, "r")

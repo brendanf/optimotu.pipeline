@@ -13,8 +13,8 @@ do_denovo_cluster(
   tax_ranks,
   denovo_thresholds,
   dist_config,
-  clust_config = optimotu::clust_tree(),
-  parallel_config = optimotu::parallel_concurrent(optimotu.pipeline::local_cpus())
+  clust_config = NULL,
+  parallel_config = NULL
 )
 }
 \arguments{
@@ -45,10 +45,14 @@ mismatch.}
 distance calculation, as returned by \code{\link[optimotu:dist_config]{optimotu::dist_config()}}.}
 
 \item{clust_config}{(\code{list}) a list of configuration options for the
-clustering, as returned by \code{\link[optimotu:clust_config]{optimotu::clust_config()}}.}
+clustering, as returned by \code{\link[optimotu:clust_config]{optimotu::clust_config()}}. When \code{NULL},
+\code{\link[=cluster_clust_config]{cluster_clust_config()}} is evaluated (SLINK for Hamming, tree
+otherwise).}
 
 \item{parallel_config}{(\code{list}) a list of configuration options for the
-parallelization, as returned by \code{\link[optimotu:parallel_config]{optimotu::parallel_config()}}.}
+parallelization, as returned by \code{\link[optimotu:parallel_config]{optimotu::parallel_config()}}. When
+\code{NULL}, \code{\link[=cluster_parallel_config]{cluster_parallel_config()}} is evaluated (merge for Hamming,
+concurrent otherwise).}
 }
 \value{
 (\code{data.frame}) a table of taxonomic assignments with columns \code{seq_id}

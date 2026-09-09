@@ -1,4 +1,10 @@
 # optimotu.pipeline (development version)
+* Treat `ksw2` as a slow distance method for clustering job-size defaults
+  and include it among native methods that default
+  `clustering.memory_budget_mb` to `"auto"`.
+* Add `cluster_clust_config()` /
+  `cluster_parallel_config()`, which select appropriate clustering
+  algorithm and parallelization depending on the chosen distance method.
 * `consensus_columns()` accepts `inferrnal` `StockholmMultipleAlignment`
   objects (with a `GC`/`RF` annotation) as well as the legacy
   `list(alignment=, GC=)` return shape, so current `cmalign()` output can be

@@ -13,8 +13,8 @@ cluster_ops_defaults(method)
 named \code{list} with \code{min_parallel_ops} and \code{max_batch_ops}
 }
 \description{
-Hamming and USEARCH are treated as fast methods; WFA2, Edlib, and hybrid
-alignment are ~100x slower per comparison, so both thresholds are 100x
-smaller.
+Hamming and USEARCH are treated as fast methods; WFA2, Edlib, KSW2, and
+hybrid alignment are ~100x slower per comparison, so both thresholds are
+100x smaller.
 }
 \keyword{internal}
