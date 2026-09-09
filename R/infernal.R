@@ -46,21 +46,43 @@ read_sfile <- function(file) {
     )
 }
 
-# TODO: implement for newer version of inferrnal StockholmMultipleAlignment
-#       (or move to inferrnal)
-
 #' Extract the consensus columns from a multiple sequence alignment
-#' @param aln (`list`) a list with elements `alignment` (a `MultipleAlignment`
-#' object) and `GC` (a `BString` object with the consensus sequence)
-#' @return a `DNAStringSet` with the consensus columns
+#'
+#' Columns marked with `.` in the Infernal reference (`RF`) annotation are
+#' treated as inserts and removed via [Biostrings::colmask()].
+#'
+#' @param aln either:
+#'   * an `inferrnal` `StockholmMultipleAlignment` (or subclass such as
+#'     `StockholmDNAMultipleAlignment`), with a `GC` annotation named `"RF"`; or
+#'   * a `list` with elements `alignment` (a
+#'     [`MultipleAlignment`][Biostrings::MultipleAlignment-class]) and `GC`
+#'     containing `RF` as a [`BString`][Biostrings::XString-class] (legacy
+#'     `inferrnal` return shape)
+#' @return a `DNAStringSet` with the consensus columns. RNA alignments are
+#'   converted to DNA (`U` → `T`).
 #' @export
 consensus_columns <- function(aln) {
-  checkmate::assert_names(names(aln), must.include = c("alignment", "GC"))
-  checkmate::assert_names(names(aln$GC), must.include = "RF")
-  checkmate::assert_class(aln$alignment, "MultipleAlignment")
-  checkmate::assert_class(aln$GC$RF, "BString")
-  dots <- gregexpr("[.]+", aln$GC$RF)[[1]]
-  Biostrings::colmask(aln$alignment) <-
+  if (methods::is(aln, "StockholmMultipleAlignment")) {
+    checkmate::assert_names(names(aln@GC), must.include = "RF")
+    rf <- aln@GC[["RF"]]
+    # colmask<- on Stockholm* rebuilds S4 slots incorrectly; drop annotations.
+    alignment <- methods::as(aln, "MultipleAlignment")
+  } else {
+    checkmate::assert_list(aln)
+    checkmate::assert_names(names(aln), must.include = c("alignment", "GC"))
+    checkmate::assert_names(names(aln$GC), must.include = "RF")
+    checkmate::assert_class(aln$alignment, "MultipleAlignment")
+    rf <- aln$GC$RF
+    alignment <- aln$alignment
+  }
+  checkmate::assert_class(rf, "BString")
+  dots <- gregexpr("[.]+", as.character(rf))[[1]]
+  Biostrings::colmask(alignment) <-
     IRanges::IRanges(start = dots, width = attr(dots, "match.length"))
-  methods::as(aln$alignment, "DNAStringSet")
+  xss <- methods::as(alignment, "XStringSet")
+  if (methods::is(xss, "RNAStringSet")) {
+    Biostrings::DNAStringSet(xss)
+  } else {
+    methods::as(xss, "DNAStringSet")
+  }
 }

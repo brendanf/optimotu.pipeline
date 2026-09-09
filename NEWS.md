@@ -1,4 +1,8 @@
 # optimotu.pipeline (development version)
+* `consensus_columns()` accepts `inferrnal` `StockholmMultipleAlignment`
+  objects (with a `GC`/`RF` annotation) as well as the legacy
+  `list(alignment=, GC=)` return shape, so current `cmalign()` output can be
+  piped without conversion.
 * Add `clustering.memory_budget_mb` (`NULL`, positive MB, or `"auto"`) parsed
   into `cluster_memory_budget_mb()` and passed through to
   `optimotu::optimize_thresholds()`. Default is `"auto"` when threshold

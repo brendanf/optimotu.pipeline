@@ -7,12 +7,21 @@
 consensus_columns(aln)
 }
 \arguments{
-\item{aln}{(\code{list}) a list with elements \code{alignment} (a \code{MultipleAlignment}
-object) and \code{GC} (a \code{BString} object with the consensus sequence)}
+\item{aln}{either:
+\itemize{
+\item an \code{inferrnal} \code{StockholmMultipleAlignment} (or subclass such as
+\code{StockholmDNAMultipleAlignment}), with a \code{GC} annotation named \code{"RF"}; or
+\item a \code{list} with elements \code{alignment} (a
+\code{\link[Biostrings:MultipleAlignment-class]{MultipleAlignment}}) and \code{GC}
+containing \code{RF} as a \code{\link[Biostrings:XString-class]{BString}} (legacy
+\code{inferrnal} return shape)
+}}
 }
 \value{
-a \code{DNAStringSet} with the consensus columns
+a \code{DNAStringSet} with the consensus columns. RNA alignments are
+converted to DNA (\code{U} → \code{T}).
 }
 \description{
-Extract the consensus columns from a multiple sequence alignment
+Columns marked with \code{.} in the Infernal reference (\code{RF}) annotation are
+treated as inserts and removed via \code{\link[Biostrings:MultipleAlignment-class]{Biostrings::colmask()}}.
 }

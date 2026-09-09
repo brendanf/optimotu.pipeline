@@ -1,7 +1,7 @@
 Package: optimotu.pipeline
 Type: Package
 Title: Pipeline for Environmental DNA Metabarcoding
-Version: 0.6.3.9022
+Version: 0.6.3.9023
 Authors@R: 
     person(given = "Brendan",
            family = "Furneaux",
@@ -57,6 +57,7 @@ Suggests:
     dada2,
     fst,
     ggplot2,
+    inferrnal,
     lulu,
     png,
     qs,
@@ -72,6 +73,7 @@ Remotes:
     tobiasgf/lulu,
     brendanf/optimotu,
     brendanf/fastqindexr,
+    brendanf/inferrnal,
     bioc::BiocGenerics,
     bioc::Biostrings,
     bioc::dada2,
@@ -79,3 +81,4 @@ Remotes:
     bioc::S4Vectors
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.0
+RoxygenNote: 7.3.2
