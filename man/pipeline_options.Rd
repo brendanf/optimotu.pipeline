@@ -104,6 +104,7 @@
 \alias{cluster_min_refseq}
 \alias{cluster_memory_budget_mb}
 \alias{do_guilds}
+\alias{guild_databases}
 \alias{do_wide_otu_table}
 \alias{rarefy_number}
 \alias{rarefy_numerator}
@@ -315,6 +316,8 @@ cluster_min_refseq()
 cluster_memory_budget_mb()
 
 do_guilds()
+
+guild_databases()
 
 do_wide_otu_table()
 

@@ -1,4 +1,10 @@
 # optimotu.pipeline (development version)
+* `guilds` in `pipeline_options.yaml` is a list of databases (`funguild`,
+  `carlos`, and/or `{name:, file:}` tables). `guilds: yes` still enables
+  the FUNGuild + Carlos defaults.
+* `generate_krona_data()` is rank-generic (`ranks` argument) and
+  `krona_node_data_format()` / `krona_html_attributes()` replace hardcoded
+  family/genus/species Krona attributes.
 * Treat `ksw2` as a slow distance method for clustering job-size defaults
   and include it among native methods that default
   `clustering.memory_budget_mb` to `"auto"`.

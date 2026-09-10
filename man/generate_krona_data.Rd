@@ -4,23 +4,24 @@
 \alias{generate_krona_data}
 \title{Generate data to write a KronaTools XML file}
 \usage{
-generate_krona_data(otu_taxonomy)
+generate_krona_data(otu_taxonomy, ranks = tax_ranks())
 }
 \arguments{
-\item{otu_taxonomy}{(\code{data.frame}) with (at least) columns \code{kingdom}, \code{phylum},
-\code{class}, \code{order}, \code{family}, \code{genus}, \code{species}, \code{nread} and \code{nsample}}
+\item{otu_taxonomy}{(\code{data.frame}) OTU taxonomy with rank columns named in
+\code{ranks}, plus \code{nread} and \code{nsample}}
+
+\item{ranks}{(\code{character}) taxonomic ranks, most inclusive first. Defaults
+to \code{\link[=tax_ranks]{tax_ranks()}}.}
 }
 \value{
 \code{data.frame} with columns \code{rank}, \code{taxon}, \code{parent_taxonomy},
-\code{phylum_unknown_fread}, \code{phylum_unknown_fotu}, \code{phylum_unknown_focc},
-\code{class_unknown_fread}, \code{class_unknown_fotu}, \code{class_unknown_focc},
-\code{order_unknown_fread}, \code{order_unknown_fotu}, \code{order_unknown_focc},
-\code{family_unknown_fread}, \code{family_unknown_fotu}, \code{family_unknown_focc},
-\code{genus_unknown_fread}, \code{genus_unknown_fotu}, \code{genus_unknown_focc},
-\code{species_unknown_fread}, \code{species_unknown_fotu}, \code{species_unknown_focc},
-\code{nread}, \code{nocc}, \code{notu}, \code{child_unknown_fread}, \code{child_unknown_fotu},
-\code{child_unknown_focc}, \code{fread}, \code{focc}, \code{fotu}
+\verb{\{rank\}_unknown_\{fread,fotu,focc\}} for each non-root rank, \code{nread},
+\code{nocc}, \code{notu}, \verb{child_unknown_\{fread,fotu,focc\}}, \code{fread}, \code{focc},
+\code{fotu}
 }
 \description{
-Generate data to write a KronaTools XML file
+Builds parent-taxonomy strings and per-rank unknown fractions for every
+rank except the root. Taxa whose names start with \code{pseudo} count as
+unknown. \code{\link[=remove_mycobank_number]{remove_mycobank_number()}} is applied to \code{genus} and \code{species}
+when those ranks are present.
 }

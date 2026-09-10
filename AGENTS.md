@@ -74,7 +74,11 @@ Secondary clustering / OTU curation:
 
 Reporting helpers:
 
-- `R/krona.R` — generates KronaTools XML for taxonomic composition
+- `R/krona.R` — rank-generic KronaTools tables (`generate_krona_data(ranks)`)
+  and XML (`krona_node_data_format()`, `krona_html_attributes()`)
+- `R/guilds.R` — FUNGuild-style taxonomy strings, optional lifestyle RDS,
+  and `load_guild_database()` for YAML-configured DBs (`funguild`,
+  `carlos`, `{name:, file:}`); no Protax `taxonomy_new`
 - `R/target_taxa.R` — finds OTUs with any probability of containing a
   target taxon
 
@@ -172,6 +176,8 @@ commands.
   - `R/denoise_map.R`, `R/read_map.R`, `R/dada2_map.R`, `R/unoise.R`,
     `add_lulu_to_read_map()`, `add_uncross_to_read_map()`,
     `with_read_map_annotate()`
+- change Krona or guild reporting helpers:
+  - `R/krona.R`, `R/guilds.R
 
 ## 5) Testing workflow
 

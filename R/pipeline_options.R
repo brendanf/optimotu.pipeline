@@ -2494,23 +2494,228 @@ cluster_memory_budget_mb <- function() {
 }
 
 #### guilds settings ####
-# TODO: this needs additional customization options
+# `guilds: yes` enables funguild + carlos defaults. A list names databases
+# (`funguild`, `carlos`, or `{name:, file:}` tables). Not classifier-specific.
+
+empty_guild_databases <- function() {
+  tibble::tibble(
+    name = character(),
+    source = character(),
+    path = character()
+  )
+}
+
+guild_builtin_row <- function(name, require_file = TRUE) {
+  if (identical(name, "funguild")) {
+    return(tibble::tibble(
+      name = "funguild",
+      source = "download",
+      path = NA_character_
+    ))
+  }
+  if (identical(name, "carlos")) {
+    path <- lifestyle_guild_path()
+    if (!file.exists(path)) {
+      if (isTRUE(require_file)) {
+        stop(
+          "Guild database 'carlos' requires '",
+          path,
+          "', which was not found.",
+          call. = FALSE
+        )
+      }
+      message(
+        "Guilds default includes 'carlos', but '",
+        path,
+        "' is missing; skipping that database."
+      )
+      return(empty_guild_databases())
+    }
+    return(tibble::tibble(
+      name = "carlos",
+      source = "lifestyle",
+      path = path
+    ))
+  }
+  stop(
+    "Unknown guild database '",
+    name,
+    "'. Builtins are 'funguild' and 'carlos'; ",
+    "additional databases need name: and file:.",
+    call. = FALSE
+  )
+}
+
+default_guild_databases <- function() {
+  dplyr::bind_rows(
+    guild_builtin_row("funguild", require_file = TRUE),
+    guild_builtin_row("carlos", require_file = FALSE)
+  )
+}
+
+assert_guild_name <- function(name) {
+  checkmate::assert_string(name, min.chars = 1L)
+  if (!grepl("^[A-Za-z][A-Za-z0-9_]*$", name)) {
+    stop(
+      "Guild database name '",
+      name,
+      "' must start with a letter and contain only letters, digits, ",
+      "and underscores.",
+      call. = FALSE
+    )
+  }
+  invisible(name)
+}
+
+parse_guild_entry <- function(entry) {
+  if (is.character(entry) && length(entry) == 1L) {
+    return(guild_builtin_row(entry, require_file = TRUE))
+  }
+  if (!is.list(entry)) {
+    stop(
+      "Each guilds: entry must be 'funguild', 'carlos', or a map with ",
+      "name: and file:.",
+      call. = FALSE
+    )
+  }
+  extra <- setdiff(names(entry), c("name", "file"))
+  if (length(extra) > 0L) {
+    stop(
+      "Unknown key(s) in a guilds: database entry: ",
+      paste(extra, collapse = ", "),
+      ". Allowed keys are name: and file:.",
+      call. = FALSE
+    )
+  }
+  if (is.null(entry$name) || is.null(entry$file)) {
+    stop(
+      "Custom guild databases need both name: and file:.",
+      call. = FALSE
+    )
+  }
+  checkmate::assert_string(entry$name, min.chars = 1L)
+  checkmate::assert_string(entry$file, min.chars = 1L)
+  if (entry$name %in% c("funguild", "carlos")) {
+    stop(
+      "Specify builtin guild database '",
+      entry$name,
+      "' as a string, not as name: / file:.",
+      call. = FALSE
+    )
+  }
+  assert_guild_name(entry$name)
+  if (!file.exists(entry$file)) {
+    stop(
+      "Guild database file '",
+      entry$file,
+      "' (name: ",
+      entry$name,
+      ") was not found.",
+      call. = FALSE
+    )
+  }
+  tibble::tibble(
+    name = entry$name,
+    source = "file",
+    path = entry$file
+  )
+}
+
+normalize_guild_databases <- function(guilds) {
+  if (is.logical(guilds) && length(guilds) == 1L) {
+    if (isTRUE(guilds)) {
+      return(default_guild_databases())
+    }
+    return(empty_guild_databases())
+  }
+  if (is.character(guilds) && length(guilds) == 1L) {
+    key <- tolower(guilds)
+    if (key %in% c("yes", "true")) {
+      return(default_guild_databases())
+    }
+    if (key %in% c("no", "false")) {
+      return(empty_guild_databases())
+    }
+  }
+  if (is.character(guilds)) {
+    rows <- lapply(guilds, parse_guild_entry)
+    out <- dplyr::bind_rows(rows)
+  } else if (
+    is.list(guilds) &&
+      is.character(guilds$name) &&
+      is.character(guilds$file)
+  ) {
+    out <- parse_guild_entry(guilds)
+  } else if (is.list(guilds)) {
+    rows <- lapply(guilds, parse_guild_entry)
+    out <- dplyr::bind_rows(rows)
+  } else {
+    stop(
+      "'guilds' must be yes/no or a list of databases ",
+      "('funguild', 'carlos', and/or name: + file: maps).",
+      call. = FALSE
+    )
+  }
+  if (nrow(out) == 0L) {
+    return(out)
+  }
+  dups <- out$name[duplicated(out$name)]
+  if (length(dups) > 0L) {
+    stop(
+      "Duplicate guild database name(s): ",
+      paste(unique(dups), collapse = ", "),
+      ".",
+      call. = FALSE
+    )
+  }
+  out
+}
 
 #' @rdname parse_pipeline_options
 #' @keywords internal
 parse_guilds_options <- function(pipeline_options) {
-  if (!is.null(pipeline_options$guilds)) {
-    checkmate::assert_flag(pipeline_options$guilds)
-    options(
-      optimotu.pipeline.do_guilds = pipeline_options$guilds
-    )
+  dbs <- if (is.null(pipeline_options$guilds)) {
+    empty_guild_databases()
+  } else {
+    normalize_guild_databases(pipeline_options$guilds)
   }
+  options(
+    optimotu.pipeline.do_guilds = nrow(dbs) > 0L,
+    optimotu.pipeline.guild_databases = dbs
+  )
 }
 
 #' @rdname pipeline_options
 #' @export
 do_guilds <- function() {
   getOption("optimotu.pipeline.do_guilds", FALSE)
+}
+
+#' @rdname pipeline_options
+#' @export
+guild_databases <- function() {
+  getOption(
+    "optimotu.pipeline.guild_databases",
+    empty_guild_databases()
+  )
+}
+
+#' Target names for guild database tables (and local files)
+#'
+#' @return (`character`) names such as `guild_db_funguild` and
+#'   `guild_db_file_carlos`
+#' @export
+guild_db_target_names <- function() {
+  dbs <- guild_databases()
+  if (nrow(dbs) == 0L) {
+    return(character())
+  }
+  out <- paste0("guild_db_", dbs$name)
+  file_i <- !is.na(dbs$path)
+  if (any(file_i)) {
+    out <- c(out, paste0("guild_db_file_", dbs$name[file_i]))
+  }
+  out
 }
 
 #### output / OTU table settings ####
