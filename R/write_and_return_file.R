@@ -171,7 +171,6 @@ write_tabular_outputs <- function(
   ...
 ) {
   checkmate::assert_character(file, len = 1)
-  file <- sub("\\.[^.]+$", "", file)
   checkmate::assert_character(formats, min.len = 1)
   vapply(
     formats,
