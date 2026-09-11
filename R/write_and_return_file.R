@@ -86,6 +86,19 @@
   }
 }
 
+#' Error for deprecated qs (v1) format support
+#' @keywords internal
+#' @noRd
+.stop_qs_deprecated <- function(context = "qs") {
+  stop(
+    "The 'qs' package format (",
+    context,
+    ") is deprecated and no longer supported. ",
+    "Use 'qs2' (e.g. .qs2 files / type = \"qs2\") or RDS instead.",
+    call. = FALSE
+  )
+}
+
 #' Resolve a list to a named object list for RData export
 #' @param x list passed to [write_and_return_file.list()]
 #' @param envir environment for symbol lookup
@@ -341,9 +354,7 @@ write_and_return_file.default <- function(
     ensure_directory(file)
     saveRDS(x, file, ...)
   } else if (type == "qs") {
-    .require_format_package("qs", type)
-    ensure_directory(file)
-    qs::qsave(x, file, ...)
+    .stop_qs_deprecated('type = "qs" / .qs')
   } else if (type == "qs2") {
     .require_format_package("qs2", type)
     ensure_directory(file)

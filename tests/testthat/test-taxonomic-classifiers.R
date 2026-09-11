@@ -265,3 +265,20 @@ test_that("bayesant trains and predicts on generated fixtures", {
   testthat::expect_true(is.integer(out$seq_idx))
   testthat::expect_true(all(out$prob >= 0 & out$prob <= 1))
 })
+
+test_that("bayesant rejects deprecated .qs model files", {
+  model_file <- withr::local_tempfile(fileext = ".qs")
+  writeLines("placeholder", model_file)
+  expect_error(
+    optimotu.pipeline::bayesant(
+      query = c(seq1 = "ACGT"),
+      model = model_file,
+      ncpu = 1L
+    ),
+    "deprecated"
+  )
+  expect_error(
+    optimotu.pipeline:::read_bayesant_model(model_file),
+    "deprecated"
+  )
+})

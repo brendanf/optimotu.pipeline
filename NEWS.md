@@ -1,4 +1,5 @@
 # optimotu.pipeline 0.7.0
+* Drop support for the deprecated `qs` package. Users are referred to `qs2`.
 * `guilds` in `pipeline_options.yaml` is a list of databases (`funguild`,
   `carlos`, and/or `{name:, file:}` tables). `guilds: yes` still enables
   the FUNGuild + Carlos defaults.

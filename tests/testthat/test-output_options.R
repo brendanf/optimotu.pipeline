@@ -27,6 +27,17 @@ test_that("normalize_output_formats rejects unknown formats", {
   )
 })
 
+test_that("normalize_output_formats rejects deprecated qs", {
+  expect_error(
+    optimotu.pipeline:::normalize_output_formats("qs"),
+    "deprecated"
+  )
+  expect_error(
+    optimotu.pipeline:::normalize_output_formats(c("rds", "QS")),
+    "deprecated"
+  )
+})
+
 test_that("parse_output_options sets formats and wide_table", {
   withr::local_options(
     list(

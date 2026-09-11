@@ -66,16 +66,18 @@ test_that("write_and_return_file.default type='rds' round-trips and returns file
   expect_identical(read_back, x)
 })
 
-test_that("write_and_return_file.default type='qs' round-trips and returns filename", {
-  testthat::skip_if_not_installed("qs")
+test_that("write_and_return_file.default type='qs' errors as deprecated", {
   x <- list(a = 1L, b = c("x", "y"), c = TRUE)
   file <- withr::local_tempfile(fileext = ".qs")
 
-  out <- optimotu.pipeline::write_and_return_file(x, file)
-  read_back <- qs::qread(file)
-
-  expect_equal(out, file)
-  expect_identical(read_back, x)
+  expect_error(
+    optimotu.pipeline::write_and_return_file(x, file),
+    "deprecated"
+  )
+  expect_error(
+    optimotu.pipeline::write_and_return_file(x, file, type = "qs"),
+    "deprecated"
+  )
 })
 
 test_that("write_and_return_file.default type='qs2' round-trips and returns filename", {

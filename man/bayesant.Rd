@@ -22,7 +22,8 @@ or \code{character} file name) the sequences to identify. If a file name, it
 should point to a FASTA file (possibly gzipped).}
 
 \item{model}{(\code{character} file name or \code{BayesANT} model) the BayesANT model
-to use.  If a file name, it must be in .rds, .qs, or .qs2 format.}
+to use.  If a file name, it must be in .rds or .qs2 format.  Legacy \code{.qs}
+files are no longer supported; convert to \code{.qs2} or \code{.rds}.}
 
 \item{ncpu}{(\code{integer}) the number of CPU cores to use}
 

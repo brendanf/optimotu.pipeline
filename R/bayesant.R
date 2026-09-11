@@ -3,7 +3,8 @@
 #' or `character` file name) the sequences to identify. If a file name, it
 #' should point to a FASTA file (possibly gzipped).
 #' @param model (`character` file name or `BayesANT` model) the BayesANT model
-#' to use.  If a file name, it must be in .rds, .qs, or .qs2 format.
+#' to use.  If a file name, it must be in .rds or .qs2 format.  Legacy `.qs`
+#' files are no longer supported; convert to `.qs2` or `.rds`.
 #' @param ncpu (`integer`) the number of CPU cores to use
 #' @param id_is_int (`logical`) if `TRUE`, parse the sequence IDs as integers
 #' @param n_top_taxa (`integer`) the number of top taxa to return
@@ -61,13 +62,7 @@ bayesant <- function(
     if (endsWith(model, ".rds")) {
       model <- readRDS(model)
     } else if (endsWith(model, ".qs")) {
-      if (!requireNamespace("qs")) {
-        stop(
-          "qs package is required but not installed. Please install it",
-          " using `install.packages('qs')`."
-        )
-      }
-      model <- qs::qread(model, nthreads = ncpu)
+      .stop_qs_deprecated(".qs BayesANT model files")
     } else if (endsWith(model, ".qs2")) {
       if (!requireNamespace("qs2")) {
         stop(
@@ -77,7 +72,7 @@ bayesant <- function(
       }
       model <- qs2::qs_read(model, nthreads = ncpu)
     } else if (endsWith(model, ".qdata")) {
-      stop("Model file must be in .rds, .qs, or .qs2 format.")
+      stop("Model file must be in .rds or .qs2 format.")
     }
   } else if (is.character(model) && !file.exists(model)) {
     stop(
@@ -145,7 +140,7 @@ read_bayesant_model <- function(model = bayesant_model()) {
     if (ext == "rds") {
       substitute(readRDS(model), list(model = model))
     } else if (ext == "qs") {
-      substitute(qs::qread(model), list(model = model))
+      .stop_qs_deprecated(".qs bayesant_model files")
     } else if (ext == "qs2") {
       substitute(qs2::qs_read(model), list(model = model))
     } else {

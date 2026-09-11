@@ -2738,6 +2738,11 @@ normalize_output_formats <- function(formats) {
   checkmate::assert_character(formats, min.len = 1)
   formats <- unique(tolower(as.character(formats)))
   formats[formats == "qd"] <- "qdata"
+  if ("qs" %in% formats) {
+    .stop_qs_deprecated(
+      "output.formats: qs in pipeline_options.yaml"
+    )
+  }
   allowed <- c(
     "rds",
     "tsv",
