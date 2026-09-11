@@ -452,11 +452,14 @@ test_that("lulu_distmx works with fastqindexr index object input", {
   seq_file <- make_oneline_fasta_gz(seq, ids)
   seq_idx <- fastqindexr::create_index(files = seq_file, type = "fasta")
   seqtable <- tibble::tibble(seq_idx = 1L:3L, nread = c(10L, 8L, 4L))
+  # Native distance method: default lulu_dist_config() is USEARCH, which
+  # is not available in CI.
   out <- lulu_distmx(
     seqall_file = seq_file,
     seqall_index = seq_idx,
     seqtable = seqtable,
-    threshold = 1
+    threshold = 1,
+    dist_config = optimotu::dist_wfa2()
   )
   expect_s3_class(out, "data.frame")
   expect_true(all(c("seq_idx1", "seq_idx2", "dist", "nread1") %in% names(out)))

@@ -1,3 +1,7 @@
+skip_if_no_usearch <- function() {
+  tc_skip_if_no_exec("usearch")
+}
+
 test_that("unnest_yaml_list flattens length-1 nested lists", {
   nested <- list(list(a = 1), list(b = 2))
   out <- optimotu.pipeline:::unnest_yaml_list(nested)
@@ -766,18 +770,6 @@ test_that("parse_cluster_options resolves memory_budget_mb defaults", {
       list(
         clustering = list(
           thresholds = list(train_data = "self"),
-          dist_config = "usearch"
-        )
-      )
-    )
-  )
-  expect_null(cluster_memory_budget_mb())
-
-  suppressMessages(
-    optimotu.pipeline:::parse_cluster_options(
-      list(
-        clustering = list(
-          thresholds = list(train_data = "self"),
           dist_config = "wfa2",
           memory_budget_mb = 256
         )
@@ -785,21 +777,6 @@ test_that("parse_cluster_options resolves memory_budget_mb defaults", {
     )
   )
   expect_equal(cluster_memory_budget_mb(), 256)
-
-  expect_error(
-    suppressMessages(
-      optimotu.pipeline:::parse_cluster_options(
-        list(
-          clustering = list(
-            thresholds = list(train_data = "self"),
-            dist_config = "usearch",
-            memory_budget_mb = "auto"
-          )
-        )
-      )
-    ),
-    "not supported with dist_config method 'usearch'"
-  )
 
   # Load-only thresholds: no auto budget even for native methods
   load_tsv <- withr::local_tempfile(fileext = ".tsv")
@@ -815,6 +792,39 @@ test_that("parse_cluster_options resolves memory_budget_mb defaults", {
     )
   )
   expect_null(cluster_memory_budget_mb())
+})
+
+test_that("parse_cluster_options memory_budget_mb rejects usearch auto", {
+  skip_if_no_usearch()
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+
+  suppressMessages(
+    optimotu.pipeline:::parse_cluster_options(
+      list(
+        clustering = list(
+          thresholds = list(train_data = "self"),
+          dist_config = "usearch"
+        )
+      )
+    )
+  )
+  expect_null(cluster_memory_budget_mb())
+
+  expect_error(
+    suppressMessages(
+      optimotu.pipeline:::parse_cluster_options(
+        list(
+          clustering = list(
+            thresholds = list(train_data = "self"),
+            dist_config = "usearch",
+            memory_budget_mb = "auto"
+          )
+        )
+      )
+    ),
+    "not supported with dist_config method 'usearch'"
+  )
 })
 
 test_that("cluster_clust_config and cluster_parallel_config return calls", {
