@@ -1,4 +1,4 @@
-# optimotu.pipeline (development version)
+# optimotu.pipeline 0.7.0
 * `guilds` in `pipeline_options.yaml` is a list of databases (`funguild`,
   `carlos`, and/or `{name:, file:}` tables). `guilds: yes` still enables
   the FUNGuild + Carlos defaults.
@@ -134,6 +134,7 @@
 * Add a `lulu_map_lowmem()`, which further reduces peak memory usage by
   `lulu_map()` in the context of a `targets` pipeline, by internally managing
   loading of the OTU table and match list from disk.
+* Requires optimotu >= 0.10.0
 
 # optimotu.pipeline 0.6.3
 * Add `parse_reference_taxonomy()` to parse common taxonomy formats from
