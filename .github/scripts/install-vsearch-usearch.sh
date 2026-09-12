@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
-# Download platform binaries for vsearch and open-source usearch12 into a
-# directory on PATH for GitHub Actions (and local smoke-testing).
+# Download platform binaries for vsearch and USEARCH 11 into a directory on
+# PATH for GitHub Actions (and local smoke-testing).
+#
+# USEARCH 11 (not 12) is required: our helpers and optimotu still call
+# calc_distmx, allpairs_global, makeudb_sintax, and fastx_getseqs, which were
+# removed in usearch12. Binaries are CC0 from:
+# https://github.com/rcedgar/usearch_old_binaries
 set -euo pipefail
 
 DEST="${OPTIMOTU_TOOLS_DIR:-${HOME}/.local/optimotu-tools}"
 mkdir -p "${DEST}"
 
 VSEARCH_VERSION="${VSEARCH_VERSION:-2.31.0}"
-# Open-source USEARCH 12; currently only a beta release with binaries.
-# https://github.com/rcedgar/usearch12
-USEARCH_TAG="${USEARCH_TAG:-v12.0-beta1}"
-USEARCH_VERSION="${USEARCH_VERSION:-12.0-beta}"
+USEARCH_VERSION="${USEARCH_VERSION:-11.0.667}"
+USEARCH_BASE_URL="${USEARCH_BASE_URL:-https://raw.githubusercontent.com/rcedgar/usearch_old_binaries/main/bin}"
 
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -86,54 +89,41 @@ else
   chmod +x "${DEST}/vsearch.exe" 2>/dev/null || true
 fi
 
-# --- usearch12 ---------------------------------------------------------------
+# --- usearch 11 --------------------------------------------------------------
+# Only x86 binaries were published for v11. On Apple Silicon, the osx64 binary
+# runs under Rosetta 2 (available on GitHub Actions macos runners).
+US_NAME="usearch"
+US_ASSET=""
 case "${OS}" in
   Linux)
     case "${ARCH}" in
       x86_64|amd64)
-        US_ASSET="usearch_linux_x86_${USEARCH_VERSION}"
-        US_NAME="usearch"
-        ;;
-      aarch64|arm64)
-        US_ASSET="usearch_linux_arch64_${USEARCH_VERSION}"
-        US_NAME="usearch"
+        US_ASSET="usearch${USEARCH_VERSION}_i86linux64"
         ;;
       *)
-        echo "Unsupported Linux architecture for usearch: ${ARCH}" >&2
-        exit 1
+        echo "WARNING: no USEARCH ${USEARCH_VERSION} binary for Linux ${ARCH}; skipping" >&2
         ;;
     esac
     ;;
   Darwin)
-    case "${ARCH}" in
-      x86_64|amd64)
-        US_ASSET="usearch_osx_x86_${USEARCH_VERSION}"
-        US_NAME="usearch"
-        ;;
-      arm64|aarch64)
-        US_ASSET="usearch_osx_m_${USEARCH_VERSION}"
-        US_NAME="usearch"
-        ;;
-      *)
-        echo "Unsupported macOS architecture for usearch: ${ARCH}" >&2
-        exit 1
-        ;;
-    esac
+    # Prefer 64-bit OSX binary (works natively on Intel; via Rosetta on ARM).
+    US_ASSET="usearch${USEARCH_VERSION}_i86osx64"
     ;;
   MINGW*|MSYS*|CYGWIN*)
-    US_ASSET="usearch_win_${USEARCH_VERSION}.exe"
+    US_ASSET="usearch${USEARCH_VERSION}_win64.exe"
     US_NAME="usearch.exe"
     ;;
   *)
-    echo "Unsupported OS for usearch: ${OS}" >&2
-    exit 1
+    echo "WARNING: no USEARCH ${USEARCH_VERSION} binary for OS ${OS}; skipping" >&2
     ;;
 esac
 
-US_URL="https://github.com/rcedgar/usearch12/releases/download/${USEARCH_TAG}/${US_ASSET}"
-echo "Installing usearch ${USEARCH_TAG} from ${US_URL}"
-download "${US_URL}" "${DEST}/${US_NAME}"
-chmod +x "${DEST}/${US_NAME}"
+if [[ -n "${US_ASSET}" ]]; then
+  US_URL="${USEARCH_BASE_URL}/${US_ASSET}"
+  echo "Installing usearch ${USEARCH_VERSION} from ${US_URL}"
+  download "${US_URL}" "${DEST}/${US_NAME}"
+  chmod +x "${DEST}/${US_NAME}"
+fi
 
 # --- PATH --------------------------------------------------------------------
 if [[ -n "${GITHUB_PATH:-}" ]]; then
@@ -146,10 +136,12 @@ echo "Installed tools in ${DEST}:"
 ls -l "${DEST}"
 if is_windows; then
   "${DEST}/vsearch.exe" --version
-  test -x "${DEST}/usearch.exe"
+  if [[ -x "${DEST}/usearch.exe" ]]; then
+    "${DEST}/usearch.exe" -version
+  fi
 else
   "${DEST}/vsearch" --version
-  test -x "${DEST}/usearch"
+  if [[ -x "${DEST}/usearch" ]]; then
+    "${DEST}/usearch" -version
+  fi
 fi
-# usearch12 does not accept a bare -version/--version flag the way older
-# binaries did; presence + execute bit is enough for CI PATH setup.
