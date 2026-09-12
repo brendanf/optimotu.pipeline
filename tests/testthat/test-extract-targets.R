@@ -53,7 +53,12 @@ test_that("extract_targets uses the worker subpipeline when meta is unset", {
   pat <- new.env(parent = emptyenv())
   class(pat) <- c("tar_pattern", "tar_target")
   pat$name <- "pat"
-  pat$junction <- list(index = c(pat_1 = 1L, pat_2 = 2L))
+  # junction_init() builds the version-appropriate junction shape
+  # ($index names in targets <= 1.10; $splits in >= 1.11).
+  pat$junction <- targets:::junction_init(
+    nexus = "pat",
+    splits = c("pat_1", "pat_2")
+  )
   targets_env$pat <- pat
   target <- new.env(parent = emptyenv())
   target$subpipeline <- pipeline
