@@ -1,4 +1,6 @@
 # optimotu.pipeline 0.7.0
+* `fastx_gz_hash()` falls back to a temp extract + `tools::md5sum()`
+  on Windows.
 * Drop support for the deprecated `qs` package. Users are referred to `qs2`.
 * `guilds` in `pipeline_options.yaml` is a list of databases (`funguild`,
   `carlos`, and/or `{name:, file:}` tables). `guilds: yes` still enables

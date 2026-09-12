@@ -174,7 +174,18 @@ expect_one_group_per_parent <- function(out, parent_rank) {
   expect_true(all(groups_per_parent$n == 1L))
 }
 
+# Defaults for min_ops/max_ops call cluster_dist_config(), which falls back to
+# optimotu::dist_usearch() and requires usearch on PATH. These packing tests
+# only need a distance method for the numeric defaults, so pin hamming.
+local_cluster_dist_hamming <- function(.local_envir = parent.frame()) {
+  withr::local_options(
+    optimotu.pipeline.clustering_dist_config = optimotu::dist_hamming(),
+    .local_envir = .local_envir
+  )
+}
+
 test_that("small_preclosed_taxon_table splits leftover taxa across tar_groups", {
+  local_cluster_dist_hamming()
   known <- tibble::tibble(
     seq_id = sprintf("ASV%04d", 1:8),
     genus = rep(c("Homo", "Pan"), each = 4L),
@@ -214,6 +225,7 @@ test_that("small_preclosed_taxon_table splits leftover taxa across tar_groups", 
 })
 
 test_that("small_predenovo_taxon_table splits leftover taxa across tar_groups", {
+  local_cluster_dist_hamming()
   closedref <- tibble::tibble(
     seq_id = sprintf("ASV%04d", 1:6),
     genus = rep(c("Homo", "Pan"), each = 3L),
@@ -244,6 +256,7 @@ test_that("small_predenovo_taxon_table splits leftover taxa across tar_groups", 
 })
 
 test_that("preclosed large/small partition on min_ops, pack on max_ops", {
+  local_cluster_dist_hamming()
   known <- tibble::tibble(
     seq_id = sprintf("ASV%04d", 1:10),
     genus = c(rep("Homo", 4L), rep("Pan", 6L)),
@@ -285,6 +298,7 @@ test_that("preclosed large/small partition on min_ops, pack on max_ops", {
 })
 
 test_that("predenovo large/small partition on min_ops, pack on max_ops", {
+  local_cluster_dist_hamming()
   closedref <- tibble::tibble(
     seq_id = sprintf("ASV%04d", 1:8),
     genus = c(rep("Homo", 3L), rep("Pan", 5L)),
@@ -315,6 +329,7 @@ test_that("predenovo large/small partition on min_ops, pack on max_ops", {
 })
 
 test_that("large_preclosed_taxon_table packs taxa across tar_groups", {
+  local_cluster_dist_hamming()
   known <- tibble::tibble(
     seq_id = sprintf("ASV%04d", 1:12),
     genus = rep(c("Homo", "Pan"), each = 6L),
@@ -360,6 +375,7 @@ test_that("large_preclosed_taxon_table packs taxa across tar_groups", {
 })
 
 test_that("large_predenovo_taxon_table packs taxa across tar_groups", {
+  local_cluster_dist_hamming()
   closedref <- tibble::tibble(
     seq_id = sprintf("ASV%04d", 1:10),
     genus = rep(c("Homo", "Pan"), each = 5L),
@@ -392,6 +408,7 @@ test_that("large_predenovo_taxon_table packs taxa across tar_groups", {
 })
 
 test_that("large_preclosed and small_predenovo delegate seq_id join path", {
+  local_cluster_dist_hamming()
   out_large <- large_preclosed_taxon_table(
     known_taxon_table = known_taxon_id_fixture(),
     asv_taxsort = asv_taxsort_id_fixture(),

@@ -1,6 +1,7 @@
-# run_protax() is exercised with a no-op shell stub so we do not require a real
+# run_protax() is exercised with a no-op stub so we do not require a real
 # ProtaxFungi install; the stub copies outdir/all.fa into the model directory
-# for assertions.
+# for assertions. Use .cmd on Windows because system2()/CreateProcess cannot
+# run shebang scripts there.
 local_protax_stub <- function(envir = parent.frame()) {
   root <- withr::local_tempdir(
     pattern = "run_protax_test",
@@ -8,16 +9,27 @@ local_protax_stub <- function(envir = parent.frame()) {
   )
   modeldir <- file.path(root, "model")
   dir.create(modeldir, recursive = TRUE)
-  script <- file.path(root, "runprotax_stub.sh")
-  writeLines(
-    c(
-      "#!/bin/sh",
-      "set -e",
-      "cp \"$1/all.fa\" \"$2/_captured_all.fa\""
-    ),
-    script
-  )
-  Sys.chmod(script, "0700")
+  if (.Platform$OS.type == "windows") {
+    script <- file.path(root, "runprotax_stub.cmd")
+    writeLines(
+      c(
+        "@echo off",
+        "copy /Y \"%~1\\all.fa\" \"%~2\\_captured_all.fa\" >NUL"
+      ),
+      script
+    )
+  } else {
+    script <- file.path(root, "runprotax_stub.sh")
+    writeLines(
+      c(
+        "#!/bin/sh",
+        "set -e",
+        "cp \"$1/all.fa\" \"$2/_captured_all.fa\""
+      ),
+      script
+    )
+    Sys.chmod(script, "0700")
+  }
   list(
     root = root,
     modeldir = modeldir,

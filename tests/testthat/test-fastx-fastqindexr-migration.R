@@ -172,11 +172,10 @@ reference_fastx_gz_hash <- function(infile, index, start, n) {
     collapse_sequence_lines = FALSE,
     renumber = "none"
   )
-  c(strtrim(system2("md5sum", tmp, stdout = TRUE), 32))
+  unname(tools::md5sum(tmp))
 }
 
 test_that("fastx_gz_hash matches md5 of extracted byte stream", {
-  skip_if_not(nzchar(Sys.which("md5sum")), "md5sum not on PATH")
   seq <- c("ACGT", "TGCA", "GGGG", "CCCC", "TTAA")
   ids <- c("h1", "h2", "h3", "h4", "h5")
   infile <- make_oneline_fasta_gz(seq, ids)
@@ -189,7 +188,6 @@ test_that("fastx_gz_hash matches md5 of extracted byte stream", {
 })
 
 test_that("fastx_gz_hash hashes from the first record and single records", {
-  skip_if_not(nzchar(Sys.which("md5sum")), "md5sum not on PATH")
   seq <- c("AAAA", "AAAC", "AATT")
   ids <- c("x1", "x2", "x3")
   infile <- make_oneline_fasta_gz(seq, ids)
@@ -205,7 +203,6 @@ test_that("fastx_gz_hash hashes from the first record and single records", {
 })
 
 test_that("fastx_gz_hash accepts fqi path indexes", {
-  skip_if_not(nzchar(Sys.which("md5sum")), "md5sum not on PATH")
   skip_if(!nzchar(Sys.which("fastqindex")), "fastqindex CLI not available")
   seq <- c("ACGT", "TGCA", "GGGG")
   ids <- c("f1", "f2", "f3")
@@ -516,7 +513,6 @@ test_that("seq_cluster_protax accepts fastqindexr_index", {
 
 test_that("write_fastqindexr_index qs2 round-trips through extract helpers", {
   skip_if_not_installed("qs2")
-  skip_if_not(nzchar(Sys.which("md5sum")), "md5sum not on PATH")
   seq <- c("ACGT", "TGCA", "GGGG", "CCCC")
   ids <- c("q1", "q2", "q3", "q4")
   infile <- make_oneline_fasta_gz(seq, ids)

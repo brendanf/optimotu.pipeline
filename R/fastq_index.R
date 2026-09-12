@@ -360,6 +360,25 @@ fastx_gz_hash <- function(infile, index, start, n) {
   checkmate::assert_integerish(n, lower = 1)
 
   input <- normalize_fastx_extract_inputs(infile = infile, index = index)
+  seq_idx <- seq(start, start + n - 1L)
+  if (.Platform$OS.type == "windows") {
+    # mkfifo is unavailable on Windows; hash a temp extract instead.
+    tmp <- withr::local_tempfile(fileext = ".fa")
+    fastqindexr::extract_sequences_to_file(
+      index = input$index,
+      seq_idx = seq_idx,
+      file = input$file,
+      outfile = tmp,
+      type = "auto",
+      append = FALSE,
+      compress = FALSE,
+      collapse_sequence_lines = FALSE,
+      renumber = "none"
+    )
+    return(unname(tools::md5sum(tmp)))
+  }
+  # Stream extract -> md5sum via a named pipe so the full subset need not
+  # sit on disk.
   tmp_fifo <- withr::local_tempfile(fileext = ".fifo")
   system2("mkfifo", tmp_fifo)
   md5_run <- processx::process$new(
@@ -369,7 +388,7 @@ fastx_gz_hash <- function(infile, index, start, n) {
   )
   fastqindexr::extract_sequences_to_file(
     index = input$index,
-    seq_idx = seq(start, start + n - 1L),
+    seq_idx = seq_idx,
     file = input$file,
     outfile = tmp_fifo,
     type = "auto",

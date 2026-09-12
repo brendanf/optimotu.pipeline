@@ -126,8 +126,19 @@ if [[ -n "${US_ASSET}" ]]; then
 fi
 
 # --- PATH --------------------------------------------------------------------
+# On Windows, GITHUB_PATH must be a native path (C:\...) so later R/cmd steps
+# see the tools. Bash MSYS paths like /c/Users/... are ignored there.
+path_for_github() {
+  local dir="$1"
+  if is_windows && command -v cygpath >/dev/null 2>&1; then
+    cygpath -w "${dir}"
+  else
+    printf '%s\n' "${dir}"
+  fi
+}
+
 if [[ -n "${GITHUB_PATH:-}" ]]; then
-  echo "${DEST}" >> "${GITHUB_PATH}"
+  path_for_github "${DEST}" >> "${GITHUB_PATH}"
 else
   export PATH="${DEST}:${PATH}"
 fi
