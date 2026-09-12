@@ -1,7 +1,3 @@
-skip_if_no_usearch <- function() {
-  tc_skip_if_no_exec("usearch")
-}
-
 test_that("unnest_yaml_list flattens length-1 nested lists", {
   nested <- list(list(a = 1), list(b = 2))
   out <- optimotu.pipeline:::unnest_yaml_list(nested)

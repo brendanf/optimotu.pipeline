@@ -50,6 +50,8 @@ test_that("seq_batch_make_chunk_files preserves multi-file record order (ncpu=1)
 })
 
 test_that("vsearch_uchime_ref rejects list seq_idx with more than one partition", {
+  # find_vsearch() is evaluated in the default args before the partition check.
+  skip_if_no_vsearch()
   f1 <- tempfile(fileext = ".fasta")
   f2 <- tempfile(fileext = ".fasta")
   on.exit(unlink(c(f1, f2)), add = TRUE)
@@ -70,6 +72,8 @@ test_that("vsearch_uchime_ref rejects list seq_idx with more than one partition"
 })
 
 test_that("sintax rejects list seq_idx with more than one partition", {
+  # find_vsearch() is evaluated in the default args before the partition check.
+  skip_if_no_vsearch()
   f1 <- tempfile(fileext = ".fasta")
   f2 <- tempfile(fileext = ".fasta")
   on.exit(unlink(c(f1, f2)), add = TRUE)

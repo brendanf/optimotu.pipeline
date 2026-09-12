@@ -1,7 +1,3 @@
-skip_if_no_vsearch <- function() {
-  tc_skip_if_no_exec("vsearch")
-}
-
 write_qual_fastq <- function(seqs, file, qual = 40L) {
   q <- lapply(Biostrings::width(seqs), \(n) as.integer(rep(qual, n))) |>
     S4Vectors::List() |>
@@ -52,6 +48,8 @@ test_that("merged_filter_options constructs and updates", {
 })
 
 test_that("vsearch_fastq_merge_pairs handles empty input", {
+  # Default arg find_vsearch() runs before the empty short-circuit.
+  skip_if_no_vsearch()
   expect_equal(
     vsearch_fastq_merge_pairs(
       seq_R1 = character(),
