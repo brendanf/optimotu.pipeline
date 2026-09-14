@@ -85,7 +85,8 @@ read_seq_ids <- function(seq) {
 #'
 #' Accepts a single sample or a chunk of samples. Sequence-to-index matching
 #' against `seq_all` must already have been done by [make_denoise_map()];
-#' pass that result as `denoise_map`.
+#' pass that result as `denoise_map`. A length-0 `sample` (empty seq batch)
+#' returns a 0-row fate map with the usual columns.
 #'
 #' Bit `0x02` (filter) is set when the raw read is present in the merged,
 #' quality-filtered FASTQ. Bit `0x04` (denoise) is set when that merged
@@ -96,7 +97,8 @@ read_seq_ids <- function(seq) {
 #' between computation (dereplication is fast) and storage (the dereplication
 #' map is large).
 #'
-#' @param sample (`character`) sample name(s)
+#' @param sample (`character`) sample name(s); length 0 is allowed and
+#'   returns an empty fate map
 #' @param fq_raw (`character`) raw FASTQ R1 file path(s)
 #' @param fq_trim (`character`) trimmed FASTQ R1 file path(s)
 #' @param fq_merged (`character`) merged and filtered FASTQ file path(s)
@@ -134,18 +136,16 @@ unoise_read_map <- function(
   # avoid R CMD check NOTE: no visible binding for global variable
   raw_idx <- seq_idx <- trim_idx <- filt_idx <- denoise_local <- NULL
 
-  checkmate::assert_character(sample, min.len = 1L, any.missing = FALSE)
-  checkmate::assert_character(fq_raw, len = length(sample), any.missing = FALSE)
-  checkmate::assert_character(
-    fq_trim,
-    len = length(sample),
-    any.missing = FALSE
-  )
-  checkmate::assert_character(
-    fq_merged,
-    len = length(sample),
-    any.missing = FALSE
-  )
+  if (
+    read_map_empty_batch(
+      sample,
+      fq_raw = fq_raw,
+      fq_trim = fq_trim,
+      fq_merged = fq_merged
+    )
+  ) {
+    return(empty_read_map())
+  }
   checkmate::assert_file_exists(fq_raw, "r")
   checkmate::assert_file_exists(fq_trim, "r")
   checkmate::assert_file_exists(fq_merged, "r")

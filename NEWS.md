@@ -1,3 +1,7 @@
+# optimotu.pipeline development version
+* Read fate mapping no longer fails if all samples in a batch are empty after
+  denoising.
+
 # optimotu.pipeline 0.7.0
 * `fastx_gz_hash()` falls back to a temp extract + `tools::md5sum()`
   on Windows.

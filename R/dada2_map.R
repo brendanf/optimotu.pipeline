@@ -60,9 +60,11 @@ dada2_merge_map <- function(dadaF, derepF, dadaR, derepR, merged) {
 #'
 #' Accepts a single sample or a chunk of samples. Sequence-to-index matching
 #' against `seq_all` must already have been done by [make_denoise_map()];
-#' pass that result as `denoise_map`.
+#' pass that result as `denoise_map`. A length-0 `sample` (empty seq batch)
+#' returns a 0-row fate map with the usual columns.
 #'
-#' @param sample (`character`) sample name(s)
+#' @param sample (`character`) sample name(s); length 0 is allowed and
+#'   returns an empty fate map
 #' @param fq_raw (`character`) raw FASTQ R1 file path(s)
 #' @param fq_trim (`character`) trimmed FASTQ R1 file path(s)
 #' @param fq_filt (`character`) filtered FASTQ R1 file path(s)
@@ -106,18 +108,16 @@ dada2_read_map <- function(
   # avoid R CMD check NOTE: no visible binding for global variable
   raw_idx <- seq_idx <- trim_idx <- filt_idx <- denoise_local <- NULL
 
-  checkmate::assert_character(sample, min.len = 1L, any.missing = FALSE)
-  checkmate::assert_character(fq_raw, len = length(sample), any.missing = FALSE)
-  checkmate::assert_character(
-    fq_trim,
-    len = length(sample),
-    any.missing = FALSE
-  )
-  checkmate::assert_character(
-    fq_filt,
-    len = length(sample),
-    any.missing = FALSE
-  )
+  if (
+    read_map_empty_batch(
+      sample,
+      fq_raw = fq_raw,
+      fq_trim = fq_trim,
+      fq_filt = fq_filt
+    )
+  ) {
+    return(empty_read_map())
+  }
   checkmate::assert_file_exists(fq_raw, "r")
   checkmate::assert_file_exists(fq_trim, "r")
   checkmate::assert_file_exists(fq_filt, "r")

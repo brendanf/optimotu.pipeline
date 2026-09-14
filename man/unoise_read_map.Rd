@@ -15,7 +15,8 @@ unoise_read_map(
 )
 }
 \arguments{
-\item{sample}{(\code{character}) sample name(s)}
+\item{sample}{(\code{character}) sample name(s); length 0 is allowed and
+returns an empty fate map}
 
 \item{fq_raw}{(\code{character}) raw FASTQ R1 file path(s)}
 
@@ -57,7 +58,8 @@ filtering happen before denoising.
 \details{
 Accepts a single sample or a chunk of samples. Sequence-to-index matching
 against \code{seq_all} must already have been done by \code{\link[=make_denoise_map]{make_denoise_map()}};
-pass that result as \code{denoise_map}.
+pass that result as \code{denoise_map}. A length-0 \code{sample} (empty seq batch)
+returns a 0-row fate map with the usual columns.
 
 Bit \code{0x02} (filter) is set when the raw read is present in the merged,
 quality-filtered FASTQ. Bit \code{0x04} (denoise) is set when that merged

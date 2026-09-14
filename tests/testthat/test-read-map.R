@@ -159,6 +159,109 @@ test_that("make_denoise_map retains unmatched seq_idx rows", {
   )
 })
 
+empty_denoise_map <- function() {
+  tibble::tibble(
+    sample = character(),
+    denoise_idx = integer(),
+    seq_idx = integer(),
+    nread = integer()
+  )
+}
+
+test_that("dada2_read_map returns an empty fate map for a 0-sample batch", {
+  got <- dada2_read_map(
+    sample = character(),
+    fq_raw = character(),
+    fq_trim = character(),
+    fq_filt = character(),
+    dadaF = list(),
+    derepF = list(),
+    dadaR = list(),
+    derepR = list(),
+    merged = list(),
+    denoise_map = empty_denoise_map()
+  )
+  expect_equal(nrow(got), 0L)
+  expect_named(got, c("sample", "raw_idx", "seq_idx", "flags"))
+  expect_type(got$flags, "raw")
+})
+
+test_that("unoise_read_map returns an empty fate map for a 0-sample batch", {
+  got <- unoise_read_map(
+    sample = character(),
+    fq_raw = character(),
+    fq_trim = character(),
+    fq_merged = character(),
+    uc = list(),
+    denoise_map = empty_denoise_map()
+  )
+  expect_equal(nrow(got), 0L)
+  expect_named(got, c("sample", "raw_idx", "seq_idx", "flags"))
+  expect_type(got$flags, "raw")
+})
+
+test_that("empty read-map batches still error on mismatched path lengths", {
+  expect_error(
+    dada2_read_map(
+      sample = character(),
+      fq_raw = "missing.fastq",
+      fq_trim = character(),
+      fq_filt = character(),
+      dadaF = list(),
+      derepF = list(),
+      dadaR = list(),
+      derepR = list(),
+      merged = list(),
+      denoise_map = empty_denoise_map()
+    ),
+    "fq_raw"
+  )
+})
+
+test_that("empty read maps merge and annotate without rows", {
+  empty <- dada2_read_map(
+    sample = character(),
+    fq_raw = character(),
+    fq_trim = character(),
+    fq_filt = character(),
+    dadaF = list(),
+    derepF = list(),
+    dadaR = list(),
+    derepR = list(),
+    merged = list(),
+    denoise_map = empty_denoise_map()
+  )
+  merged <- merge_read_maps(empty, empty)
+  expect_equal(nrow(merged), 0L)
+  expect_named(merged, c("sample", "raw_idx", "seq_idx", "flags"))
+
+  lulu <- add_lulu_to_read_map(
+    merged,
+    tibble::tibble(seq_idx = integer(), lulu_idx = integer())
+  )
+  expect_equal(nrow(lulu), 0L)
+  expect_true("prelulu_idx" %in% names(lulu))
+
+  annotated <- add_uncross_to_read_map(
+    lulu,
+    tibble::tibble(
+      sample = character(),
+      seq_idx = integer(),
+      nread = integer()
+    ),
+    tibble::tibble(
+      sample = character(),
+      seq_idx = integer(),
+      is_tag_jump = logical()
+    )
+  )
+  expect_equal(nrow(annotated), 0L)
+  expect_named(
+    annotated,
+    c("sample", "raw_idx", "seq_idx", "prelulu_idx", "flags")
+  )
+})
+
 test_that("add_lulu_to_read_map rewrites daughters and keeps prelulu_idx", {
   read_map <- tibble::tibble(
     sample = "s1",

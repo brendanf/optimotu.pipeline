@@ -87,6 +87,23 @@ empty_read_map <- function() {
   )
 }
 
+# TRUE when the caller passed a 0-sample batch. Path vectors must match
+# `sample` in length; files are not checked because there are none.
+read_map_empty_batch <- function(sample, ...) {
+  checkmate::assert_character(sample, any.missing = FALSE)
+  paths <- list(...)
+  nms <- names(paths)
+  for (nm in nms) {
+    checkmate::assert_character(
+      paths[[nm]],
+      len = length(sample),
+      any.missing = FALSE,
+      .var.name = nm
+    )
+  }
+  length(sample) == 0L
+}
+
 #' Subset a denoise map to one sample
 #'
 #' @param denoise_map (`data.frame`) as from [make_denoise_map()]
