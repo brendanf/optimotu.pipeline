@@ -357,6 +357,190 @@ lulu_map_lowmem <- function(
   )
 }
 
+#' Precompute global OTU statistics for scoped LULU mapping
+#'
+#' Scans OTU-table targets (one at a time; use `retrieval = "none"`) and
+#' returns occurrence, abundance, and partition grain for each OTU. Rows are
+#' sorted in the same parent/child rank order as [lulu_map_lowmem()].
+#'
+#' Grain codes reflect where an OTU appears in the OTU-table layout: `0` =
+#' one OTU-table piece (batch), `1` = multiple pieces within one seqrun
+#' stem, `2` = multiple seqrun stems.
+#'
+#' @param otu_table expression containing one or more OTU-table targets with
+#'   columns `seq_idx` and `nread`
+#' @param verbose (`integer`) verbosity level
+#' @returns a `data.frame` with columns `seq_idx`, `occurrence`, `abundance`,
+#'   and `grain`
+#' @export
+lulu_otu_stats <- function(otu_table, verbose = 0L) {
+  otu_table_targets <- extract_targets(rlang::enquo(otu_table))
+  if (length(otu_table_targets) < 1L) {
+    stop(
+      "'otu_table` must include one or more targets from a `targets` pipeline."
+    )
+  }
+  checkmate::assert_int(verbose)
+  stems <- tar_stem(otu_table_targets)
+  seqrun_ids <- match(stems, unique(stems))
+  lulu_otu_stats_impl(otu_table_targets, seqrun_ids, verbose)
+}
+
+#' Scoped LULU parent mapping for one partition grain
+#'
+#' Decides LULU parents only for OTUs whose grain matches `scope`. Intended for
+#' targets with `retrieval = "none"`. Returns sparse non-identity rows;
+#' [lulu_map_combine()] builds the full map.
+#'
+#' When `min_cooccurrence_ratio == 1`, pairs whose parent grain is strictly
+#' finer than the child's (parent restricted to a narrower OTU-table
+#' partition) are skipped. OTUs with `occurrence == 1` use a singleton
+#' fast-path and are not inserted into the pair map.
+#'
+#' @param stats (`data.frame` or target expression) output of [lulu_otu_stats()]
+#' @param match_table expression containing one or more match-table targets
+#' @param scope (`character`) `"batch"`, `"seqrun"`, or `"global"`
+#' @param max_dist (`numeric` scalar) maximum pairwise distance for two OTUs to
+#'   be considered for merging
+#' @param min_abundance_ratio (`numeric` scalar) minimum parent:child abundance
+#'   ratio for two OTUs to be considered for merging
+#' @param min_cooccurrence_ratio (`numeric` scalar) minimum ratio of
+#'   co-occurrences to total occurrences of the child for two OTUs to be
+#'   considered for merging
+#' @param use_mean_abundance_ratio (`logical` flag) if `TRUE`,
+#'   `min_abundance_ratio` is the mean over co-occurring samples; if `FALSE`,
+#'   the minimum across those samples
+#' @param verbose (`integer`) verbosity level
+#' @returns a two-column `data.frame` with non-identity `seq_idx` / `lulu_idx`
+#' @export
+lulu_map_scoped <- function(
+  stats,
+  match_table,
+  scope = c("batch", "seqrun", "global"),
+  max_dist = lulu_max_dist(),
+  min_abundance_ratio = lulu_min_abundance_ratio(),
+  min_cooccurrence_ratio = lulu_min_cooccurrence_ratio(),
+  use_mean_abundance_ratio = lulu_use_mean_abundance_ratio(),
+  verbose = 0L
+) {
+  scope <- match.arg(scope)
+  checkmate::assert_numeric(max_dist, lower = 0)
+  checkmate::assert_numeric(min_abundance_ratio, lower = 0)
+  checkmate::assert_numeric(min_cooccurrence_ratio, lower = 0, upper = 1)
+  checkmate::assert_flag(use_mean_abundance_ratio)
+  checkmate::assert_int(verbose)
+
+  stats_quo <- rlang::enquo(stats)
+  stats_expr <- rlang::quo_get_expr(stats_quo)
+  if (is.data.frame(stats_expr)) {
+    stats_df <- stats_expr
+  } else {
+    stats_targets <- tryCatch(
+      extract_targets(stats_quo),
+      error = function(e) character()
+    )
+    if (length(stats_targets) >= 1L) {
+      stats_df <- read_runtime_target(stats_targets[[1L]])
+    } else {
+      stats_df <- rlang::eval_tidy(stats_quo)
+    }
+  }
+  checkmate::assert_data_frame(stats_df)
+  checkmate::assert_names(
+    names(stats_df),
+    must.include = c("seq_idx", "occurrence", "abundance", "grain")
+  )
+
+  match_table_targets <- extract_targets(rlang::enquo(match_table))
+  if (length(match_table_targets) < 1L) {
+    stop(
+      "'match_table` must include one or more targets from a `targets`",
+      " pipeline."
+    )
+  }
+
+  lulu_map_scoped_impl(
+    stats_df,
+    match_table_targets,
+    scope,
+    max_dist,
+    min_abundance_ratio,
+    min_cooccurrence_ratio,
+    use_mean_abundance_ratio,
+    verbose
+  )
+}
+
+#' Combine sparse scoped LULU maps into a full OTU map
+#'
+#' @param stats (`data.frame` or target expression) output of
+#'   [lulu_otu_stats()]
+#' @param ... sparse map `data.frame`s, or expressions containing map targets
+#'   (as with [lulu_map_lowmem()]). Each map must have columns `seq_idx` and
+#'   `lulu_idx`.
+#' @returns a full `data.frame` with `seq_idx` and path-compressed `lulu_idx`
+#' @export
+lulu_map_combine <- function(stats, ...) {
+  stats_quo <- rlang::enquo(stats)
+  stats_expr <- rlang::quo_get_expr(stats_quo)
+  if (is.data.frame(stats_expr)) {
+    stats_df <- stats_expr
+  } else {
+    stats_targets <- tryCatch(
+      extract_targets(stats_quo),
+      error = function(e) character()
+    )
+    if (length(stats_targets) >= 1L) {
+      stats_df <- read_runtime_target(stats_targets[[1L]])
+    } else {
+      stats_df <- rlang::eval_tidy(stats_quo)
+    }
+  }
+  checkmate::assert_data_frame(stats_df)
+  checkmate::assert_names(names(stats_df), must.include = "seq_idx")
+
+  sparse <- list()
+  for (q in rlang::enquos(...)) {
+    expr <- rlang::quo_get_expr(q)
+    if (is.data.frame(expr)) {
+      sparse[[length(sparse) + 1L]] <- expr
+      next
+    }
+    map_targets <- tryCatch(
+      extract_targets(q),
+      error = function(e) character()
+    )
+    if (length(map_targets) >= 1L) {
+      for (nm in map_targets) {
+        m <- read_runtime_target(nm)
+        if (is.null(m)) {
+          m <- data.frame(seq_idx = integer(), lulu_idx = integer())
+        }
+        sparse[[length(sparse) + 1L]] <- m
+      }
+    } else {
+      val <- rlang::eval_tidy(q)
+      if (is.data.frame(val)) {
+        sparse[[length(sparse) + 1L]] <- val
+      } else if (is.list(val)) {
+        sparse <- c(sparse, val)
+      } else {
+        stop("Each map argument must be a data.frame or target expression")
+      }
+    }
+  }
+
+  sparse <- lapply(sparse, function(m) {
+    checkmate::assert_data_frame(m)
+    if (nrow(m) == 0L) {
+      return(data.frame(seq_idx = integer(), lulu_idx = integer()))
+    }
+    checkmate::assert_names(names(m), must.include = c("seq_idx", "lulu_idx"))
+    m[c("seq_idx", "lulu_idx")]
+  })
+  lulu_map_combine_impl(stats_df, sparse)
+}
+
 #' Apply LULU denoising to an OTU table
 #'
 #' @param lulu_map (`data.frame`) output of a call to `lulu_map()`
@@ -412,7 +596,7 @@ lulu_table <- function(
 
 #' Remap a per-read fate map through LULU parent assignment
 #'
-#' Rewrites `seq_idx` from the denoise-time ASV id to the LULU parent id so it
+#' Rewrites `seq_idx` from the denoise-time OTU id to the LULU parent id so it
 #' matches post-LULU community tables (`seqtable_lulu`, `seqtable_uncross`).
 #' The original denoise-time id is kept as `prelulu_idx`. A LULU daughter is
 #' `!is.na(prelulu_idx) && prelulu_idx != seq_idx`. No flag bit is set; bits

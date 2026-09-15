@@ -18,7 +18,7 @@ or \code{\link[=unoise_read_map]{unoise_read_map()}}}
 (integer). \code{seq_idx} is the LULU parent where a mapping exists.
 }
 \description{
-Rewrites \code{seq_idx} from the denoise-time ASV id to the LULU parent id so it
+Rewrites \code{seq_idx} from the denoise-time OTU id to the LULU parent id so it
 matches post-LULU community tables (\code{seqtable_lulu}, \code{seqtable_uncross}).
 The original denoise-time id is kept as \code{prelulu_idx}. A LULU daughter is
 \code{!is.na(prelulu_idx) && prelulu_idx != seq_idx}. No flag bit is set; bits

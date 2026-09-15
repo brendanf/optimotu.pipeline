@@ -1,4 +1,16 @@
 # optimotu.pipeline development version
+* Split LULU parent mapping by OTU-table partition (batch / seqrun / global)
+  to reduce peak memory: `lulu_otu_stats()` precomputes global
+  occurrence/abundance/grain; `lulu_map_scoped()` decides parents for
+  children restricted to one batch, one seqrun, or spanning multiple
+  seqruns; `lulu_map_combine()` overlays sparse maps and path-compresses.
+  When `min_cooccurrence_ratio == 1`, pairs whose parent is restricted to a
+  finer partition than the child are skipped. Singleton OTUs
+  (`occurrence == 1`) use a fast-path outside the pair map.
+  `lulu_map_lowmem()` remains as the single-job oracle.
+* `extract_targets()` resolves dynamic co-branch builders when the worker
+  subpipeline contains only `stem_<hash>` children, not the parent pattern
+  object (needed for per-batch `lulu_map_scoped()` with `retrieval = "none"`).
 * Read fate mapping no longer fails if all samples in a batch are empty after
   denoising.
 

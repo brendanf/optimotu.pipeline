@@ -91,7 +91,7 @@ test_that("extract_targets errors in-pipeline instead of calling tar_meta()", {
   )
 })
 
-test_that("extract_targets does not call tar_meta() for an empty subpipeline", {
+test_that("extract_targets resolves dynamic co-branch builders by stem", {
   rt <- targets::tar_runtime_object()
   old_meta <- rt$meta
   old_store <- rt$store
@@ -105,12 +105,32 @@ test_that("extract_targets does not call tar_meta() for an empty subpipeline", {
     add = TRUE
   )
   rt$meta <- NULL
-  rt$store <- "_targets"
+  rt$store <- tempfile("fake_store_")
+  targets_env <- new.env(parent = emptyenv())
+  pipeline <- list(targets = targets_env)
+  # Worker subpipeline for a map() branch often has only the sibling child,
+  # not the parent pattern object named "lulu_match_table".
+  child <- new.env(parent = emptyenv())
+  class(child) <- c("tar_stem", "tar_builder", "tar_target")
+  child$name <- "lulu_match_table_abc123def4567890"
+  targets_env[[child$name]] <- child
   target <- new.env(parent = emptyenv())
-  target$subpipeline <- list(targets = new.env(parent = emptyenv()))
+  target$subpipeline <- pipeline
   rt$target <- target
   expect_equal(
-    length(optimotu.pipeline:::extract_targets(quote(stem1))),
-    0L
+    optimotu.pipeline:::extract_targets(quote(lulu_match_table)),
+    "lulu_match_table_abc123def4567890"
+  )
+})
+
+test_that("tar_stem strips dynamic branch hashes", {
+  expect_equal(
+    optimotu.pipeline:::tar_stem(
+      c(
+        "seqtable_raw_LIFEPLAN.00001_eebce0ec729d5008",
+        "seqtable_raw_LIFEPLAN.00001"
+      )
+    ),
+    c("seqtable_raw_LIFEPLAN.00001", "seqtable_raw_LIFEPLAN.00001")
   )
 })

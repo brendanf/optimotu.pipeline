@@ -65,10 +65,16 @@ Secondary clustering / OTU curation:
 - `R/lulu_long.R` — LULU secondary denoising (Frøslev et al. 2017), merges
   putative artifact OTUs into parent OTUs post-clustering.
   `add_lulu_to_read_map()` rewrites per-read `seq_idx` to the parent and
-  stores `prelulu_idx` (no extra flag bit). `lulu_map_lowmem()` must run
-  with `retrieval = "none"`; on crew workers it reads deps from the
-  target subpipeline rather than `tar_meta()` / `tar_read()`.
-- `src/lulu.cpp` — native backend for LULU's pairwise comparisons
+  stores `prelulu_idx` (no extra flag bit). Pipeline mapping is three-level:
+  `lulu_otu_stats()` then batch/seqrun/global `lulu_map_scoped()` jobs and
+  `lulu_map_combine()` (sparse maps → full parent map). With
+  `min_cooccurrence_ratio == 1`, nested-parent pairs are skipped. Singleton
+  OTUs (`occurrence == 1`) use a fast-path outside the pair map.
+  `lulu_map_lowmem()` remains for tests/oracle; scoped/lowmem targets need
+  `retrieval = "none"` and read deps from the worker subpipeline rather than
+  `tar_meta()` / `tar_read()`.
+- `src/lulu.cpp` — native backend for LULU's pairwise comparisons and scoped
+  mapping
 - configured via `parse_lulu_options()` in `R/pipeline_options.R`
   (`do_lulu`, `lulu_dist_type`, `lulu_max_dist`, etc.)
 
@@ -143,8 +149,9 @@ families include:
 - Top-level `dist_config:` / `executables:` / `merging:` options; Protax
   `added_reference` lives under `taxonomy.protax`
 - LULU secondary-clustering entry points (`lulu_long.R`), configured through
-  `parse_lulu_options()`, including `add_lulu_to_read_map()` for fate maps
-  and `with_read_map_annotate()` to wrap those steps in target commands
+  `parse_lulu_options()`, including `lulu_otu_stats()`, `lulu_map_scoped()`,
+  `lulu_map_combine()`, `add_lulu_to_read_map()` for fate maps, and
+  `with_read_map_annotate()` to wrap those steps in target commands
 
 Changes to exported option helpers are high-risk because downstream
 `optimotu_targets` scripts often quote/unquote these calls inside target

@@ -6,7 +6,7 @@
 \usage{
 with_read_map_annotate(
   read_map_expr,
-  lulu_map = quote(lulu_asv_map),
+  lulu_map = quote(lulu_seq_map),
   seqtable = NULL,
   uncross = quote(uncross)
 )
@@ -16,7 +16,7 @@ with_read_map_annotate(
 map as from \code{\link[=dada2_read_map]{dada2_read_map()}} or \code{\link[=unoise_read_map]{unoise_read_map()}}.}
 
 \item{lulu_map}{(\code{language}) expression for the LULU map target.
-Default \code{lulu_asv_map}.}
+Default \code{lulu_seq_map}.}
 
 \item{seqtable}{(\code{language} or \code{NULL}) community table passed to
 \code{\link[=remove_tag_jumps]{remove_tag_jumps()}}. Default \code{seqtable_lulu} when LULU is enabled,

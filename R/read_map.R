@@ -170,7 +170,7 @@ merge_read_maps <- function(read_map_fwd, read_map_rev) {
 #' @param read_map_expr (`language`) quoted expression that produces a fate
 #'   map as from [dada2_read_map()] or [unoise_read_map()].
 #' @param lulu_map (`language`) expression for the LULU map target.
-#'   Default `lulu_asv_map`.
+#'   Default `lulu_seq_map`.
 #' @param seqtable (`language` or `NULL`) community table passed to
 #'   [remove_tag_jumps()]. Default `seqtable_lulu` when LULU is enabled,
 #'   otherwise `seqtable_raw`.
@@ -182,7 +182,7 @@ merge_read_maps <- function(read_map_fwd, read_map_rev) {
 #' @export
 with_read_map_annotate <- function(
   read_map_expr,
-  lulu_map = quote(lulu_asv_map),
+  lulu_map = quote(lulu_seq_map),
   seqtable = NULL,
   uncross = quote(uncross)
 ) {

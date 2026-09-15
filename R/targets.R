@@ -196,14 +196,34 @@ lookup_names_in_pipeline <- function(deps, pipeline) {
     lapply(
       deps,
       function(x) {
-        if (!targets:::pipeline_exists_target(pipeline, x)) {
+        if (targets:::pipeline_exists_target(pipeline, x)) {
+          target <- targets:::pipeline_get_target(pipeline, x)
+          if (inherits(target, "tar_pattern")) {
+            return(targets:::target_get_children(target))
+          }
+          if (inherits(target, "tar_builder")) {
+            return(target$name)
+          }
           return(NULL)
         }
-        target <- targets:::pipeline_get_target(pipeline, x)
-        if (inherits(target, "tar_pattern")) {
-          targets:::target_get_children(target)
-        } else if (inherits(target, "tar_builder")) {
-          target$name
+        # Dynamic co-branch case: the command still names the pattern stem
+        # (e.g. lulu_match_table), but the worker subpipeline only contains
+        # the sibling child builder (lulu_match_table_<hash>).
+        prefix <- paste0(x, "_")
+        children <- character()
+        for (nm in targets:::pipeline_get_names(pipeline)) {
+          if (identical(nm, x) || startsWith(nm, prefix)) {
+            if (!targets:::pipeline_exists_target(pipeline, nm)) {
+              next
+            }
+            tgt <- targets:::pipeline_get_target(pipeline, nm)
+            if (inherits(tgt, "tar_builder")) {
+              children <- c(children, tgt$name)
+            }
+          }
+        }
+        if (length(children)) {
+          unique(children)
         } else {
           NULL
         }
@@ -284,4 +304,13 @@ extract_targets <- function(expr, ...) {
     meta[!has_children, "name"],
     unlist(meta[has_children, "children"])
   )
+}
+
+#' Strip a targets dynamic-branch hash suffix from a target name
+#'
+#' @param names (`character`) target names
+#' @return (`character`) stem names without a trailing `_<16+ hex>` suffix
+#' @keywords internal
+tar_stem <- function(names) {
+  sub("_[0-9a-f]{16,}$", "", names)
 }

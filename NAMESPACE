@@ -217,12 +217,15 @@ export(lulu_dist_config)
 export(lulu_dist_type)
 export(lulu_distmx)
 export(lulu_map)
+export(lulu_map_combine)
 export(lulu_map_lowmem)
+export(lulu_map_scoped)
 export(lulu_max_dist)
 export(lulu_max_gap_length)
 export(lulu_max_gap_total)
 export(lulu_min_abundance_ratio)
 export(lulu_min_cooccurrence_ratio)
+export(lulu_otu_stats)
 export(lulu_table)
 export(lulu_use_mean_abundance_ratio)
 export(makeBinnedQualErrfun)
@@ -369,10 +372,14 @@ export(write_fastqindexr_index)
 export(write_sequence)
 export(write_tabular_outputs)
 importFrom(Rcpp,sourceCpp)
-importFrom(dplyr,all_of)
-importFrom(dplyr,any_of)
-importFrom(dplyr,everything)
-importFrom(dplyr,one_of)
-importFrom(rlang,.data)
-importFrom(rlang,`:=`)
+importFrom(dplyr,
+  all_of,
+  any_of,
+  everything,
+  one_of
+)
+importFrom(rlang,
+  .data,
+  `:=`
+)
 useDynLib(optimotu.pipeline, .registration = TRUE)

@@ -442,3 +442,76 @@ lulu_map_lowmem_impl <- function(otu_table_names, match_table_names, max_dist, m
     .Call(`_optimotu_pipeline_lulu_map_lowmem_impl`, otu_table_names, match_table_names, max_dist, min_abundance_ratio, min_cooccurrence_ratio, use_mean_abundance_ratio, verbose)
 }
 
+#' Precompute global LULU OTU statistics for scoped mapping
+#'
+#' Scans OTU table targets one at a time and returns occurrence, abundance,
+#' and partition grain for each OTU, sorted in the same parent/child rank
+#' order used by [lulu_map_lowmem_impl()].
+#'
+#' @param otu_table_names (`character`) resolved OTU table target names.
+#' @param seqrun_ids (`integer`) parallel to `otu_table_names`; same id means
+#'   the tables belong to the same sequencing-run stem.
+#' @param verbose (`integer`) verbosity level.
+#' @returns a `data.frame` with columns `seq_idx`, `occurrence`, `abundance`,
+#'   and `grain` (`0` = batch, `1` = seqrun, `2` = global), sorted most
+#'   parent-like first.
+#'
+lulu_otu_stats_impl <- function(otu_table_names, seqrun_ids, verbose = 0L) {
+    .Call(`_optimotu_pipeline_lulu_otu_stats_impl`, otu_table_names, seqrun_ids, verbose)
+}
+
+#' In-memory variant of [lulu_otu_stats_impl()] for tests
+#'
+#' @param otu_tables (`list`) of OTU `data.frame`s with `seq_idx` and `nread`.
+#' @param seqrun_ids (`integer`) parallel to `otu_tables`.
+#' @param verbose (`integer`) verbosity level.
+#' @returns same structure as [lulu_otu_stats_impl()].
+#'
+lulu_otu_stats_dfs_impl <- function(otu_tables, seqrun_ids, verbose = 0L) {
+    .Call(`_optimotu_pipeline_lulu_otu_stats_dfs_impl`, otu_tables, seqrun_ids, verbose)
+}
+
+#' Scoped LULU mapping from streamed match-table targets
+#'
+#' Decides parents only for OTUs whose partition grain matches `scope`.
+#' Returns sparse non-identity rows. Requires precomputed stats from
+#' [lulu_otu_stats_impl()].
+#'
+#' @param stats (`data.frame`) output of [lulu_otu_stats_impl()].
+#' @param match_table_names (`character`) match table target names to stream.
+#' @param scope (`character`) `"batch"`, `"seqrun"`, or `"global"`.
+#' @inheritParams lulu_map_impl
+#'
+lulu_map_scoped_impl <- function(stats, match_table_names, scope, max_dist, min_abundance_ratio = 1.0, min_cooccurrence_ratio = 0.95, use_mean_abundance_ratio = FALSE, verbose = 0L) {
+    .Call(`_optimotu_pipeline_lulu_map_scoped_impl`, stats, match_table_names, scope, max_dist, min_abundance_ratio, min_cooccurrence_ratio, use_mean_abundance_ratio, verbose)
+}
+
+#' Scoped LULU mapping from in-memory match tables
+#'
+#' Test/direct-use variant of [lulu_map_scoped_impl()] that takes a list of
+#' match-table `data.frame`s instead of target names.
+#'
+#' @param stats (`data.frame`) output of [lulu_otu_stats_impl()] or an
+#'   equivalent table.
+#' @param match_tables (`list`) of match `data.frame`s.
+#' @param scope (`character`) `"batch"`, `"seqrun"`, or `"global"`.
+#' @inheritParams lulu_map_impl
+#'
+lulu_map_scoped_dfs_impl <- function(stats, match_tables, scope, max_dist, min_abundance_ratio = 1.0, min_cooccurrence_ratio = 0.95, use_mean_abundance_ratio = FALSE, verbose = 0L) {
+    .Call(`_optimotu_pipeline_lulu_map_scoped_dfs_impl`, stats, match_tables, scope, max_dist, min_abundance_ratio, min_cooccurrence_ratio, use_mean_abundance_ratio, verbose)
+}
+
+#' Combine sparse scoped LULU maps into a full parent map
+#'
+#' Starts from identity for every OTU in `stats`, overlays non-identity rows
+#' from `sparse_maps`, then path-compresses to roots.
+#'
+#' @param stats (`data.frame`) with column `seq_idx` (from
+#'   [lulu_otu_stats_impl()]).
+#' @param sparse_maps (`list`) of `data.frame`s with `seq_idx` and `lulu_idx`.
+#' @returns a full `data.frame` with `seq_idx` and `lulu_idx`.
+#'
+lulu_map_combine_impl <- function(stats, sparse_maps) {
+    .Call(`_optimotu_pipeline_lulu_map_combine_impl`, stats, sparse_maps)
+}
+

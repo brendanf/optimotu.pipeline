@@ -380,6 +380,80 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// lulu_otu_stats_impl
+Rcpp::DataFrame lulu_otu_stats_impl(Rcpp::CharacterVector otu_table_names, Rcpp::IntegerVector seqrun_ids, int verbose);
+RcppExport SEXP _optimotu_pipeline_lulu_otu_stats_impl(SEXP otu_table_namesSEXP, SEXP seqrun_idsSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type otu_table_names(otu_table_namesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type seqrun_ids(seqrun_idsSEXP);
+    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(lulu_otu_stats_impl(otu_table_names, seqrun_ids, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// lulu_otu_stats_dfs_impl
+Rcpp::DataFrame lulu_otu_stats_dfs_impl(Rcpp::List otu_tables, Rcpp::IntegerVector seqrun_ids, int verbose);
+RcppExport SEXP _optimotu_pipeline_lulu_otu_stats_dfs_impl(SEXP otu_tablesSEXP, SEXP seqrun_idsSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type otu_tables(otu_tablesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type seqrun_ids(seqrun_idsSEXP);
+    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(lulu_otu_stats_dfs_impl(otu_tables, seqrun_ids, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// lulu_map_scoped_impl
+Rcpp::DataFrame lulu_map_scoped_impl(Rcpp::DataFrame stats, Rcpp::CharacterVector match_table_names, Rcpp::String scope, double max_dist, double min_abundance_ratio, double min_cooccurrence_ratio, bool use_mean_abundance_ratio, int verbose);
+RcppExport SEXP _optimotu_pipeline_lulu_map_scoped_impl(SEXP statsSEXP, SEXP match_table_namesSEXP, SEXP scopeSEXP, SEXP max_distSEXP, SEXP min_abundance_ratioSEXP, SEXP min_cooccurrence_ratioSEXP, SEXP use_mean_abundance_ratioSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type match_table_names(match_table_namesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::String >::type scope(scopeSEXP);
+    Rcpp::traits::input_parameter< double >::type max_dist(max_distSEXP);
+    Rcpp::traits::input_parameter< double >::type min_abundance_ratio(min_abundance_ratioSEXP);
+    Rcpp::traits::input_parameter< double >::type min_cooccurrence_ratio(min_cooccurrence_ratioSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_mean_abundance_ratio(use_mean_abundance_ratioSEXP);
+    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(lulu_map_scoped_impl(stats, match_table_names, scope, max_dist, min_abundance_ratio, min_cooccurrence_ratio, use_mean_abundance_ratio, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// lulu_map_scoped_dfs_impl
+Rcpp::DataFrame lulu_map_scoped_dfs_impl(Rcpp::DataFrame stats, Rcpp::List match_tables, Rcpp::String scope, double max_dist, double min_abundance_ratio, double min_cooccurrence_ratio, bool use_mean_abundance_ratio, int verbose);
+RcppExport SEXP _optimotu_pipeline_lulu_map_scoped_dfs_impl(SEXP statsSEXP, SEXP match_tablesSEXP, SEXP scopeSEXP, SEXP max_distSEXP, SEXP min_abundance_ratioSEXP, SEXP min_cooccurrence_ratioSEXP, SEXP use_mean_abundance_ratioSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type match_tables(match_tablesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::String >::type scope(scopeSEXP);
+    Rcpp::traits::input_parameter< double >::type max_dist(max_distSEXP);
+    Rcpp::traits::input_parameter< double >::type min_abundance_ratio(min_abundance_ratioSEXP);
+    Rcpp::traits::input_parameter< double >::type min_cooccurrence_ratio(min_cooccurrence_ratioSEXP);
+    Rcpp::traits::input_parameter< bool >::type use_mean_abundance_ratio(use_mean_abundance_ratioSEXP);
+    Rcpp::traits::input_parameter< int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(lulu_map_scoped_dfs_impl(stats, match_tables, scope, max_dist, min_abundance_ratio, min_cooccurrence_ratio, use_mean_abundance_ratio, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// lulu_map_combine_impl
+Rcpp::DataFrame lulu_map_combine_impl(Rcpp::DataFrame stats, Rcpp::List sparse_maps);
+RcppExport SEXP _optimotu_pipeline_lulu_map_combine_impl(SEXP statsSEXP, SEXP sparse_mapsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::DataFrame >::type stats(statsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type sparse_maps(sparse_mapsSEXP);
+    rcpp_result_gen = Rcpp::wrap(lulu_map_combine_impl(stats, sparse_maps));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_derep_map_only", (DL_FUNC) &_optimotu_pipeline_derep_map_only, 1},
@@ -408,6 +482,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_optimotu_pipeline_fasta_split", (DL_FUNC) &_optimotu_pipeline_fasta_split, 3},
     {"_optimotu_pipeline_lulu_map_impl", (DL_FUNC) &_optimotu_pipeline_lulu_map_impl, 12},
     {"_optimotu_pipeline_lulu_map_lowmem_impl", (DL_FUNC) &_optimotu_pipeline_lulu_map_lowmem_impl, 7},
+    {"_optimotu_pipeline_lulu_otu_stats_impl", (DL_FUNC) &_optimotu_pipeline_lulu_otu_stats_impl, 3},
+    {"_optimotu_pipeline_lulu_otu_stats_dfs_impl", (DL_FUNC) &_optimotu_pipeline_lulu_otu_stats_dfs_impl, 3},
+    {"_optimotu_pipeline_lulu_map_scoped_impl", (DL_FUNC) &_optimotu_pipeline_lulu_map_scoped_impl, 8},
+    {"_optimotu_pipeline_lulu_map_scoped_dfs_impl", (DL_FUNC) &_optimotu_pipeline_lulu_map_scoped_dfs_impl, 8},
+    {"_optimotu_pipeline_lulu_map_combine_impl", (DL_FUNC) &_optimotu_pipeline_lulu_map_combine_impl, 2},
     {NULL, NULL, 0}
 };
 

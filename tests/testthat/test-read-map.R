@@ -371,7 +371,7 @@ test_that("with_read_map_annotate pipes LULU then UNCROSS without evaluating", {
     got,
     quote(
       dada2_read_map(x) |>
-        optimotu.pipeline::add_lulu_to_read_map(lulu_asv_map) |>
+        optimotu.pipeline::add_lulu_to_read_map(lulu_seq_map) |>
         optimotu.pipeline::add_uncross_to_read_map(seqtable_lulu, uncross)
     )
   )
@@ -386,7 +386,7 @@ test_that("with_read_map_annotate pipes LULU only", {
     with_read_map_annotate(quote(dada2_read_map(x))),
     quote(
       dada2_read_map(x) |>
-        optimotu.pipeline::add_lulu_to_read_map(lulu_asv_map)
+        optimotu.pipeline::add_lulu_to_read_map(lulu_seq_map)
     )
   )
 })
@@ -417,7 +417,7 @@ test_that("with_read_map_annotate accepts an explicit seqtable expression", {
     ),
     quote(
       dada2_read_map(x) |>
-        optimotu.pipeline::add_lulu_to_read_map(lulu_asv_map) |>
+        optimotu.pipeline::add_lulu_to_read_map(lulu_seq_map) |>
         optimotu.pipeline::add_uncross_to_read_map(
           seqtable_pre_uncross,
           uncross

@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <string>
+#include <map>
 #include "accessor.h"
 
 // struct to store match information about a pair of sequences
@@ -565,4 +567,757 @@ Rcpp::DataFrame lulu_map_lowmem_impl(
   }
 
   return lulu_map;
+}
+
+// Grain levels for three-level LULU peeling. Narrower grains are smaller.
+static constexpr int LULU_GRAIN_BATCH = 0;
+static constexpr int LULU_GRAIN_SEQRUN = 1;
+static constexpr int LULU_GRAIN_GLOBAL = 2;
+
+static int parse_lulu_scope(Rcpp::String scope)
+{
+  std::string s(scope.get_cstring());
+  if (s == "batch")
+    return LULU_GRAIN_BATCH;
+  if (s == "seqrun")
+    return LULU_GRAIN_SEQRUN;
+  if (s == "global")
+    return LULU_GRAIN_GLOBAL;
+  Rcpp::stop(
+      "Unknown LULU scope '%s'; expected 'batch', 'seqrun', or 'global'",
+      s.c_str());
+  return LULU_GRAIN_GLOBAL;
+}
+
+//' Precompute global LULU OTU statistics for scoped mapping
+//'
+//' Scans OTU table targets one at a time and returns occurrence, abundance,
+//' and partition grain for each OTU, sorted in the same parent/child rank
+//' order used by [lulu_map_lowmem_impl()].
+//'
+//' @param otu_table_names (`character`) resolved OTU table target names.
+//' @param seqrun_ids (`integer`) parallel to `otu_table_names`; same id means
+//'   the tables belong to the same sequencing-run stem.
+//' @param verbose (`integer`) verbosity level.
+//' @returns a `data.frame` with columns `seq_idx`, `occurrence`, `abundance`,
+//'   and `grain` (`0` = batch, `1` = seqrun, `2` = global), sorted most
+//'   parent-like first.
+//'
+// [[Rcpp::export]]
+Rcpp::DataFrame lulu_otu_stats_impl(
+    Rcpp::CharacterVector otu_table_names,
+    Rcpp::IntegerVector seqrun_ids,
+    int verbose = 0)
+{
+  if (otu_table_names.size() != seqrun_ids.size())
+  {
+    Rcpp::stop("otu_table_names and seqrun_ids must have the same length");
+  }
+
+  std::vector<int> total_occurrences;
+  std::vector<size_t> total_abundance;
+  std::vector<int> first_seqrun;
+  std::vector<int> n_tables;
+  std::vector<char> multi_seqrun;
+  std::vector<int> last_table;
+
+  for (R_xlen_t i = 0; i < otu_table_names.size(); ++i)
+  {
+    if (Rcpp::IntegerVector::is_na(seqrun_ids[i]))
+    {
+      Rcpp::stop("seqrun_ids must not contain NA");
+    }
+    Rcpp::String otu_table_name(otu_table_names[i]);
+    if (verbose)
+    {
+      Rcpp::Rcerr << "Reading OTU table " << otu_table_name.get_cstring()
+                  << "\n  Collecting garbage..." << std::flush;
+    }
+    R_gc();
+    if (verbose)
+    {
+      Rcpp::Rcerr << "done.\n  Counting occurrences..." << std::flush;
+    }
+    Rcpp::RObject otu_table = tar_read(otu_table_name);
+    Rcpp::IntegerVector seq_idx =
+        integer_column(otu_table, "seq_idx", otu_table_name.get_cstring());
+    Rcpp::IntegerVector nread =
+        integer_column(otu_table, "nread", otu_table_name.get_cstring());
+
+    for (R_xlen_t j = 0; j < seq_idx.size(); ++j)
+    {
+      int s = seq_idx[j];
+      if (s < 0)
+        continue;
+      if (s >= (int)total_occurrences.size())
+      {
+        std::size_t new_size = (std::size_t)s + 1;
+        total_occurrences.resize(new_size, 0);
+        total_abundance.resize(new_size, 0);
+        first_seqrun.resize(new_size, -1);
+        n_tables.resize(new_size, 0);
+        multi_seqrun.resize(new_size, 0);
+        last_table.resize(new_size, -1);
+      }
+      total_occurrences[s]++;
+      total_abundance[s] += nread[j];
+      if (last_table[s] != (int)i)
+      {
+        last_table[s] = (int)i;
+        if (first_seqrun[s] < 0)
+        {
+          first_seqrun[s] = seqrun_ids[i];
+          n_tables[s] = 1;
+        }
+        else
+        {
+          n_tables[s]++;
+          if (first_seqrun[s] != seqrun_ids[i])
+            multi_seqrun[s] = 1;
+        }
+      }
+    }
+    if (verbose)
+      Rcpp::Rcerr << "done." << std::endl;
+  }
+
+  std::size_t n_seq_idx = 0;
+  for (int n : total_occurrences)
+  {
+    if (n > 0)
+      ++n_seq_idx;
+  }
+
+  Rcpp::IntegerVector rev_map(n_seq_idx);
+  Rcpp::IntegerVector nonempty_occurrences(n_seq_idx);
+  Rcpp::IntegerVector nonempty_abundance(n_seq_idx);
+  Rcpp::IntegerVector nonempty_grain(n_seq_idx);
+  Rcpp::IntegerVector order(n_seq_idx);
+
+  int i = 0, j = 0;
+  for (int n : total_occurrences)
+  {
+    if (n > 0)
+    {
+      rev_map[i] = j;
+      nonempty_occurrences[i] = n;
+      nonempty_abundance[i] = (int)total_abundance[j];
+      if (multi_seqrun[j])
+        nonempty_grain[i] = LULU_GRAIN_GLOBAL;
+      else if (n_tables[j] > 1)
+        nonempty_grain[i] = LULU_GRAIN_SEQRUN;
+      else
+        nonempty_grain[i] = LULU_GRAIN_BATCH;
+      ++i;
+    }
+    ++j;
+  }
+
+  R_orderVector(
+      INTEGER(order),
+      n_seq_idx,
+      Rf_lang2(nonempty_occurrences, nonempty_abundance),
+      FALSE,
+      TRUE);
+
+  rev_map = rev_map[order];
+  nonempty_occurrences = nonempty_occurrences[order];
+  nonempty_abundance = nonempty_abundance[order];
+  nonempty_grain = nonempty_grain[order];
+
+  return Rcpp::DataFrame::create(
+      Rcpp::Named("seq_idx") = rev_map,
+      Rcpp::Named("occurrence") = nonempty_occurrences,
+      Rcpp::Named("abundance") = nonempty_abundance,
+      Rcpp::Named("grain") = nonempty_grain);
+}
+
+//' In-memory variant of [lulu_otu_stats_impl()] for tests
+//'
+//' @param otu_tables (`list`) of OTU `data.frame`s with `seq_idx` and `nread`.
+//' @param seqrun_ids (`integer`) parallel to `otu_tables`.
+//' @param verbose (`integer`) verbosity level.
+//' @returns same structure as [lulu_otu_stats_impl()].
+//'
+// [[Rcpp::export]]
+Rcpp::DataFrame lulu_otu_stats_dfs_impl(
+    Rcpp::List otu_tables,
+    Rcpp::IntegerVector seqrun_ids,
+    int verbose = 0)
+{
+  if (otu_tables.size() != seqrun_ids.size())
+  {
+    Rcpp::stop("otu_tables and seqrun_ids must have the same length");
+  }
+
+  std::vector<int> total_occurrences;
+  std::vector<size_t> total_abundance;
+  std::vector<int> first_seqrun;
+  std::vector<int> n_tables;
+  std::vector<char> multi_seqrun;
+  std::vector<int> last_table;
+
+  for (R_xlen_t i = 0; i < otu_tables.size(); ++i)
+  {
+    if (Rcpp::IntegerVector::is_na(seqrun_ids[i]))
+    {
+      Rcpp::stop("seqrun_ids must not contain NA");
+    }
+    Rcpp::RObject otu_table = otu_tables[i];
+    std::string name = "otu_tables[[" + std::to_string(i + 1) + "]]";
+    Rcpp::IntegerVector seq_idx =
+        integer_column(otu_table, "seq_idx", name.c_str());
+    Rcpp::IntegerVector nread =
+        integer_column(otu_table, "nread", name.c_str());
+
+    for (R_xlen_t j = 0; j < seq_idx.size(); ++j)
+    {
+      int s = seq_idx[j];
+      if (s < 0)
+        continue;
+      if (s >= (int)total_occurrences.size())
+      {
+        std::size_t new_size = (std::size_t)s + 1;
+        total_occurrences.resize(new_size, 0);
+        total_abundance.resize(new_size, 0);
+        first_seqrun.resize(new_size, -1);
+        n_tables.resize(new_size, 0);
+        multi_seqrun.resize(new_size, 0);
+        last_table.resize(new_size, -1);
+      }
+      total_occurrences[s]++;
+      total_abundance[s] += nread[j];
+      if (last_table[s] != (int)i)
+      {
+        last_table[s] = (int)i;
+        if (first_seqrun[s] < 0)
+        {
+          first_seqrun[s] = seqrun_ids[i];
+          n_tables[s] = 1;
+        }
+        else
+        {
+          n_tables[s]++;
+          if (first_seqrun[s] != seqrun_ids[i])
+            multi_seqrun[s] = 1;
+        }
+      }
+    }
+  }
+
+  std::size_t n_seq_idx = 0;
+  for (int n : total_occurrences)
+  {
+    if (n > 0)
+      ++n_seq_idx;
+  }
+
+  Rcpp::IntegerVector rev_map(n_seq_idx);
+  Rcpp::IntegerVector nonempty_occurrences(n_seq_idx);
+  Rcpp::IntegerVector nonempty_abundance(n_seq_idx);
+  Rcpp::IntegerVector nonempty_grain(n_seq_idx);
+  Rcpp::IntegerVector order(n_seq_idx);
+
+  int i = 0, j = 0;
+  for (int n : total_occurrences)
+  {
+    if (n > 0)
+    {
+      rev_map[i] = j;
+      nonempty_occurrences[i] = n;
+      nonempty_abundance[i] = (int)total_abundance[j];
+      if (multi_seqrun[j])
+        nonempty_grain[i] = LULU_GRAIN_GLOBAL;
+      else if (n_tables[j] > 1)
+        nonempty_grain[i] = LULU_GRAIN_SEQRUN;
+      else
+        nonempty_grain[i] = LULU_GRAIN_BATCH;
+      ++i;
+    }
+    ++j;
+  }
+
+  R_orderVector(
+      INTEGER(order),
+      n_seq_idx,
+      Rf_lang2(nonempty_occurrences, nonempty_abundance),
+      FALSE,
+      TRUE);
+
+  rev_map = rev_map[order];
+  nonempty_occurrences = nonempty_occurrences[order];
+  nonempty_abundance = nonempty_abundance[order];
+  nonempty_grain = nonempty_grain[order];
+
+  return Rcpp::DataFrame::create(
+      Rcpp::Named("seq_idx") = rev_map,
+      Rcpp::Named("occurrence") = nonempty_occurrences,
+      Rcpp::Named("abundance") = nonempty_abundance,
+      Rcpp::Named("grain") = nonempty_grain);
+}
+
+// Build dense fwd_map / occurrence / grain / rev_map from stats rows.
+// stats rows must be in parent-rank order (most parent-like first).
+static void lulu_stats_maps(
+    Rcpp::DataFrame stats,
+    std::vector<int> &fwd_map,
+    std::vector<int> &occurrence,
+    std::vector<int> &grain,
+    Rcpp::IntegerVector &rev_map,
+    std::vector<int> &mapped_occurrence)
+{
+  Rcpp::IntegerVector seq_idx = stats["seq_idx"];
+  Rcpp::IntegerVector occ = stats["occurrence"];
+  Rcpp::IntegerVector gr = stats["grain"];
+  R_xlen_t n = seq_idx.size();
+  rev_map = Rcpp::IntegerVector(n);
+  mapped_occurrence.assign(n, 0);
+
+  int max_seq = 0;
+  for (R_xlen_t i = 0; i < n; ++i)
+  {
+    if (seq_idx[i] > max_seq)
+      max_seq = seq_idx[i];
+  }
+  fwd_map.assign((std::size_t)max_seq + 1, NA_INTEGER);
+  occurrence.assign((std::size_t)max_seq + 1, 0);
+  grain.assign((std::size_t)max_seq + 1, -1);
+
+  for (R_xlen_t i = 0; i < n; ++i)
+  {
+    int s = seq_idx[i];
+    fwd_map[s] = (int)i;
+    occurrence[s] = occ[i];
+    grain[s] = gr[i];
+    rev_map[i] = s;
+    mapped_occurrence[i] = occ[i];
+  }
+}
+
+static void lulu_add_scoped_match(
+    int seq1,
+    int seq2,
+    int nread1,
+    int nread2,
+    const std::vector<int> &fwd_map,
+    const std::vector<int> &occurrence,
+    const std::vector<int> &grain,
+    int scope,
+    bool skip_nested_parent,
+    double min_abundance_ratio,
+    match_info_data &mid,
+    std::vector<int> &singleton_parent)
+{
+  if (seq1 < 0 || seq2 < 0)
+    return;
+  if (seq1 >= (int)fwd_map.size() || seq2 >= (int)fwd_map.size())
+    return;
+  int m1 = fwd_map[seq1];
+  int m2 = fwd_map[seq2];
+  if (Rcpp::IntegerVector::is_na(m1) || Rcpp::IntegerVector::is_na(m2))
+    return;
+  if (m1 == m2)
+    return;
+
+  int child_m, parent_m, child_n, parent_n, child_seq, parent_seq;
+  if (m1 > m2)
+  {
+    child_m = m1;
+    parent_m = m2;
+    child_n = nread1;
+    parent_n = nread2;
+    child_seq = seq1;
+    parent_seq = seq2;
+  }
+  else
+  {
+    child_m = m2;
+    parent_m = m1;
+    child_n = nread2;
+    parent_n = nread1;
+    child_seq = seq2;
+    parent_seq = seq1;
+  }
+
+  if (grain[child_seq] != scope)
+    return;
+  if (skip_nested_parent && grain[parent_seq] >= 0 &&
+      grain[parent_seq] < grain[child_seq])
+    return;
+
+  if (occurrence[child_seq] == 1)
+  {
+    double abund_ratio = double(parent_n) / double(child_n);
+    if (abund_ratio > min_abundance_ratio)
+    {
+      if (Rcpp::IntegerVector::is_na(singleton_parent[child_m]) ||
+          parent_m < singleton_parent[child_m])
+      {
+        singleton_parent[child_m] = parent_m;
+      }
+    }
+    return;
+  }
+
+  mid.add_match(child_m, parent_m, child_n, parent_n);
+}
+
+static void lulu_ingest_match_table(
+    Rcpp::RObject match_table,
+    const char *name,
+    double max_dist,
+    const std::vector<int> &fwd_map,
+    const std::vector<int> &occurrence,
+    const std::vector<int> &grain,
+    int scope,
+    bool skip_nested_parent,
+    double min_abundance_ratio,
+    match_info_data &mid,
+    std::vector<int> &singleton_parent)
+{
+  Rcpp::IntegerVector seq_idx1 = integer_column(match_table, "seq_idx1", name);
+  Rcpp::IntegerVector seq_idx2 = integer_column(match_table, "seq_idx2", name);
+  Rcpp::IntegerVector nread1 = integer_column(match_table, "nread1", name);
+  Rcpp::IntegerVector nread2 = integer_column(match_table, "nread2", name);
+  Rcpp::NumericVector dist = numeric_column(match_table, "dist", name);
+
+  for (R_xlen_t j = 0; j < seq_idx1.size(); ++j)
+  {
+    if (Rcpp::IntegerVector::is_na(seq_idx1[j]))
+      continue;
+    if (Rcpp::IntegerVector::is_na(seq_idx2[j]))
+      continue;
+    if (Rcpp::IntegerVector::is_na(nread1[j]))
+      continue;
+    if (Rcpp::IntegerVector::is_na(nread2[j]))
+      continue;
+    if (Rcpp::NumericVector::is_na(dist[j]))
+      continue;
+    if (Rcpp::traits::is_nan<REALSXP>(dist[j]))
+      continue;
+    if (dist[j] > max_dist)
+      continue;
+    lulu_add_scoped_match(
+        seq_idx1[j],
+        seq_idx2[j],
+        nread1[j],
+        nread2[j],
+        fwd_map,
+        occurrence,
+        grain,
+        scope,
+        skip_nested_parent,
+        min_abundance_ratio,
+        mid,
+        singleton_parent);
+  }
+}
+
+static Rcpp::DataFrame lulu_map_scoped_finish(
+    Rcpp::IntegerVector &rev_map,
+    std::vector<int> &mapped_occurrence,
+    const std::vector<int> &grain_by_seq,
+    int scope,
+    match_info_data &mid,
+    std::vector<int> &singleton_parent,
+    double min_abundance_ratio,
+    double min_cooccurrence_ratio,
+    bool use_mean_abundance_ratio,
+    int verbose)
+{
+  R_xlen_t n_seq_idx = rev_map.size();
+  // Immediate parents only (no full path-compression across grains). Within-
+  // job chains are compressed below so a batch-restricted child can skip
+  // through a batch-restricted intermediate parent.
+  std::vector<int> lulu_map(n_seq_idx);
+  for (R_xlen_t i = 0; i < n_seq_idx; ++i)
+    lulu_map[i] = (int)i;
+
+  for (const auto &mi : mid.data)
+  {
+    int child = mi.first.first;
+    int parent = mi.first.second;
+    if (verbose > 0)
+    {
+      Rcpp::Rcerr << "Considering match pair (" << child << ", " << parent
+                  << ") with " << mapped_occurrence[child] << " and "
+                  << mapped_occurrence[parent]
+                  << " occurrences and " << mi.second.nboth
+                  << " co-occurrences" << std::endl;
+    }
+    if (lulu_map[child] != child)
+      continue;
+    if (mi.second.nboth <
+        min_cooccurrence_ratio * mapped_occurrence[child])
+      continue;
+    double abundance_ratio = mi.second.abund_ratio;
+    if (use_mean_abundance_ratio)
+      abundance_ratio /= mi.second.nboth;
+    if (abundance_ratio > min_abundance_ratio)
+    {
+      if (verbose > 0)
+      {
+        Rcpp::Rcerr << "Mapping child " << child << " to parent " << parent
+                    << std::endl;
+      }
+      lulu_map[child] = parent;
+    }
+  }
+
+  for (R_xlen_t i = 0; i < n_seq_idx; ++i)
+  {
+    if (!Rcpp::IntegerVector::is_na(singleton_parent[i]) &&
+        lulu_map[i] == (int)i)
+    {
+      lulu_map[i] = singleton_parent[i];
+    }
+  }
+
+  std::vector<int> seq_out;
+  std::vector<int> lulu_out;
+  seq_out.reserve(n_seq_idx);
+  lulu_out.reserve(n_seq_idx);
+  for (R_xlen_t i = 0; i < n_seq_idx; ++i)
+  {
+    int child_seq = rev_map[i];
+    if (grain_by_seq[child_seq] != scope)
+      continue;
+    if (lulu_map[i] == (int)i)
+      continue;
+    int j = lulu_map[i];
+    while (lulu_map[j] != j)
+      j = lulu_map[j];
+    seq_out.push_back(child_seq);
+    lulu_out.push_back(rev_map[j]);
+  }
+
+  return Rcpp::DataFrame::create(
+      Rcpp::Named("seq_idx") = seq_out,
+      Rcpp::Named("lulu_idx") = lulu_out);
+}
+
+//' Scoped LULU mapping from streamed match-table targets
+//'
+//' Decides parents only for OTUs whose partition grain matches `scope`.
+//' Returns sparse non-identity rows. Requires precomputed stats from
+//' [lulu_otu_stats_impl()].
+//'
+//' @param stats (`data.frame`) output of [lulu_otu_stats_impl()].
+//' @param match_table_names (`character`) match table target names to stream.
+//' @param scope (`character`) `"batch"`, `"seqrun"`, or `"global"`.
+//' @inheritParams lulu_map_impl
+//'
+// [[Rcpp::export]]
+Rcpp::DataFrame lulu_map_scoped_impl(
+    Rcpp::DataFrame stats,
+    Rcpp::CharacterVector match_table_names,
+    Rcpp::String scope,
+    double max_dist,
+    double min_abundance_ratio = 1.0,
+    double min_cooccurrence_ratio = 0.95,
+    bool use_mean_abundance_ratio = false,
+    int verbose = 0)
+{
+  int scope_i = parse_lulu_scope(scope);
+  bool skip_nested_parent = min_cooccurrence_ratio >= 1.0;
+
+  std::vector<int> fwd_map;
+  std::vector<int> occurrence;
+  std::vector<int> grain;
+  Rcpp::IntegerVector rev_map;
+  std::vector<int> mapped_occurrence;
+  lulu_stats_maps(
+      stats, fwd_map, occurrence, grain, rev_map, mapped_occurrence);
+
+  match_info_data mid(use_mean_abundance_ratio);
+  std::vector<int> singleton_parent(rev_map.size(), NA_INTEGER);
+
+  for (R_xlen_t i = 0; i < match_table_names.size(); ++i)
+  {
+    Rcpp::String match_table_name(match_table_names[i]);
+    if (verbose)
+    {
+      Rcpp::Rcerr << "Reading match table " << match_table_name.get_cstring()
+                  << "\n  Collecting garbage.." << std::flush;
+    }
+    R_gc();
+    if (verbose)
+    {
+      Rcpp::Rcerr << "done.\n  Adding matches to index..." << std::flush;
+    }
+    Rcpp::RObject match_table = tar_read(match_table_name);
+    lulu_ingest_match_table(
+        match_table,
+        match_table_name.get_cstring(),
+        max_dist,
+        fwd_map,
+        occurrence,
+        grain,
+        scope_i,
+        skip_nested_parent,
+        min_abundance_ratio,
+        mid,
+        singleton_parent);
+    if (verbose)
+      Rcpp::Rcerr << "done." << std::endl;
+  }
+  if (verbose)
+    Rcpp::Rcerr << "Collecting garbage..." << std::flush;
+  R_gc();
+  if (verbose)
+    Rcpp::Rcerr << "done." << std::endl;
+
+  return lulu_map_scoped_finish(
+      rev_map,
+      mapped_occurrence,
+      grain,
+      scope_i,
+      mid,
+      singleton_parent,
+      min_abundance_ratio,
+      min_cooccurrence_ratio,
+      use_mean_abundance_ratio,
+      verbose);
+}
+
+//' Scoped LULU mapping from in-memory match tables
+//'
+//' Test/direct-use variant of [lulu_map_scoped_impl()] that takes a list of
+//' match-table `data.frame`s instead of target names.
+//'
+//' @param stats (`data.frame`) output of [lulu_otu_stats_impl()] or an
+//'   equivalent table.
+//' @param match_tables (`list`) of match `data.frame`s.
+//' @param scope (`character`) `"batch"`, `"seqrun"`, or `"global"`.
+//' @inheritParams lulu_map_impl
+//'
+// [[Rcpp::export]]
+Rcpp::DataFrame lulu_map_scoped_dfs_impl(
+    Rcpp::DataFrame stats,
+    Rcpp::List match_tables,
+    Rcpp::String scope,
+    double max_dist,
+    double min_abundance_ratio = 1.0,
+    double min_cooccurrence_ratio = 0.95,
+    bool use_mean_abundance_ratio = false,
+    int verbose = 0)
+{
+  int scope_i = parse_lulu_scope(scope);
+  bool skip_nested_parent = min_cooccurrence_ratio >= 1.0;
+
+  std::vector<int> fwd_map;
+  std::vector<int> occurrence;
+  std::vector<int> grain;
+  Rcpp::IntegerVector rev_map;
+  std::vector<int> mapped_occurrence;
+  lulu_stats_maps(
+      stats, fwd_map, occurrence, grain, rev_map, mapped_occurrence);
+
+  match_info_data mid(use_mean_abundance_ratio);
+  std::vector<int> singleton_parent(rev_map.size(), NA_INTEGER);
+
+  for (R_xlen_t i = 0; i < match_tables.size(); ++i)
+  {
+    Rcpp::RObject match_table = match_tables[i];
+    std::string name = "match_tables[[" + std::to_string(i + 1) + "]]";
+    lulu_ingest_match_table(
+        match_table,
+        name.c_str(),
+        max_dist,
+        fwd_map,
+        occurrence,
+        grain,
+        scope_i,
+        skip_nested_parent,
+        min_abundance_ratio,
+        mid,
+        singleton_parent);
+  }
+
+  return lulu_map_scoped_finish(
+      rev_map,
+      mapped_occurrence,
+      grain,
+      scope_i,
+      mid,
+      singleton_parent,
+      min_abundance_ratio,
+      min_cooccurrence_ratio,
+      use_mean_abundance_ratio,
+      verbose);
+}
+
+//' Combine sparse scoped LULU maps into a full parent map
+//'
+//' Starts from identity for every OTU in `stats`, overlays non-identity rows
+//' from `sparse_maps`, then path-compresses to roots.
+//'
+//' @param stats (`data.frame`) with column `seq_idx` (from
+//'   [lulu_otu_stats_impl()]).
+//' @param sparse_maps (`list`) of `data.frame`s with `seq_idx` and `lulu_idx`.
+//' @returns a full `data.frame` with `seq_idx` and `lulu_idx`.
+//'
+// [[Rcpp::export]]
+Rcpp::DataFrame lulu_map_combine_impl(
+    Rcpp::DataFrame stats,
+    Rcpp::List sparse_maps)
+{
+  Rcpp::IntegerVector seq_idx = stats["seq_idx"];
+  R_xlen_t n = seq_idx.size();
+  if (n == 0)
+  {
+    return Rcpp::DataFrame::create(
+        Rcpp::Named("seq_idx") = Rcpp::IntegerVector(),
+        Rcpp::Named("lulu_idx") = Rcpp::IntegerVector());
+  }
+
+  int max_seq = 0;
+  for (R_xlen_t i = 0; i < n; ++i)
+  {
+    if (seq_idx[i] > max_seq)
+      max_seq = seq_idx[i];
+  }
+
+  std::vector<int> parent((std::size_t)max_seq + 1, NA_INTEGER);
+  for (R_xlen_t i = 0; i < n; ++i)
+    parent[seq_idx[i]] = seq_idx[i];
+
+  for (R_xlen_t i = 0; i < sparse_maps.size(); ++i)
+  {
+    Rcpp::DataFrame m = Rcpp::as<Rcpp::DataFrame>(sparse_maps[i]);
+    if (m.nrows() == 0)
+      continue;
+    Rcpp::IntegerVector s = m["seq_idx"];
+    Rcpp::IntegerVector l = m["lulu_idx"];
+    for (R_xlen_t j = 0; j < s.size(); ++j)
+    {
+      if (Rcpp::IntegerVector::is_na(s[j]) ||
+          Rcpp::IntegerVector::is_na(l[j]))
+        continue;
+      if (s[j] < 0 || s[j] > max_seq)
+        continue;
+      if (Rcpp::IntegerVector::is_na(parent[s[j]]))
+        continue;
+      parent[s[j]] = l[j];
+    }
+  }
+
+  Rcpp::IntegerVector lulu_idx(n);
+  for (R_xlen_t i = 0; i < n; ++i)
+  {
+    int j = seq_idx[i];
+    // Path-compress with cycle guard
+    int guard = 0;
+    while (parent[j] != j)
+    {
+      j = parent[j];
+      if (++guard > max_seq + 1)
+        Rcpp::stop("Cycle detected while combining LULU maps");
+    }
+    lulu_idx[i] = j;
+  }
+
+  return Rcpp::DataFrame::create(
+      Rcpp::Named("seq_idx") = seq_idx,
+      Rcpp::Named("lulu_idx") = lulu_idx);
 }

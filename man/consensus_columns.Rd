@@ -23,5 +23,5 @@ converted to DNA (\code{U} → \code{T}).
 }
 \description{
 Columns marked with \code{.} in the Infernal reference (\code{RF}) annotation are
-treated as inserts and removed via \code{\link[Biostrings:MultipleAlignment-class]{Biostrings::colmask()}}.
+treated as inserts and removed via \code{\link[Biostrings:colmask]{Biostrings::colmask()}}.
 }

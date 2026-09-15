@@ -348,22 +348,22 @@ unevaluated)}
 
 (\code{character} string) the reverse primer
 
-a \code{call} to \code{\link[optimotu:clust_config]{optimotu::clust_slink()}} or \code{\link[optimotu:clust_config]{optimotu::clust_tree()}}
+a \code{call} to \code{\link[optimotu:clust_slink]{optimotu::clust_slink()}} or \code{\link[optimotu:clust_tree]{optimotu::clust_tree()}}
 
-a \code{call} to \code{\link[optimotu:parallel_config]{optimotu::parallel_merge()}} or
-\code{\link[optimotu:parallel_config]{optimotu::parallel_concurrent()}}
+a \code{call} to \code{\link[optimotu:parallel_merge]{optimotu::parallel_merge()}} or
+\code{\link[optimotu:parallel_concurrent]{optimotu::parallel_concurrent()}}
 }
 \description{
 When used in a targets plan, these should always be
 pre-evaluated with \verb{!!} or \verb{!!!} to ensure proper dependency tracking.
 
-Hamming uses \code{\link[optimotu:clust_config]{optimotu::clust_slink()}}; other methods use
-\code{\link[optimotu:clust_config]{optimotu::clust_tree()}}. Returns an unevaluated call so it can be \verb{!!}
+Hamming uses \code{\link[optimotu:clust_slink]{optimotu::clust_slink()}}; other methods use
+\code{\link[optimotu:clust_tree]{optimotu::clust_tree()}}. Returns an unevaluated call so it can be \verb{!!}
 spliced at plan definition time (when \code{\link[=cluster_dist_config]{cluster_dist_config()}} is
 available) and evaluated on the worker. Not a YAML option.
 
-Hamming uses \code{\link[optimotu:parallel_config]{optimotu::parallel_merge()}}; other methods use
-\code{\link[optimotu:parallel_config]{optimotu::parallel_concurrent()}}. Returns an unevaluated call: the
+Hamming uses \code{\link[optimotu:parallel_merge]{optimotu::parallel_merge()}}; other methods use
+\code{\link[optimotu:parallel_concurrent]{optimotu::parallel_concurrent()}}. Returns an unevaluated call: the
 distance method is resolved at plan definition time via
 \code{\link[=cluster_dist_config]{cluster_dist_config()}}, while \code{threads} is captured unevaluated so
 \code{\link[=local_cpus]{local_cpus()}} can run on the worker. Not a YAML option. Callers that
