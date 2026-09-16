@@ -853,3 +853,286 @@ test_that("cluster_clust_config and cluster_parallel_config return calls", {
     quote(optimotu::parallel_merge(threads = local_cpus()))
   )
 })
+
+reset_taxonomy_options <- function() {
+  options(
+    optimotu.pipeline.do_protax = FALSE,
+    optimotu.pipeline.do_sintax = FALSE,
+    optimotu.pipeline.do_bayesant = FALSE,
+    optimotu.pipeline.do_epa = FALSE,
+    optimotu.pipeline.protax_aligned = FALSE,
+    optimotu.pipeline.protax_location = NULL,
+    optimotu.pipeline.primary_classifier = NULL,
+    optimotu.pipeline.reclassify_classifier = NULL,
+    optimotu.pipeline.reclassify_rank = NULL,
+    optimotu.pipeline.reclassify_min_prob = NULL,
+    optimotu.pipeline.primary_scope_ranks = NULL,
+    optimotu.pipeline.primary_scope_taxa = NULL,
+    optimotu.pipeline.reclassify_scope_ranks = NULL,
+    optimotu.pipeline.reclassify_scope_taxa = NULL,
+    optimotu.pipeline.do_best_hit = NULL,
+    optimotu.pipeline.do_outgroup = FALSE,
+    optimotu.pipeline.do_model_align = FALSE,
+    optimotu.pipeline.tax_ranks = NULL,
+    optimotu.pipeline.known_ranks = NULL,
+    optimotu.pipeline.known_taxa = NULL
+  )
+}
+
+test_that("parse_taxonomy_options keeps single-classifier configs", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+  reset_taxonomy_options()
+  options(optimotu.pipeline.do_model_align = FALSE)
+
+  protax_dir <- tempdir()
+  optimotu.pipeline:::parse_taxonomy_options(
+    list(
+      taxonomy = list(
+        protax = list(aligned = FALSE, location = protax_dir),
+        ranks = list(list(kingdom = "Fungi"), "phylum", "class")
+      )
+    )
+  )
+  expect_true(do_protax())
+  expect_false(do_reclassify())
+  expect_equal(primary_classifier(), "protax")
+  expect_null(reclassify_classifier())
+  expect_equal(classifier_scope_ranks("primary"), "kingdom")
+  expect_equal(classifier_scope_taxa("primary"), "Fungi")
+  expect_false(classifier_is_open("primary"))
+  expect_true(do_best_hit())
+  expect_equal(known_taxa(), "Fungi")
+})
+
+test_that("parse_taxonomy_options errors on two top-level classifiers", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+  reset_taxonomy_options()
+
+  expect_error(
+    optimotu.pipeline:::parse_taxonomy_options(
+      list(
+        taxonomy = list(
+          protax = list(aligned = FALSE, location = tempdir()),
+          sintax = list(reftax = tempfile())
+        )
+      )
+    ),
+    "Only one of options"
+  )
+})
+
+test_that("parse_taxonomy_options accepts reclassify with open EPA scope", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+  reset_taxonomy_options()
+  options(optimotu.pipeline.do_model_align = TRUE)
+
+  ref <- withr::local_tempfile(fileext = ".fasta")
+  tax <- withr::local_tempfile(fileext = ".tsv")
+  tree <- withr::local_tempfile(fileext = ".nwk")
+  og_ref <- withr::local_tempfile(fileext = ".fasta")
+  file.create(ref)
+  file.create(tax)
+  file.create(tree)
+  file.create(og_ref)
+
+  optimotu.pipeline:::parse_taxonomy_options(
+    list(
+      taxonomy = list(
+        protax = list(aligned = TRUE, location = tempdir()),
+        reclassify = list(
+          rank = "family",
+          min_prob = 0.9,
+          epa = list(
+            scope = FALSE,
+            reference = ref,
+            taxonomy = tax,
+            tree = tree,
+            params = "GTR+F+G",
+            outgroup = "Outgroup"
+          )
+        ),
+        ranks = list(
+          list(kingdom = "Animalia"),
+          "phylum",
+          "class",
+          "order",
+          "family",
+          "genus",
+          "species"
+        )
+      ),
+      outgroup_reference = list(sequences = og_ref)
+    )
+  )
+  expect_true(do_protax())
+  expect_true(do_epa())
+  expect_true(do_reclassify())
+  expect_equal(primary_classifier(), "protax")
+  expect_equal(reclassify_classifier(), "epa")
+  expect_equal(reclassify_rank(), "family")
+  expect_equal(reclassify_min_prob(), 0.9)
+  expect_false(classifier_is_open("primary"))
+  expect_true(classifier_is_open("reclassify"))
+  expect_equal(classifier_scope_ranks("reclassify"), character())
+  expect_true(do_best_hit())
+})
+
+test_that("parse_taxonomy_options scope false opens primary", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+  reset_taxonomy_options()
+  options(optimotu.pipeline.do_model_align = TRUE)
+
+  ref <- withr::local_tempfile(fileext = ".fasta")
+  tax <- withr::local_tempfile(fileext = ".tsv")
+  tree <- withr::local_tempfile(fileext = ".nwk")
+  file.create(ref)
+  file.create(tax)
+  file.create(tree)
+
+  optimotu.pipeline:::parse_taxonomy_options(
+    list(
+      taxonomy = list(
+        epa = list(
+          scope = FALSE,
+          reference = ref,
+          taxonomy = tax,
+          tree = tree,
+          params = "GTR+F+G",
+          outgroup = "Outgroup"
+        ),
+        ranks = list(list(kingdom = "Animalia"), "phylum", "class")
+      )
+    )
+  )
+  expect_true(classifier_is_open("primary"))
+  expect_false(do_best_hit())
+  expect_equal(known_taxa(), "Animalia")
+})
+
+test_that("parse_taxonomy_options validates reclassify configs", {
+  old <- options()
+  withr::defer(options(old), testthat::teardown_env())
+  reset_taxonomy_options()
+  options(optimotu.pipeline.do_model_align = TRUE)
+
+  ref <- withr::local_tempfile(fileext = ".fasta")
+  tax <- withr::local_tempfile(fileext = ".tsv")
+  tree <- withr::local_tempfile(fileext = ".nwk")
+  file.create(ref)
+  file.create(tax)
+  file.create(tree)
+  epa_opts <- list(
+    scope = FALSE,
+    reference = ref,
+    taxonomy = tax,
+    tree = tree,
+    params = "GTR+F+G",
+    outgroup = "Outgroup"
+  )
+  ranks <- list(
+    list(kingdom = "Animalia"),
+    "phylum",
+    "class",
+    "order",
+    "family",
+    "genus",
+    "species"
+  )
+
+  expect_error(
+    optimotu.pipeline:::parse_taxonomy_options(
+      list(
+        taxonomy = list(
+          protax = list(aligned = TRUE, location = tempdir()),
+          reclassify = list(rank = "family", min_prob = 0.9, epa = epa_opts),
+          ranks = ranks
+        )
+      )
+    ),
+    "outgroup_reference"
+  )
+
+  og_ref <- withr::local_tempfile(fileext = ".fasta")
+  file.create(og_ref)
+
+  expect_error(
+    optimotu.pipeline:::parse_taxonomy_options(
+      list(
+        taxonomy = list(
+          protax = list(aligned = TRUE, location = tempdir()),
+          reclassify = list(rank = "kingdom", min_prob = 0.9, epa = epa_opts),
+          ranks = ranks
+        ),
+        outgroup_reference = list(sequences = og_ref)
+      )
+    ),
+    "inside the primary classifier scope"
+  )
+
+  expect_error(
+    optimotu.pipeline:::parse_taxonomy_options(
+      list(
+        taxonomy = list(
+          protax = list(aligned = TRUE, location = tempdir()),
+          reclassify = list(
+            rank = "family",
+            min_prob = 0.9,
+            protax = list(aligned = FALSE, location = tempdir())
+          ),
+          ranks = ranks
+        ),
+        outgroup_reference = list(sequences = og_ref)
+      )
+    ),
+    "must differ"
+  )
+
+  expect_error(
+    optimotu.pipeline:::parse_taxonomy_options(
+      list(
+        taxonomy = list(
+          protax = list(aligned = TRUE, location = tempdir()),
+          reclassify = list(
+            rank = "family",
+            min_prob = 0.9,
+            epa = list(
+              # closed at kingdom — same as primary
+              scope = list(kingdom = "Animalia"),
+              reference = ref,
+              taxonomy = tax,
+              tree = tree,
+              params = "GTR+F+G",
+              outgroup = "Outgroup"
+            )
+          ),
+          ranks = ranks
+        ),
+        outgroup_reference = list(sequences = og_ref)
+      )
+    ),
+    "must assign those ranks"
+  )
+
+  options(optimotu.pipeline.do_model_align = FALSE)
+  expect_error(
+    optimotu.pipeline:::parse_taxonomy_options(
+      list(
+        taxonomy = list(
+          epa = list(
+            reference = ref,
+            taxonomy = tax,
+            tree = tree,
+            params = "GTR+F+G",
+            outgroup = "Outgroup"
+          ),
+          ranks = ranks
+        )
+      )
+    ),
+    "model_align"
+  )
+})

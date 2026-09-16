@@ -432,3 +432,380 @@ truncate_taxonomy <- function(s, rank) {
 remove_mycobank_number <- function(taxon) {
   dplyr::if_else(startsWith(taxon, "pseudo"), taxon, sub("_[0-9]+$", "", taxon))
 }
+
+#### classifier cascade helpers ####
+
+#' Taxon labels that do not count as outgroup for best_hit screening
+#'
+#' Shared between the reclassify screen and
+#' `final_asv_known_outgroup` construction.
+#'
+#' @return `character` vector of ignored taxon labels
+#' @export
+best_hit_ingroup_exceptions <- function() {
+  c("unspecified", "Eukaryota_kgd_Incertae_sedis", "None")
+}
+
+#' Ranks a classifier actually assigns
+#'
+#' @param scope_ranks (`character`) ranks in the classifier's closed scope
+#' @param ranks (`character`) full rank list
+#' @return `character` vector of assigned ranks
+#' @export
+assigned_ranks <- function(scope_ranks, ranks = tax_ranks()) {
+  checkmate::assert_character(scope_ranks, any.missing = FALSE)
+  checkmate::assert_character(ranks, any.missing = FALSE, min.len = 1)
+  setdiff(ranks, scope_ranks)
+}
+
+#' Sequence IDs that fail the primary classifier confidence / scope screen
+#'
+#' An ID is included when either:
+#' 1. There is no known (non-`NA`, non-`"unk"`) taxon at `rank` with
+#'    `prob >= min_prob`, or
+#' 2. `screen` is supplied and the best-hit taxon at any `scope_ranks` is
+#'    present and not equal to the corresponding `scope_taxa` (ignoring
+#'    [best_hit_ingroup_exceptions()]).
+#'
+#' @param tax_prob (`data.frame`) long taxonomy/probability table from the
+#'   primary classifier
+#' @param rank (`character`) rank used for the probability gate
+#' @param min_prob (`numeric`) minimum known-taxon probability
+#' @param all_ids vector of all sequence IDs in the batch
+#' @param id_col (`character`) ID column name (`"seq_idx"` or `"seq_id"`)
+#' @param screen (`data.frame` or `NULL`) best-hit table with `id_col` and
+#'   one column per `scope_ranks`
+#' @param scope_ranks (`character`) closed-scope ranks for the primary
+#' @param scope_taxa (`character`) expected taxa at `scope_ranks`
+#' @return vector of IDs needing reclassification (same type as `all_ids`)
+#' @export
+ids_needing_reclassify <- function(
+  tax_prob,
+  rank,
+  min_prob,
+  all_ids,
+  id_col = "seq_idx",
+  screen = NULL,
+  scope_ranks = character(),
+  scope_taxa = character()
+) {
+  checkmate::assert_data_frame(tax_prob)
+  checkmate::assert_string(rank)
+  checkmate::assert_number(min_prob, lower = 0, upper = 1)
+  checkmate::assert_string(id_col)
+  checkmate::assert_character(scope_ranks, any.missing = FALSE)
+  checkmate::assert_character(scope_taxa, any.missing = FALSE)
+  if (length(scope_ranks) != length(scope_taxa)) {
+    stop("`scope_ranks` and `scope_taxa` must have the same length.")
+  }
+  checkmate::assert_names(
+    names(tax_prob),
+    must.include = c(id_col, "rank", "taxon", "prob")
+  )
+
+  ids <- unique(all_ids)
+  if (length(ids) == 0L) {
+    return(ids)
+  }
+
+  known_ok <- tax_prob |>
+    dplyr::filter(
+      .data[["rank"]] == .env$rank,
+      !is.na(.data$taxon),
+      .data$taxon != "unk",
+      .data$prob >= .env$min_prob
+    ) |>
+    dplyr::distinct(.data[[id_col]]) |>
+    dplyr::pull(1)
+
+  need <- setdiff(ids, known_ok)
+
+  if (!is.null(screen) && length(scope_ranks) > 0L) {
+    checkmate::assert_data_frame(screen)
+    checkmate::assert_names(
+      names(screen),
+      must.include = c(id_col, scope_ranks)
+    )
+    exceptions <- best_hit_ingroup_exceptions()
+    screen_need <- rep(FALSE, nrow(screen))
+    for (i in seq_along(scope_ranks)) {
+      col <- scope_ranks[[i]]
+      taxon_i <- scope_taxa[[i]]
+      vals <- screen[[col]]
+      screen_need <- screen_need |
+        (!is.na(vals) & !vals %in% c(taxon_i, exceptions))
+    }
+    screened_ids <- screen[[id_col]][screen_need]
+    need <- union(need, screened_ids)
+  }
+
+  # Preserve type/order relative to all_ids
+  ids[ids %in% need]
+}
+
+#' Combine primary and fallback taxonomy tables for a cascade
+#'
+#' Drops primary rows for `reclassify_ids`, binds fallback rows, and tags a
+#' `classifier` column.
+#'
+#' @param primary (`data.frame`) primary classifier output
+#' @param fallback (`data.frame`) fallback classifier output
+#' @param reclassify_ids IDs that were sent to the fallback
+#' @param id_col (`character`) ID column name
+#' @param primary_name (`character`) label for primary rows
+#' @param fallback_name (`character`) label for fallback rows
+#' @return combined `data.frame`
+#' @export
+combine_tax_prob <- function(
+  primary,
+  fallback,
+  reclassify_ids,
+  id_col = "seq_idx",
+  primary_name = "primary",
+  fallback_name = "fallback"
+) {
+  checkmate::assert_data_frame(primary)
+  checkmate::assert_data_frame(fallback)
+  checkmate::assert_string(id_col)
+  checkmate::assert_string(primary_name)
+  checkmate::assert_string(fallback_name)
+  checkmate::assert_names(names(primary), must.include = id_col)
+  checkmate::assert_names(names(fallback), must.include = id_col)
+
+  kept_primary <- primary[
+    !primary[[id_col]] %in% reclassify_ids,
+    ,
+    drop = FALSE
+  ]
+  if (nrow(kept_primary) > 0L) {
+    kept_primary$classifier <- primary_name
+  } else {
+    kept_primary$classifier <- character()
+  }
+  if (nrow(fallback) > 0L) {
+    fallback$classifier <- fallback_name
+  } else if (!"classifier" %in% names(fallback)) {
+    fallback$classifier <- character()
+  }
+
+  # Align columns for bind_rows
+  all_cols <- union(names(kept_primary), names(fallback))
+  for (col in setdiff(all_cols, names(kept_primary))) {
+    kept_primary[[col]] <- rep(NA, nrow(kept_primary))
+  }
+  for (col in setdiff(all_cols, names(fallback))) {
+    fallback[[col]] <- rep(NA, nrow(fallback))
+  }
+  dplyr::bind_rows(kept_primary[all_cols], fallback[all_cols])
+}
+
+#' Build prior taxonomy rows for a classifier's closed scope
+#'
+#' @param ids vector of sequence IDs
+#' @param id_col (`character`) name for the ID column
+#' @param scope_ranks (`character`) closed-scope ranks
+#' @param scope_taxa (`character`) taxa at those ranks
+#' @param ranks (`character`) full ordered rank list for factor conversion
+#' @return `data.frame` with id, rank, taxon, prob=1, parent_taxonomy
+#' @export
+scope_prior_taxonomy <- function(
+  ids,
+  id_col = "seq_idx",
+  scope_ranks,
+  scope_taxa,
+  ranks = tax_ranks()
+) {
+  checkmate::assert_string(id_col)
+  checkmate::assert_character(scope_ranks, any.missing = FALSE)
+  checkmate::assert_character(scope_taxa, any.missing = FALSE)
+  if (length(scope_ranks) != length(scope_taxa)) {
+    stop("`scope_ranks` and `scope_taxa` must have the same length.")
+  }
+  if (length(scope_ranks) == 0L || length(ids) == 0L) {
+    out <- tibble::tibble(
+      rank = rank2factor(character(), ranks),
+      taxon = character(),
+      prob = numeric(),
+      parent_taxonomy = character()
+    )
+    out[[id_col]] <- if (is.integer(ids)) integer() else character()
+    return(dplyr::relocate(out, dplyr::all_of(id_col)))
+  }
+  priors <- tibble::tibble(
+    rank = rank2factor(scope_ranks, ranks),
+    taxon = scope_taxa,
+    prob = 1.0
+  ) |>
+    dplyr::arrange(dplyr::desc(rank)) |>
+    dplyr::mutate(
+      parent_taxonomy = purrr::accumulate(
+        .x = dplyr::lag(taxon, default = NA_character_),
+        .f = \(x, y) if (is.na(x)) y else paste(x, y, sep = ",")
+      )
+    )
+  tidyr::crossing(tibble::tibble(!!id_col := ids), priors)
+}
+
+#' Build study-ingroup / outgroup / unknown labels per sequence
+#'
+#' Assigned taxonomy from open classifiers wins at `known_ranks`. Closed
+#' classifier winners (and sequences with no assignment at those ranks) fall
+#' back to `best_hit` when provided. Injected scope priors are not treated as
+#' assigned evidence.
+#'
+#' @param tax_prob long taxonomy table (`seq_id`/`seq_idx`, `rank`, `taxon`,
+#'   `prob`, optional `classifier`)
+#' @param best_hit wide best-hit table with `id_col` and `known_ranks` columns,
+#'   or `NULL`
+#' @param id_col ID column name
+#' @param known_ranks study-ingroup ranks
+#' @param known_taxa study-ingroup taxa
+#' @param open_classifiers classifier labels whose assignments are authoritative
+#'   at `known_ranks`; empty means no classifier assignments count (use
+#'   `best_hit` only)
+#' @param has_classifier_column whether `tax_prob` has a `classifier` column
+#' @return `list` of tibbles: `known_ingroup`, `known_outgroup`, `unknown_outin`
+#' @export
+study_ingroup_membership <- function(
+  tax_prob,
+  best_hit = NULL,
+  id_col = "seq_id",
+  study_ranks = known_ranks(),
+  study_taxa = known_taxa(),
+  open_classifiers = character(),
+  has_classifier_column = "classifier" %in% names(tax_prob)
+) {
+  checkmate::assert_data_frame(tax_prob)
+  checkmate::assert_string(id_col)
+  checkmate::assert_character(study_ranks, any.missing = FALSE)
+  checkmate::assert_character(study_taxa, any.missing = FALSE)
+  checkmate::assert_character(open_classifiers, any.missing = FALSE)
+  exceptions <- best_hit_ingroup_exceptions()
+  known_ranks <- study_ranks
+  known_taxa <- study_taxa
+
+  all_ids <- unique(tax_prob[[id_col]])
+  if (!is.null(best_hit)) {
+    all_ids <- union(all_ids, unique(best_hit[[id_col]]))
+  }
+
+  # Assigned rows at known ranks from open classifiers only
+  assigned <- tax_prob
+  if (length(known_ranks) == 0L) {
+    assigned <- assigned[0, , drop = FALSE]
+  } else {
+    assigned <- dplyr::filter(
+      assigned,
+      .data$rank %in% .env$known_ranks,
+      !is.na(.data$taxon),
+      .data$taxon != "unk"
+    )
+    if (has_classifier_column) {
+      if (length(open_classifiers) == 0L) {
+        assigned <- assigned[0, , drop = FALSE]
+      } else {
+        assigned <- dplyr::filter(
+          assigned,
+          .data$classifier %in% .env$open_classifiers
+        )
+      }
+    } else if (length(open_classifiers) == 0L) {
+      # No classifier column and no open classifiers: ignore tax_prob for
+      # study-ingroup ranks (closed sole classifier → best_hit only).
+      assigned <- assigned[0, , drop = FALSE]
+    }
+  }
+
+  assigned_wide <- if (nrow(assigned) == 0L) {
+    out <- tibble::tibble(!!id_col := all_ids[0])
+    for (r in known_ranks) {
+      out[[r]] <- character()
+    }
+    out
+  } else {
+    assigned |>
+      dplyr::arrange(dplyr::desc(prob)) |>
+      dplyr::distinct(.data[[id_col]], rank, .keep_all = TRUE) |>
+      dplyr::select(dplyr::all_of(c(id_col, "rank", "taxon"))) |>
+      tidyr::pivot_wider(names_from = "rank", values_from = "taxon")
+  }
+
+  # Fill gaps from best_hit
+  if (!is.null(best_hit) && length(known_ranks) > 0L) {
+    checkmate::assert_names(
+      names(best_hit),
+      must.include = c(id_col, known_ranks)
+    )
+    merged <- dplyr::full_join(
+      assigned_wide,
+      dplyr::select(best_hit, dplyr::all_of(c(id_col, known_ranks))),
+      by = id_col,
+      suffix = c("", "_bh")
+    )
+    for (r in known_ranks) {
+      bh <- paste0(r, "_bh")
+      if (bh %in% names(merged)) {
+        merged[[r]] <- dplyr::coalesce(merged[[r]], merged[[bh]])
+        merged[[bh]] <- NULL
+      }
+    }
+  } else {
+    merged <- assigned_wide
+  }
+
+  # Ensure all ids present
+  if (length(all_ids) > 0L) {
+    merged <- dplyr::full_join(
+      tibble::tibble(!!id_col := all_ids),
+      merged,
+      by = id_col
+    )
+  }
+
+  if (length(known_ranks) == 0L || nrow(merged) == 0L) {
+    empty <- merged[0, , drop = FALSE]
+    return(list(
+      known_ingroup = empty,
+      known_outgroup = empty,
+      unknown_outin = empty
+    ))
+  }
+
+  outgroup_cols <- character(length(known_ranks))
+  ingroup_ok <- rep(TRUE, nrow(merged))
+  outgroup_any <- rep(FALSE, nrow(merged))
+  for (i in seq_along(known_ranks)) {
+    rank_i <- known_ranks[[i]]
+    taxon_i <- known_taxa[[i]]
+    vals <- merged[[rank_i]]
+    is_out <- !is.na(vals) & !vals %in% c(taxon_i, exceptions)
+    is_in <- !is.na(vals) & vals == taxon_i
+    outgroup_cols[i] <- paste0(rank_i, "_outgroup")
+    merged[[outgroup_cols[i]]] <- is_out
+    outgroup_any <- outgroup_any | is_out
+    ingroup_ok <- ingroup_ok & (is_in | is.na(vals))
+  }
+  # known_ingroup: all known ranks that are present match study taxa, and the
+  # tip known rank is present and matches
+  tip <- known_ranks[[length(known_ranks)]]
+  tip_taxon <- known_taxa[[length(known_taxa)]]
+  known_ingroup <- merged[
+    !outgroup_any & !is.na(merged[[tip]]) & merged[[tip]] == tip_taxon,
+    ,
+    drop = FALSE
+  ]
+  known_outgroup <- merged[outgroup_any, , drop = FALSE]
+  unknown_outin <- merged[
+    !outgroup_any &
+      (is.na(merged[[tip]]) | merged[[tip]] != tip_taxon),
+    ,
+    drop = FALSE
+  ]
+
+  keep_cols <- c(id_col, known_ranks)
+  list(
+    known_ingroup = dplyr::select(known_ingroup, dplyr::all_of(keep_cols)),
+    known_outgroup = dplyr::select(known_outgroup, dplyr::all_of(keep_cols)),
+    unknown_outin = dplyr::select(unknown_outin, dplyr::all_of(keep_cols))
+  )
+}

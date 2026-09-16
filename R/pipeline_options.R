@@ -1504,6 +1504,101 @@ do_pos_control <- function() {
 
 #### taxonomic assignment settings ####
 
+TAXONOMY_CLASSIFIER_NAMES <- c("protax", "sintax", "bayesant", "epa")
+
+#' Peel `scope:` from a classifier option list
+#'
+#' @param opts (`list` or `NULL`) classifier options
+#' @return named `list` with `opts` (scope removed) and `scope` (raw value or
+#'   `NULL` if omitted)
+#' @keywords internal
+extract_classifier_scope <- function(opts) {
+  if (is.null(opts)) {
+    return(list(opts = list(), scope = NULL))
+  }
+  checkmate::assert_list(opts)
+  opts <- unnest_yaml_list(opts)
+  scope <- if ("scope" %in% names(opts)) opts$scope else NULL
+  opts$scope <- NULL
+  list(opts = opts, scope = scope)
+}
+
+#' Resolve classifier `scope:` into ranks and taxa
+#'
+#' @param scope_option raw YAML value: omitted/`NULL` inherits study named
+#'   ranks; `FALSE` means open (no scoped ranks); a named mapping is an
+#'   explicit closed prefix.
+#' @param which (`character`) `"primary"` or `"reclassify"` (for error text)
+#' @return named `list` with `ranks` and `taxa` character vectors
+#' @keywords internal
+resolve_classifier_scope <- function(scope_option, which = "primary") {
+  if (is.null(scope_option)) {
+    return(list(ranks = known_ranks(), taxa = known_taxa()))
+  }
+  if (isFALSE(scope_option)) {
+    return(list(ranks = character(), taxa = character()))
+  }
+  if (is.list(scope_option) || is.character(scope_option)) {
+    scope_option <- unnest_yaml_list(as.list(scope_option))
+    ranks <- names(scope_option)
+    taxa <- unname(unlist(scope_option))
+    if (is.null(ranks) || any(!nzchar(ranks)) || any(is.na(taxa))) {
+      stop(
+        "Option 'taxonomy:",
+        which,
+        ":scope' must be a named mapping ",
+        "(e.g. kingdom: Animalia), false, or omitted.\n",
+        "(file: pipeline_options.yaml)"
+      )
+    }
+    checkmate::assert_character(ranks, any.missing = FALSE, unique = TRUE)
+    checkmate::assert_character(taxa, any.missing = FALSE, min.chars = 1)
+    if (length(ranks) != length(taxa)) {
+      stop(
+        "Option 'taxonomy:",
+        which,
+        ":scope' ranks and taxa must have ",
+        "equal length.\n(file: pipeline_options.yaml)"
+      )
+    }
+    # Scoped ranks must be a prefix of tax_ranks().
+    expected_prefix <- tax_ranks()[seq_along(ranks)]
+    if (!identical(as.character(ranks), as.character(expected_prefix))) {
+      stop(
+        "Option 'taxonomy:",
+        which,
+        ":scope' must be a prefix of ",
+        "'taxonomy:ranks' (got ",
+        paste(ranks, collapse = ", "),
+        "; expected ",
+        paste(expected_prefix, collapse = ", "),
+        ").\n(file: pipeline_options.yaml)"
+      )
+    }
+    return(list(ranks = as.character(ranks), taxa = as.character(taxa)))
+  }
+  stop(
+    "Option 'taxonomy:",
+    which,
+    ":scope' must be a named mapping ",
+    "(e.g. kingdom: Animalia), false, or omitted.\n",
+    "(file: pipeline_options.yaml)"
+  )
+}
+
+#' Dispatch to a classifier option parser
+#' @keywords internal
+parse_classifier_by_name <- function(name, opts) {
+  switch(
+    name,
+    protax = parse_protax_options(opts),
+    sintax = parse_sintax_options(opts),
+    bayesant = parse_bayesant_options(opts),
+    epa = parse_epa_options(opts),
+    stop("Unknown classifier: ", name)
+  )
+}
+
 #' @rdname parse_pipeline_options
 #' @export
 parse_taxonomy_options <- function(pipeline_options) {
@@ -1513,15 +1608,19 @@ parse_taxonomy_options <- function(pipeline_options) {
   }
   checkmate::assert_list(taxonomy_options)
   taxonomy_options <- unnest_yaml_list(taxonomy_options)
-  classifier_names <- c("protax", "sintax", "bayesant", "epa")
+
+  reclassify_options <- taxonomy_options$reclassify
+  taxonomy_options$reclassify <- NULL
+
   selected_classifier <- intersect(
     names(taxonomy_options),
-    classifier_names
+    TAXONOMY_CLASSIFIER_NAMES
   )
   if (length(selected_classifier) > 1) {
     stop(
       "Only one of options 'taxonomy:protax', 'taxonomy:sintax',",
-      " 'taxonomy:bayesant' and 'taxonomy:epa' may be given.",
+      " 'taxonomy:bayesant' and 'taxonomy:epa' may be given as the primary ",
+      "classifier. Use 'taxonomy:reclassify' for a fallback classifier.\n",
       "(file: pipeline_options.yaml)"
     )
   }
@@ -1536,17 +1635,229 @@ parse_taxonomy_options <- function(pipeline_options) {
       "(file: pipeline_options.yaml)"
     )
   }
-  switch(
-    selected_classifier,
-    protax = parse_protax_options(taxonomy_options$protax),
-    sintax = parse_sintax_options(taxonomy_options$sintax),
-    bayesant = parse_bayesant_options(taxonomy_options$bayesant),
-    epa = parse_epa_options(taxonomy_options$epa)
+
+  primary_extracted <- extract_classifier_scope(
+    taxonomy_options[[selected_classifier]]
   )
+  parse_classifier_by_name(selected_classifier, primary_extracted$opts)
+  options(optimotu.pipeline.primary_classifier = selected_classifier)
 
   if ("ranks" %in% names(taxonomy_options)) {
     parse_taxonomy_ranks(taxonomy_options$ranks)
   }
+
+  primary_scope <- resolve_classifier_scope(
+    primary_extracted$scope,
+    which = "primary"
+  )
+  options(
+    optimotu.pipeline.primary_scope_ranks = primary_scope$ranks,
+    optimotu.pipeline.primary_scope_taxa = primary_scope$taxa
+  )
+
+  if (!is.null(reclassify_options) && !isFALSE(reclassify_options)) {
+    parse_reclassify_options(
+      reclassify_options,
+      primary = selected_classifier,
+      pipeline_options = pipeline_options
+    )
+  } else {
+    options(
+      optimotu.pipeline.reclassify_classifier = NULL,
+      optimotu.pipeline.reclassify_rank = NULL,
+      optimotu.pipeline.reclassify_min_prob = NULL,
+      optimotu.pipeline.reclassify_scope_ranks = character(),
+      optimotu.pipeline.reclassify_scope_taxa = character()
+    )
+  }
+
+  # best_hit is needed when any winning classifier may be closed
+  do_best_hit_val <- length(primary_scope$ranks) > 0L ||
+    (do_reclassify() && length(classifier_scope_ranks("reclassify")) > 0L)
+  options(optimotu.pipeline.do_best_hit = do_best_hit_val)
+}
+
+#' Parse `taxonomy.reclassify` cascade options
+#' @keywords internal
+parse_reclassify_options <- function(
+  reclassify_options,
+  primary,
+  pipeline_options
+) {
+  checkmate::assert_list(reclassify_options)
+  reclassify_options <- unnest_yaml_list(reclassify_options)
+
+  fallback <- intersect(names(reclassify_options), TAXONOMY_CLASSIFIER_NAMES)
+  if (length(fallback) == 0) {
+    stop(
+      "Option 'taxonomy:reclassify' must include exactly one classifier ",
+      "(protax, sintax, bayesant, or epa).\n",
+      "(file: pipeline_options.yaml)"
+    )
+  }
+  if (length(fallback) > 1) {
+    stop(
+      "Option 'taxonomy:reclassify' may include only one classifier.\n",
+      "(file: pipeline_options.yaml)"
+    )
+  }
+  if (identical(fallback, primary)) {
+    stop(
+      "Primary and reclassify classifiers must differ (both are '",
+      primary,
+      "').\n(file: pipeline_options.yaml)"
+    )
+  }
+
+  checkmate::assert_names(
+    names(reclassify_options),
+    must.include = c(fallback, "rank", "min_prob"),
+    subset.of = c(fallback, "rank", "min_prob")
+  )
+
+  rank <- reclassify_options$rank
+  checkmate::assert_string(rank, min.chars = 1)
+  if (!rank %in% tax_ranks()) {
+    stop(
+      "Option 'taxonomy:reclassify:rank' must be one of taxonomy:ranks (",
+      paste(tax_ranks(), collapse = ", "),
+      "); got '",
+      rank,
+      "'.\n(file: pipeline_options.yaml)"
+    )
+  }
+  primary_scope_ranks <- classifier_scope_ranks("primary")
+  if (rank %in% primary_scope_ranks) {
+    stop(
+      "Option 'taxonomy:reclassify:rank' ('",
+      rank,
+      "') is inside the ",
+      "primary classifier scope and is not assigned by the primary. Choose a ",
+      "rank the primary assigns.\n(file: pipeline_options.yaml)"
+    )
+  }
+
+  min_prob <- reclassify_options$min_prob
+  checkmate::assert_number(min_prob, lower = 0, upper = 1)
+  if (!(min_prob > 0 && min_prob <= 1)) {
+    stop(
+      "Option 'taxonomy:reclassify:min_prob' must be in (0, 1]; got ",
+      min_prob,
+      ".\n(file: pipeline_options.yaml)"
+    )
+  }
+
+  fallback_extracted <- extract_classifier_scope(
+    reclassify_options[[fallback]]
+  )
+  parse_classifier_by_name(fallback, fallback_extracted$opts)
+  fallback_scope <- resolve_classifier_scope(
+    fallback_extracted$scope,
+    which = "reclassify"
+  )
+
+  # If primary is closed at the study ingroup rank, fallback must assign it.
+  study_ingroup <- known_ranks()
+  if (
+    length(study_ingroup) > 0L &&
+      all(study_ingroup %in% primary_scope_ranks) &&
+      any(study_ingroup %in% fallback_scope$ranks)
+  ) {
+    stop(
+      "When the primary classifier is closed at the study ingroup rank(s) (",
+      paste(study_ingroup, collapse = ", "),
+      "), the reclassify classifier must assign those ranks ",
+      "(set taxonomy:reclassify:",
+      fallback,
+      ":scope: false, or omit those ranks from its scope).\n",
+      "(file: pipeline_options.yaml)"
+    )
+  }
+
+  # Closed primary + reclassify requires outgroup_reference for the screen.
+  if (length(primary_scope_ranks) > 0L) {
+    og <- pipeline_options$outgroup_reference
+    if (is.null(og) || isFALSE(og)) {
+      stop(
+        "Closed primary classifier with taxonomy:reclassify requires ",
+        "'outgroup_reference' (used as the hard-coded best_hit screen).\n",
+        "(file: pipeline_options.yaml)"
+      )
+    }
+  }
+
+  options(
+    optimotu.pipeline.reclassify_classifier = fallback,
+    optimotu.pipeline.reclassify_rank = rank,
+    optimotu.pipeline.reclassify_min_prob = as.numeric(min_prob),
+    optimotu.pipeline.reclassify_scope_ranks = fallback_scope$ranks,
+    optimotu.pipeline.reclassify_scope_taxa = fallback_scope$taxa
+  )
+}
+
+#' @rdname pipeline_options
+#' @export
+do_reclassify <- function() {
+  !is.null(getOption("optimotu.pipeline.reclassify_classifier", NULL))
+}
+
+#' @rdname pipeline_options
+#' @export
+primary_classifier <- function() {
+  getOption("optimotu.pipeline.primary_classifier", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
+reclassify_classifier <- function() {
+  getOption("optimotu.pipeline.reclassify_classifier", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
+reclassify_rank <- function() {
+  getOption("optimotu.pipeline.reclassify_rank", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
+reclassify_min_prob <- function() {
+  getOption("optimotu.pipeline.reclassify_min_prob", NULL)
+}
+
+#' @rdname pipeline_options
+#' @param which (`character`) `"primary"` or `"reclassify"`
+#' @export
+classifier_scope_ranks <- function(which = c("primary", "reclassify")) {
+  which <- match.arg(which)
+  if (identical(which, "primary")) {
+    getOption("optimotu.pipeline.primary_scope_ranks", known_ranks())
+  } else {
+    getOption("optimotu.pipeline.reclassify_scope_ranks", character())
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+classifier_scope_taxa <- function(which = c("primary", "reclassify")) {
+  which <- match.arg(which)
+  if (identical(which, "primary")) {
+    getOption("optimotu.pipeline.primary_scope_taxa", known_taxa())
+  } else {
+    getOption("optimotu.pipeline.reclassify_scope_taxa", character())
+  }
+}
+
+#' @rdname pipeline_options
+#' @export
+classifier_is_open <- function(which = c("primary", "reclassify")) {
+  length(classifier_scope_ranks(which)) == 0L
+}
+
+#' @rdname pipeline_options
+#' @export
+do_best_hit <- function() {
+  getOption("optimotu.pipeline.do_best_hit", length(known_ranks()) > 0L)
 }
 
 ##### taxonomic ranks #####
@@ -1598,9 +1909,9 @@ parse_taxonomy_ranks <- function(rank_options) {
   }
   if (length(KNOWN_TAXA) == 0) {
     KNOWN_TAXA <- c(rootrank = "root")
-  } else {
-    options(optimotu.pipeline.do_outgroup = TRUE)
   }
+  # Study ingroup (named ranks) no longer implies best_hit / do_outgroup.
+  # Those follow classifier scope via do_best_hit() after taxonomy parse.
   set_known_ranks(names(KNOWN_TAXA))
   set_known_taxa(unname(KNOWN_TAXA))
   set_tax_ranks(c(known_ranks(), UNKNOWN_RANKS))
@@ -1617,9 +1928,10 @@ parse_protax_options <- function(protax_options) {
   if (length(protax_options) > 0L) {
     checkmate::assert_names(
       names(protax_options),
-      subset.of = c("aligned", "location", "ranks", "added_reference")
+      subset.of = c("aligned", "location", "ranks", "added_reference", "scope")
     )
   }
+  protax_options$scope <- NULL
 
   ##### protax version #####
   if ("aligned" %in% names(protax_options)) {
@@ -1685,10 +1997,15 @@ protax_location <- function() {
 parse_sintax_options <- function(sintax_options) {
   checkmate::assert_list(sintax_options)
   sintax_options <- unnest_yaml_list(sintax_options)
-  checkmate::assert_file_exists(sintax_options$reftax, "r")
+  sintax_options$scope <- NULL
+  ref <- sintax_options$reftax
+  if (is.null(ref)) {
+    ref <- sintax_options$reference
+  }
+  checkmate::assert_file_exists(ref, "r")
   options(
     optimotu.pipeline.do_sintax = TRUE,
-    optimotu.pipeline.sintax_ref = sintax_options$reftax
+    optimotu.pipeline.sintax_ref = ref
   )
 }
 
@@ -1711,15 +2028,27 @@ sintax_ref <- function() {
 parse_bayesant_options <- function(bayesant_options) {
   checkmate::assert_list(bayesant_options)
   bayesant_options <- unnest_yaml_list(bayesant_options)
+  bayesant_options$scope <- NULL
+  reftax <- bayesant_options$reftax
+  if (is.null(reftax)) {
+    reftax <- bayesant_options$reference
+  }
   checkmate::assert(
-    checkmate::check_file_exists(bayesant_options$reftax, "r"),
+    checkmate::check_file_exists(reftax, "r"),
     checkmate::check_file_exists(bayesant_options$model, "r")
   )
   checkmate::assert_flag(bayesant_options$aligned, null.ok = TRUE)
+  if (isTRUE(bayesant_options$aligned) && !do_model_align()) {
+    stop(
+      "Aligned BayesANT (taxonomy: bayesant: aligned: true) requires model",
+      "alignment to be enabled (amplicon_model: model_align: true).\n",
+      "(file: pipeline_options.yaml)"
+    )
+  }
   options(
     optimotu.pipeline.do_bayesant = TRUE,
     optimotu.pipeline.bayesant_aligned = bayesant_options$aligned,
-    optimotu.pipeline.bayesant_ref = bayesant_options$reftax,
+    optimotu.pipeline.bayesant_ref = reftax,
     optimotu.pipeline.bayesant_model = bayesant_options$model
   )
 }
@@ -1758,8 +2087,24 @@ parse_epa_options <- function(epa_options) {
   epa_options <- unnest_yaml_list(epa_options)
   checkmate::assert_names(
     names(epa_options),
-    must.include = c("reference", "taxonomy", "tree", "params", "outgroup")
+    must.include = c("reference", "taxonomy", "tree", "params", "outgroup"),
+    subset.of = c(
+      "reference",
+      "taxonomy",
+      "tree",
+      "params",
+      "outgroup",
+      "scope"
+    )
   )
+  epa_options$scope <- NULL
+  if (!do_model_align()) {
+    stop(
+      "EPA-ng (taxonomy: epa) requires model alignment to be enabled ",
+      "(amplicon_model: model_align: true).\n",
+      "(file: pipeline_options.yaml)"
+    )
+  }
   checkmate::assert_file_exists(epa_options$reference, "r")
   checkmate::assert_file_exists(epa_options$taxonomy, "r")
   checkmate::assert_file_exists(epa_options$tree, "r")
@@ -1816,24 +2161,25 @@ epa_outgroup <- function() {
 #' @rdname parse_pipeline_options
 #' @export
 parse_outgroup_options <- function(pipeline_options) {
-  # if outgroup_reference is not set at all, then we defer to the setting
-  # during parsing of taxonomic ranks
+  # if outgroup_reference is not set at all, leave existing defaults
   if (is.null(pipeline_options$outgroup_reference)) {
     return()
   }
-  # if outgroup_reference is explicitly FALSE, then we set the option.
-  # this may lead to cases where there is a defined ingroup, but no outgroup
-  # reference.
+  # if outgroup_reference is explicitly FALSE, clear the reference. Closed
+  # classifiers that need best_hit already error in parse_reclassify_options();
+  # sole closed classifiers warn here when best_hit would be useful.
   if (isFALSE(pipeline_options$outgroup_reference)) {
-    if (do_outgroup()) {
+    if (do_best_hit()) {
       warning(
-        "Taxonomic rank definitions imply the possibility of outgroup ",
-        "sequences but no outgroup reference file was provided.\n",
+        "Classifier scope implies best_hit screening may be needed but no ",
+        "outgroup reference file was provided.\n",
         "(file: pipeline_options.yaml)"
       )
     }
     options(
-      optimotu.pipeline.do_outgroup = FALSE
+      optimotu.pipeline.do_outgroup = FALSE,
+      optimotu.pipeline.outgroup_reference = NULL,
+      optimotu.pipeline.outgroup_taxonomy = NULL
     )
     return()
   }
@@ -1859,6 +2205,8 @@ parse_outgroup_options <- function(pipeline_options) {
 #' @rdname pipeline_options
 #' @export
 do_outgroup <- function() {
+  # True when an outgroup_reference file is configured (also used for uchime).
+  # Prefer do_best_hit() for whether taxonomic nearest-neighbor search runs.
   getOption("optimotu.pipeline.do_outgroup", FALSE)
 }
 

@@ -64,6 +64,15 @@
 \alias{do_spike}
 \alias{pos_control_file}
 \alias{do_pos_control}
+\alias{do_reclassify}
+\alias{primary_classifier}
+\alias{reclassify_classifier}
+\alias{reclassify_rank}
+\alias{reclassify_min_prob}
+\alias{classifier_scope_ranks}
+\alias{classifier_scope_taxa}
+\alias{classifier_is_open}
+\alias{do_best_hit}
 \alias{do_protax}
 \alias{protax_aligned}
 \alias{protax_unaligned}
@@ -237,6 +246,24 @@ pos_control_file()
 
 do_pos_control()
 
+do_reclassify()
+
+primary_classifier()
+
+reclassify_classifier()
+
+reclassify_rank()
+
+reclassify_min_prob()
+
+classifier_scope_ranks(which = c("primary", "reclassify"))
+
+classifier_scope_taxa(which = c("primary", "reclassify"))
+
+classifier_is_open(which = c("primary", "reclassify"))
+
+do_best_hit()
+
 do_protax()
 
 protax_aligned()
@@ -336,6 +363,8 @@ did_pipeline_options()
 
 \item{set_name}{(\code{character} vector) name(s) of the supplemental ASV set(s)
 to access}
+
+\item{which}{(\code{character}) \code{"primary"} or \code{"reclassify"}}
 
 \item{method}{(\code{character(1)}) distance method; defaults to
 \code{\link[=cluster_dist_config]{cluster_dist_config()}}\verb{$method}}

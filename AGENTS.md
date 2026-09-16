@@ -121,6 +121,16 @@ families include:
 - sample and path accessors (`sample_table()`, `*_path()`)
 - taxonomy utilities and rank helpers (`tax_ranks()`, `known_ranks()`,
   `superranks()`, `subranks()`, `build_taxonomy()`)
+- taxonomy cascade options (`do_reclassify()`, `primary_classifier()`,
+  `reclassify_classifier()`, `reclassify_rank()`, `reclassify_min_prob()`,
+  `classifier_scope_ranks()`, `classifier_scope_taxa()`,
+  `classifier_is_open()`, `do_best_hit()`) and helpers
+  (`ids_needing_reclassify()`, `combine_tax_prob()`, `assigned_ranks()`,
+  `scope_prior_taxonomy()`, `study_ingroup_membership()`,
+  `best_hit_ingroup_exceptions()`). Optional `taxonomy.reclassify` runs a
+  fallback on low-confidence / closed-scope-screened ASVs. Per-classifier
+  `scope:` is independent of the study-ingroup named prefix of
+  `taxonomy.ranks`.
 - clustering orchestration helpers (`do_closed_ref_cluster()`,
   `do_denovo_cluster()`, preclosed/predenovo table constructors).
   `min_ops` is the large/small parallel cutoff; `max_ops` packs both

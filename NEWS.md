@@ -1,4 +1,13 @@
 # optimotu.pipeline development version
+* Add optional `taxonomy.reclassify` cascade: a primary classifier runs on all
+  ASVs, then a fallback classifier runs only on sequences that fail a
+  confidence gate at a configured rank (or the hard-coded `best_hit` scope
+  screen when the primary is closed). Per-classifier `scope:` separates
+  study-ingroup ranks (`taxonomy.ranks` named prefix) from ranks a method does
+  not assign. `do_best_hit()` is true when any winning classifier may be
+  closed. Helpers: `ids_needing_reclassify()`, `combine_tax_prob()`,
+  `assigned_ranks()`, `scope_prior_taxonomy()`, `study_ingroup_membership()`,
+  `best_hit_ingroup_exceptions()`.
 * Split LULU parent mapping by OTU-table partition (batch / seqrun / global)
   to reduce peak memory: `lulu_otu_stats()` precomputes global
   occurrence/abundance/grain; `lulu_map_scoped()` decides parents for
