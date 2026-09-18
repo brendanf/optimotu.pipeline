@@ -1,7 +1,9 @@
 #' Finalize a sample table after it has been read or inferred
 #'
 #' This includes adding the `orient` column if it is not already present,
-#' generating file names for the trimmed and filtered reads, and validation.
+#' deriving `orient_group` (`fwd` / `rev` / `mixfwd` / `mixrev`) for plan-time
+#' both-run slicing, generating file names for the trimmed and filtered reads,
+#' and validation.
 #'
 #' @param sample_table (`tibble`) the sample table to finalize.
 #' @return A finalized sample table
@@ -12,7 +14,7 @@ finalize_sample_table <- function(
   # avoid R CMD check note for undefined global variables due to NSE
   sample <- seqrun <- fastq_R1 <- fastq_R2 <- rarefy_text <- NULL
   readwise_key <- orient <- sample_key <- filt_R1 <- filt_R2 <- NULL
-  merged <- NULL
+  merged <- orient_group <- NULL
   checkmate::assert_tibble(sample_table)
   checkmate::check_names(
     names(sample_table),
@@ -25,23 +27,6 @@ finalize_sample_table <- function(
       "pos_control"
     )
   )
-
-  n_samples <- dplyr::n_distinct(sample_table$sample, sample_table$seqrun)
-  if (n_samples != nrow(sample_table)) {
-    if (duplicate_samples() == "merge") {
-      sample_table <- sample_table |>
-        dplyr::summarize(
-          fastq_R1 = paste(fastq_R1, collapse = ","),
-          fastq_R2 = paste(fastq_R2, collapse = ","),
-          .by = c(everything(), -fastq_R1, -fastq_R2)
-        )
-    } else {
-      stop(
-        "duplicate samples found in sample table; use option ",
-        "'duplicate_samples: merge' to merge them"
-      )
-    }
-  }
 
   switch(
     read_orientation(),
@@ -66,6 +51,29 @@ finalize_sample_table <- function(
     )
   )
 
+  # After orient is known (including custom mixed -> fwd/rev rows), allow one
+  # row per sample x seqrun x orient; true duplicate libraries still error.
+  n_samples <- dplyr::n_distinct(
+    sample_table$sample,
+    sample_table$seqrun,
+    sample_table$orient
+  )
+  if (n_samples != nrow(sample_table)) {
+    if (duplicate_samples() == "merge") {
+      sample_table <- sample_table |>
+        dplyr::summarize(
+          fastq_R1 = paste(fastq_R1, collapse = ","),
+          fastq_R2 = paste(fastq_R2, collapse = ","),
+          .by = c(everything(), -fastq_R1, -fastq_R2)
+        )
+    } else {
+      stop(
+        "duplicate samples found in sample table; use option ",
+        "'duplicate_samples: merge' to merge them"
+      )
+    }
+  }
+
   if (do_rarefy()) {
     sample_table <- tidyr::crossing(sample_table, rarefy_meta(dots = FALSE)) |>
       dplyr::mutate(
@@ -83,6 +91,25 @@ finalize_sample_table <- function(
       sample_key = readwise_key
     )
   }
+
+  # Plan-time library class: disjoint fwd/rev vs paired mixfwd/mixrev.
+  # Path token `orient` stays fwd/rev; mix* marks sample_keys present in both.
+  sample_table <- sample_table |>
+    dplyr::mutate(
+      orient_group = {
+        n_orient <- dplyr::n_distinct(orient)
+        if (n_orient > 1L) {
+          dplyr::case_match(
+            orient,
+            "fwd" ~ "mixfwd",
+            "rev" ~ "mixrev"
+          )
+        } else {
+          orient
+        }
+      },
+      .by = c(seqrun, sample_key)
+    )
 
   sample_table <- sample_table |>
     # generate filenames for trimmed and filtered reads

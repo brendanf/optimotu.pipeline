@@ -153,6 +153,54 @@ merge_read_maps <- function(read_map_fwd, read_map_rev) {
     )
 }
 
+#' Read and bind fate-map targets for one sequencing run
+#'
+#' Convenience wrapper around [targets::tar_read()]. Both-orientation runs no
+#' longer store a combined seqrun-level `read_map`; this binds the available
+#' orientation slices: half-run `read_map`, disjoint `read_map_fwd` /
+#' `read_map_rev`, and batch-merged `read_map_mixed` when present.
+#'
+#' @param seqrun (`character` scalar) sequencing run name, as used in target
+#'   name suffixes
+#' @param branches (`integer` or `NULL`) passed to [targets::tar_read_raw()]
+#' @param store (`character`) path to the targets data store
+#' @return a `data.frame` with the usual fate-map columns, or a 0-row fate map
+#'   if no matching targets exist
+#' @export
+read_read_maps <- function(
+  seqrun,
+  branches = NULL,
+  store = targets::tar_config_get("store")
+) {
+  checkmate::assert_string(seqrun)
+  # Prefer merged mix maps over unannotated mixfwd/mixrev batch maps.
+  suffixes <- c("", "_fwd", "_rev", "_mixed")
+  names <- paste0("read_map", suffixes, "_", seqrun)
+  meta <- targets::tar_meta(
+    names = tidyselect::any_of(names),
+    store = store
+  )
+  present <- intersect(names, meta$name)
+  if (length(present) == 0L) {
+    return(empty_read_map())
+  }
+  parts <- lapply(
+    present,
+    \(nm) targets::tar_read_raw(nm, branches = branches, store = store)
+  )
+  # Patterned targets may return a list of branch tables
+  parts <- lapply(parts, \(x) {
+    if (is.data.frame(x)) {
+      x
+    } else if (is.list(x)) {
+      dplyr::bind_rows(x)
+    } else {
+      empty_read_map()
+    }
+  })
+  dplyr::bind_rows(parts)
+}
+
 #' Pipe LULU and/or UNCROSS annotations onto a read-map expression
 #'
 #' Plan-time helper for `targets` commands. Wraps `read_map_expr` in

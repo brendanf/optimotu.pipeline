@@ -474,7 +474,10 @@ trim_primer <- function(seqs, primer, ...) {
 #' @param pairs_meta (`data.frame`) metadata for the paired-end reads
 #' @param seqrun (`character`) seqrun identifier for the batch
 #' @param orient (`character`) orientation of the reads for the batch; either
-#' "fwd" or "rev"
+#' "fwd" or "rev" (controls primer assignment)
+#' @param log_tag (`character`) tag for the trim log file name; defaults to
+#' `orient`. Use a distinct value (e.g. `mixfwd`) when multiple batches share
+#' the same file orientation within a sequencing run.
 #' @param trim_options ([`cutadapt_paired_options`](`cutadapt_paired_options()`)
 #' options for cutadapt
 #' @param primer_R1 (`character`) primer specification for R1
@@ -493,9 +496,10 @@ trim_raw_pairs <- function(
   primer_R2,
   ncpu = local_cpus(),
   cutadapt = find_cutadapt(),
+  log_tag = orient,
   ...
 ) {
-  logfile_name <- sprintf("logs/trim_%s_%s.log", seqrun, orient)
+  logfile_name <- sprintf("logs/trim_%s_%s.log", seqrun, log_tag)
   logfile <- withr::local_connection(file(logfile_name, "w"))
 
   dplyr::group_by(

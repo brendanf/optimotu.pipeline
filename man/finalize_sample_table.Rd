@@ -14,6 +14,8 @@ A finalized sample table
 }
 \description{
 This includes adding the \code{orient} column if it is not already present,
-generating file names for the trimmed and filtered reads, and validation.
+deriving \code{orient_group} (\code{fwd} / \code{rev} / \code{mixfwd} / \code{mixrev}) for plan-time
+both-run slicing, generating file names for the trimmed and filtered reads,
+and validation.
 }
 \keyword{internal}

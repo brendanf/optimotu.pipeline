@@ -49,7 +49,8 @@ External tool wrappers:
   (`make_denoise_map()`, `denoise_map_to_seqtable()`). One `seq_all` match
   per chunk feeds both community tables and read maps.
 - `R/read_map.R` — denoiser-neutral read-map helpers (`seq_idx_lookup()`,
-  `match_to_seq_all()`, `merge_read_maps()`, `with_read_map_annotate()`)
+  `match_to_seq_all()`, `merge_read_maps()`, `with_read_map_annotate()`,
+  `read_read_maps()`)
 
 Denoising / read-quality post-processing:
 
@@ -155,13 +156,14 @@ families include:
   `merge_max_mismatch()`)
 - Shared denoise maps and read maps (`make_denoise_map()`,
   `denoise_map_to_seqtable()`, `dada2_read_map()`, `unoise_read_map()`,
-  `merge_read_maps()`, `with_read_map_annotate()`)
+  `merge_read_maps()`, `with_read_map_annotate()`, `read_read_maps()`)
 - Top-level `dist_config:` / `executables:` / `merging:` options; Protax
   `added_reference` lives under `taxonomy.protax`
 - LULU secondary-clustering entry points (`lulu_long.R`), configured through
   `parse_lulu_options()`, including `lulu_otu_stats()`, `lulu_map_scoped()`,
   `lulu_map_combine()`, `add_lulu_to_read_map()` for fate maps, and
-  `with_read_map_annotate()` to wrap those steps in target commands
+  `with_read_map_annotate()` to wrap those steps in target commands.
+  `read_read_maps()` binds per-orientation fate maps for interactive use.
 
 Changes to exported option helpers are high-risk because downstream
 `optimotu_targets` scripts often quote/unquote these calls inside target

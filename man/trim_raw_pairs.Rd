@@ -13,6 +13,7 @@ trim_raw_pairs(
   primer_R2,
   ncpu = local_cpus(),
   cutadapt = find_cutadapt(),
+  log_tag = orient,
   ...
 )
 }
@@ -22,7 +23,7 @@ trim_raw_pairs(
 \item{seqrun}{(\code{character}) seqrun identifier for the batch}
 
 \item{orient}{(\code{character}) orientation of the reads for the batch; either
-"fwd" or "rev"}
+"fwd" or "rev" (controls primer assignment)}
 
 \item{trim_options}{(\href{`cutadapt_paired_options()`}{\code{cutadapt_paired_options}}
 options for cutadapt}
@@ -34,6 +35,10 @@ options for cutadapt}
 \item{ncpu}{(\code{integer}) number of CPU threads to use}
 
 \item{cutadapt}{(\code{character}) path to the \code{cutadapt} executable}
+
+\item{log_tag}{(\code{character}) tag for the trim log file name; defaults to
+\code{orient}. Use a distinct value (e.g. \code{mixfwd}) when multiple batches share
+the same file orientation within a sequencing run.}
 
 \item{...}{additional arguments for dependency tracking}
 }

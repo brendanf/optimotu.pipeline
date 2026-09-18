@@ -1,4 +1,11 @@
 # optimotu.pipeline development version
+* Add `orient_group` on the finalized sample table (`fwd` / `rev` /
+  `mixfwd` / `mixrev`) so both-orientation runs can treat disjoint libraries
+  separately from paired mixed libraries. Path token `orient` stays
+  `fwd`/`rev`. Duplicate-sample checks are keyed on sample x seqrun x orient
+  so custom mixed libraries are allowed. `trim_raw_pairs()` gains `log_tag`.
+  Add `read_read_maps()` to bind per-orientation fate-map targets for a
+  sequencing run without storing a combined seqrun-level table.
 * Add optional `taxonomy.reclassify` cascade: a primary classifier runs on all
   ASVs, then a fallback classifier runs only on sequences that fail a
   confidence gate at a configured rank (or the hard-coded `best_hit` scope
