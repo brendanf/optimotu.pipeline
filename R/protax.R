@@ -260,7 +260,10 @@ run_protax_animal <- function(
 
   if (strip_inserts | is_gz) {
     prepipe <- vector("list", n)
-    protax_in <- replicate(n, withr::local_tempfile(fileext = ".fasta"))
+    protax_in <- replicate(
+      n,
+      withr::local_tempfile(fileext = ".fasta", .local_envir = tmp_parent)
+    )
     pipecommand <- if (is_gz) "zcat" else "cat"
     pipecommand <- paste(pipecommand, aln_seqs)
     if (strip_inserts) {
@@ -272,7 +275,7 @@ run_protax_animal <- function(
   }
 
   protax <- vector("list", n)
-  outfiles <- replicate(n, withr::local_tempfile())
+  outfiles <- replicate(n, withr::local_tempfile(.local_envir = tmp_parent))
   for (i in seq_len(n)) {
     if (strip_inserts | is_gz) {
       system(pipecommand[i])
@@ -399,7 +402,10 @@ run_protax_besthit <- function(
   is_gz_ref <- all(is_gz_ref)
 
   if (n_ref > 1) {
-    ref <- replicate(n_query, withr::local_tempfile(fileext = ".fasta"))
+    ref <- replicate(
+      n_query,
+      withr::local_tempfile(fileext = ".fasta", .local_envir = tmp_parent)
+    )
     refcommand <- if (is_gz_ref) "zcat" else "cat"
     for (i in seq_len(n_query)) {
       system2("mkfifo", args = ref[i])
@@ -415,7 +421,10 @@ run_protax_besthit <- function(
   }
 
   besthit <- vector("list", n_query)
-  outfiles <- replicate(n_query, withr::local_tempfile())
+  outfiles <- replicate(
+    n_query,
+    withr::local_tempfile(.local_envir = tmp_parent)
+  )
   for (i in seq_len(n_query)) {
     besthit[[i]] <- processx::process$new(
       command = executable,

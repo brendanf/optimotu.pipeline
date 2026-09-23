@@ -29,6 +29,8 @@
   object (needed for per-batch `lulu_map_scoped()` with `retrieval = "none"`).
 * Read fate mapping no longer fails if all samples in a batch are empty after
   denoising.
+* Fixed tempfile "leak" (i.e., tempfiles that are not deleted after use) in
+  protax helpers.
 
 # optimotu.pipeline 0.7.0
 * `fastx_gz_hash()` falls back to a temp extract + `tools::md5sum()`
