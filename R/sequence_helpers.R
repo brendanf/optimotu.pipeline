@@ -236,6 +236,26 @@ sequence_size.default <- function(seq, ...) {
   vctrs::vec_size(seq)
 }
 
+#' Get sequence names from one or more FASTA files
+#'
+#' Concatenates [Biostrings::fasta.seqlengths()] names across `x` in file
+#' order. Analogous to [fastq_names()] for FASTA (including gzipped files
+#' and batched `tar_file` path vectors).
+#'
+#' @param x (`character`) FASTA file path(s), optionally gzipped
+#' @return (`character`) sequence names in file order
+#' @export
+fasta_names <- function(x) {
+  checkmate::assert_character(x, min.len = 1L, any.missing = FALSE)
+  unlist(
+    lapply(x, function(p) {
+      checkmate::assert_file_exists(p, access = "r")
+      names(Biostrings::fasta.seqlengths(p))
+    }),
+    use.names = FALSE
+  )
+}
+
 seqhash <- function(...) {
   digest::getVDigest("spookyhash")(...)
 }

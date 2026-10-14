@@ -1,4 +1,9 @@
 # optimotu.pipeline development version
+* Add `fasta_is_hamming_ready()` to detect equal packed-width FASTA
+  (including A2M lowercase inserts) for Hamming threshold training.
+  Add `fasta_names()` (FASTA analogue of `fastq_names()`, including
+  multi-file path vectors) and `is_same_path()` for plan-time file
+  identity.
 * Add `align_fasta_batch_to_amplicon_model()` for batched CM (`cmalign` +
   consensus columns, optional `--sfile`) or HMM (`hmmalign` A2M) alignment of
   a sequence subset. Query ASV, outgroup, and supplemental alignment targets

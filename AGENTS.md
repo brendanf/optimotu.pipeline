@@ -91,24 +91,25 @@ Reporting helpers:
 
 Sequence/file helpers:
 
-- `R/sequence_helpers.R`, `R/sequence_table.R`, `R/fastx_split_combine.R`,
+- `R/sequence_helpers.R` (`fasta_names()`, write/count/hash helpers),
+  `R/sequence_table.R`, `R/fastx_split_combine.R`,
   `R/fastq_index.R` (`write_fastqindexr_index()` for qs2 index files;
   `.qs2` / `.fqi` paths accepted by extract helpers), `R/seq_batch_input.R`
   (shared internals for indexed / sequential sequence batching used by
   `hmmalign()` and future tool wrappers), `R/amplicon_align.R`
   (`align_fasta_batch_to_amplicon_model()` for batched CM/HMM alignment),
+  `R/hamming_fasta.R` (`fasta_is_hamming_ready()`),
   `R/write_and_return_file.R`
 
 Small utilities:
 
 - `R/sample_key.R` — derive a sample key from a file name
 - `R/external.R` — locate external executables on the system
+- `R/util.R` — SLURM/Snakemake/local detection, CPU count, `is_same_path()`
 - `R/distribute_tasks.R` — greedy-algorithm task binning
 - `R/parse_taxonomy.R` — parse taxonomy from TSV/FASTA headers;
   `fasta_header_seq_ids()` extracts bare IDs from annotated headers for
   `optimotu::optimize_thresholds(seq_names = ...)`
-- `R/util.R` — misc helpers (SLURM/Snakemake/local execution detection, CPU
-  count)
 
 Native helpers:
 

@@ -42,6 +42,30 @@ local_cpus <- function() {
   }
 }
 
+#' Whether two paths refer to the same existing file
+#'
+#' Plan-time identity after [normalizePath()]. Returns `FALSE` when either
+#' argument is missing, empty, or not an existing file (no error).
+#'
+#' @param a,b (`character(1)` or `NULL`) paths to compare
+#' @return (`logical(1)`)
+#' @export
+is_same_path <- function(a, b) {
+  if (
+    !checkmate::test_string(a, min.chars = 1L) ||
+      !checkmate::test_string(b, min.chars = 1L)
+  ) {
+    return(FALSE)
+  }
+  if (!file.exists(a) || !file.exists(b)) {
+    return(FALSE)
+  }
+  identical(
+    normalizePath(a, winslash = "/", mustWork = TRUE),
+    normalizePath(b, winslash = "/", mustWork = TRUE)
+  )
+}
+
 
 #' Ensure that a table has at least one row
 #'

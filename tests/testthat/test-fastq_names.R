@@ -3,6 +3,21 @@ test_that("fastq_names works", {
   expect_equal(fastq_names(raw1_fastq_gz), test_names1)
 })
 
+test_that("fasta_names concatenates multiple FASTA files", {
+  fa1 <- withr::local_tempfile(fileext = ".fasta")
+  fa2 <- withr::local_tempfile(fileext = ".fasta")
+  Biostrings::writeXStringSet(
+    Biostrings::DNAStringSet(c(a = "ACGT")),
+    fa1
+  )
+  Biostrings::writeXStringSet(
+    Biostrings::DNAStringSet(c(b = "GGGG")),
+    fa2
+  )
+  expect_equal(fasta_names(fa1), "a")
+  expect_equal(fasta_names(c(fa1, fa2)), c("a", "b"))
+})
+
 test_that("fastq_rename renames FASTQ read names and preserves content", {
   new_names <- sprintf("renamed_fastq_%03d", seq_along(test_names1))
 
