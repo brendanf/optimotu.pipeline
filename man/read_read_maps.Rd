@@ -14,7 +14,7 @@ read_read_maps(
 \item{seqrun}{(\code{character} scalar) sequencing run name, as used in target
 name suffixes}
 
-\item{branches}{(\code{integer} or \code{NULL}) passed to \code{\link[targets:tar_read_raw]{targets::tar_read_raw()}}}
+\item{branches}{(\code{integer} or \code{NULL}) passed to \code{\link[targets:tar_read]{targets::tar_read_raw()}}}
 
 \item{store}{(\code{character}) path to the targets data store}
 }

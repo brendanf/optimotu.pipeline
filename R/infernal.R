@@ -77,8 +77,15 @@ consensus_columns <- function(aln) {
   }
   checkmate::assert_class(rf, "BString")
   dots <- gregexpr("[.]+", as.character(rf))[[1]]
-  Biostrings::colmask(alignment) <-
-    IRanges::IRanges(start = dots, width = attr(dots, "match.length"))
+  # gregexpr returns -1 when there are no insert columns to mask.
+  if (length(dots) == 1L && identical(as.integer(dots), -1L)) {
+    Biostrings::colmask(alignment) <- IRanges::IRanges()
+  } else {
+    Biostrings::colmask(alignment) <- IRanges::IRanges(
+      start = dots,
+      width = attr(dots, "match.length")
+    )
+  }
   xss <- methods::as(alignment, "XStringSet")
   if (methods::is(xss, "RNAStringSet")) {
     Biostrings::DNAStringSet(xss)

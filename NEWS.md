@@ -1,4 +1,9 @@
 # optimotu.pipeline development version
+* Add `align_fasta_batch_to_amplicon_model()` for batched CM (`cmalign` +
+  consensus columns, optional `--sfile`) or HMM (`hmmalign` A2M) alignment of
+  a sequence subset. Query ASV, outgroup, and supplemental alignment targets
+  in `optimotu_targets` call this helper. `consensus_columns()` no longer
+  errors when the Infernal RF line has no insert (`.`) columns.
 * Add `orient_group` on the finalized sample table (`fwd` / `rev` /
   `mixfwd` / `mixrev`) so both-orientation runs can treat disjoint libraries
   separately from paired mixed libraries. Path token `orient` stays
