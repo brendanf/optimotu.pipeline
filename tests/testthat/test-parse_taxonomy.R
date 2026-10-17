@@ -90,10 +90,25 @@ test_that("fasta_header_seq_ids extracts IDs for all supported formats", {
   expect_equal(fasta_header_seq_ids(character()), character())
 })
 
+test_that("fasta_header_seq_ids extracts IDs from tab-separated Protax headers", {
+  protax_headers <- c(
+    "42\tAnimalia,Arthropoda,Insecta",
+    "99\tAnimalia,Chordata,Mammalia"
+  )
+  expect_equal(fasta_header_seq_ids(protax_headers), c("42", "99"))
+})
+
 test_that("fasta_header_seq_ids errors on unrecognized headers", {
   expect_error(
     fasta_header_seq_ids(c("just_an_id", "another_plain_id")),
     "Unrecognized sequence header format"
+  )
+})
+
+test_that("fasta_header_seq_ids allow_plain keeps bare IDs", {
+  expect_equal(
+    fasta_header_seq_ids(c("just_an_id", "another_plain_id"), allow_plain = TRUE),
+    c("just_an_id", "another_plain_id")
   )
 })
 

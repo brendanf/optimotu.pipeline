@@ -224,16 +224,21 @@ parse_reference_taxonomy <- function(
 
 #' Extract `seq_id` values from annotated FASTA headers
 #'
-#' Detects supported taxonomy header formats (SINTAX, BOLD, UNITE, BayesANT)
-#' and returns the sequence identifier from each header, in input order. Use
-#' with `optimotu::optimize_thresholds(seq_names = ...)` when FASTA headers
+#' Detects supported taxonomy header formats (SINTAX, BOLD, UNITE, BayesANT,
+#' and Protax-style `id<tab>taxonomy`) and returns the sequence identifier
+#' from each header, in input order. Use with
+#' `optimotu::optimize_thresholds(seq_names = ...)` when FASTA headers
 #' carry taxonomy and are not bare `seq_id` values.
 #'
 #' @param headers (`character`) FASTA header strings (without leading `>`)
+#' @param allow_plain (`logical(1)`) if `TRUE`, unrecognized headers (for
+#'   example bare IDs after `hmmalign`) are returned unchanged instead of
+#'   erroring
 #' @return (`character`) `seq_id` for each header
 #' @export
-fasta_header_seq_ids <- function(headers) {
+fasta_header_seq_ids <- function(headers, allow_plain = FALSE) {
   checkmate::assert_character(headers, any.missing = FALSE)
+  checkmate::assert_flag(allow_plain)
   if (length(headers) == 0L) {
     return(character())
   }
@@ -244,10 +249,15 @@ fasta_header_seq_ids <- function(headers) {
     vapply(strsplit(headers, "|", fixed = TRUE), `[`, character(1), 1L)
   } else if (is_bayesant_header(headers)) {
     sub("[[:space:]].*$", "", headers)
+  } else if (any(grepl("\t", headers, fixed = TRUE))) {
+    # Aligned Protax refs.aln: short ID, tab, taxonomy string
+    sub("\t.*$", "", headers)
+  } else if (isTRUE(allow_plain)) {
+    headers
   } else {
     stop(
       "Unrecognized sequence header format. Supported: SINTAX, BOLD, UNITE,",
-      " and BayesANT."
+      " BayesANT, and tab-separated Protax (`id<tab>taxonomy`)."
     )
   }
 }

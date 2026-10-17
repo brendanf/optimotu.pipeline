@@ -4,17 +4,22 @@
 \alias{fasta_header_seq_ids}
 \title{Extract \code{seq_id} values from annotated FASTA headers}
 \usage{
-fasta_header_seq_ids(headers)
+fasta_header_seq_ids(headers, allow_plain = FALSE)
 }
 \arguments{
 \item{headers}{(\code{character}) FASTA header strings (without leading \code{>})}
+
+\item{allow_plain}{(\code{logical(1)}) if \code{TRUE}, unrecognized headers (for
+example bare IDs after \code{hmmalign}) are returned unchanged instead of
+erroring}
 }
 \value{
 (\code{character}) \code{seq_id} for each header
 }
 \description{
-Detects supported taxonomy header formats (SINTAX, BOLD, UNITE, BayesANT)
-and returns the sequence identifier from each header, in input order. Use
-with \code{optimotu::optimize_thresholds(seq_names = ...)} when FASTA headers
+Detects supported taxonomy header formats (SINTAX, BOLD, UNITE, BayesANT,
+and Protax-style \verb{id<tab>taxonomy}) and returns the sequence identifier
+from each header, in input order. Use with
+\code{optimotu::optimize_thresholds(seq_names = ...)} when FASTA headers
 carry taxonomy and are not bare \code{seq_id} values.
 }

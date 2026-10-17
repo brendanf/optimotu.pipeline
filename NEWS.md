@@ -1,4 +1,7 @@
 # optimotu.pipeline development version
+* `fasta_header_seq_ids()` understands tab-separated Protax headers
+  (`id<tab>taxonomy`) and `allow_plain = TRUE` so bare IDs (e.g. after
+  `hmmalign`) are kept instead of erroring.
 * Add `fasta_is_hamming_ready()` to detect equal packed-width FASTA
   (including A2M lowercase inserts) for Hamming threshold training.
   Add `fasta_names()` (FASTA analogue of `fastq_names()`, including
