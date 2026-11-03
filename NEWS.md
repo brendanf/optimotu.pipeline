@@ -1,4 +1,11 @@
 # optimotu.pipeline development version
+* `outgroup_reference` may be a named map of FASTA libraries (plain or
+  `.gz`, mixed header formats). `vsearch_uchime_ref()` and
+  `vsearch_usearch_global()` stream those files as one `--db` with
+  `{library}:` header prefixes, so cross-library chimeras are detected
+  without writing a merged FASTA or UDB. Helpers:
+  `outgroup_libraries()`, `outgroup_library_taxonomy()`,
+  `outgroup_hit_ref_ids()`, `reduce_library_best_hits()`.
 * `fasta_header_seq_ids()` understands tab-separated Protax headers
   (`id<tab>taxonomy`) and `allow_plain = TRUE` so bare IDs (e.g. after
   `hmmalign`) are kept instead of erroring.

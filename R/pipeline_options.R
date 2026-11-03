@@ -2158,6 +2158,57 @@ epa_outgroup <- function() {
 
 #### Outgroup reference settings ####
 
+assert_outgroup_library_name <- function(name) {
+  checkmate::assert_string(name, min.chars = 1L)
+  if (grepl(":", name, fixed = TRUE) || grepl("[[:space:]]", name)) {
+    stop(
+      "outgroup_reference library names must be a single token without ",
+      "spaces or ':' (got '",
+      name,
+      "').\n(file: pipeline_options.yaml)",
+      call. = FALSE
+    )
+  }
+  made <- make.names(name)
+  if (!identical(made, name)) {
+    stop(
+      "outgroup_reference library name '",
+      name,
+      "' is not a valid R/targets name (try '",
+      made,
+      "').\n(file: pipeline_options.yaml)",
+      call. = FALSE
+    )
+  }
+  invisible(name)
+}
+
+parse_one_outgroup_library <- function(name, opts) {
+  assert_outgroup_library_name(name)
+  checkmate::assert_list(opts)
+  opts <- unnest_yaml_list(opts)
+  checkmate::assert_names(
+    names(opts),
+    must.include = "sequences",
+    subset.of = c("sequences", "taxonomy")
+  )
+  checkmate::assert_string(opts$sequences, min.chars = 1L)
+  checkmate::assert_file_exists(opts$sequences, "r")
+  taxonomy <- NULL
+  if (!is.null(opts$taxonomy)) {
+    checkmate::assert_string(opts$taxonomy, min.chars = 1L)
+    checkmate::assert_file_exists(opts$taxonomy, "r")
+    taxonomy <- opts$taxonomy
+  }
+  list(name = name, sequences = opts$sequences, taxonomy = taxonomy)
+}
+
+is_legacy_outgroup_options <- function(outgroup_options) {
+  "sequences" %in%
+    names(outgroup_options) &&
+    !is.list(outgroup_options$sequences)
+}
+
 #' @rdname parse_pipeline_options
 #' @export
 parse_outgroup_options <- function(pipeline_options) {
@@ -2179,27 +2230,67 @@ parse_outgroup_options <- function(pipeline_options) {
     options(
       optimotu.pipeline.do_outgroup = FALSE,
       optimotu.pipeline.outgroup_reference = NULL,
-      optimotu.pipeline.outgroup_taxonomy = NULL
+      optimotu.pipeline.outgroup_taxonomy = NULL,
+      optimotu.pipeline.outgroup_libraries = NULL
     )
     return()
   }
   outgroup_options <- unnest_yaml_list(pipeline_options$outgroup_reference)
-  checkmate::assert_names(
-    names(outgroup_options),
-    must.include = "sequences",
-    subset.of = c("sequences", "taxonomy")
-  )
-  checkmate::assert_file_exists(outgroup_options$sequences, "r")
+  checkmate::assert_list(outgroup_options, min.len = 1L)
+  if (is_legacy_outgroup_options(outgroup_options)) {
+    libraries <- list(parse_one_outgroup_library(
+      "reference",
+      outgroup_options
+    ))
+  } else {
+    if (
+      is.null(names(outgroup_options)) ||
+        any(!nzchar(names(outgroup_options)))
+    ) {
+      stop(
+        "'outgroup_reference' must be a mapping with 'sequences:' or a ",
+        "named map of libraries.\n(file: pipeline_options.yaml)",
+        call. = FALSE
+      )
+    }
+    if ("sequences" %in% names(outgroup_options)) {
+      stop(
+        "'outgroup_reference: sequences' must be a single FASTA path; ",
+        "for several libraries use a named map of libraries.\n",
+        "(file: pipeline_options.yaml)",
+        call. = FALSE
+      )
+    }
+    libraries <- lapply(names(outgroup_options), function(nm) {
+      el <- outgroup_options[[nm]]
+      if (!is.list(el)) {
+        stop(
+          "outgroup_reference library '",
+          nm,
+          "' must be a mapping with 'sequences:'.\n",
+          "(file: pipeline_options.yaml)",
+          call. = FALSE
+        )
+      }
+      parse_one_outgroup_library(nm, el)
+    })
+  }
+  names(libraries) <- vapply(libraries, `[[`, character(1), "name")
+  single <- length(libraries) == 1L
   options(
-    optimotu.pipeline.outgroup_reference = outgroup_options$sequences,
+    optimotu.pipeline.outgroup_libraries = libraries,
+    optimotu.pipeline.outgroup_reference = if (single) {
+      libraries[[1L]]$sequences
+    } else {
+      NULL
+    },
+    optimotu.pipeline.outgroup_taxonomy = if (single) {
+      libraries[[1L]]$taxonomy
+    } else {
+      NULL
+    },
     optimotu.pipeline.do_outgroup = TRUE
   )
-  if (!is.null(outgroup_options$taxonomy)) {
-    checkmate::assert_file_exists(outgroup_options$taxonomy, "r")
-    options(
-      optimotu.pipeline.outgroup_taxonomy = outgroup_options$taxonomy
-    )
-  }
 }
 
 #' @rdname pipeline_options
@@ -2212,13 +2303,35 @@ do_outgroup <- function() {
 
 #' @rdname pipeline_options
 #' @export
+outgroup_libraries <- function() {
+  getOption("optimotu.pipeline.outgroup_libraries", NULL)
+}
+
+#' @rdname pipeline_options
+#' @export
 outgroup_reference <- function() {
+  libs <- outgroup_libraries()
+  if (length(libs) > 1L) {
+    stop(
+      "Multiple outgroup_reference libraries are configured; ",
+      "use outgroup_libraries().",
+      call. = FALSE
+    )
+  }
   getOption("optimotu.pipeline.outgroup_reference")
 }
 
 #' @rdname pipeline_options
 #' @export
 outgroup_taxonomy <- function() {
+  libs <- outgroup_libraries()
+  if (length(libs) > 1L) {
+    stop(
+      "Multiple outgroup_reference libraries are configured; ",
+      "use outgroup_libraries().",
+      call. = FALSE
+    )
+  }
   getOption("optimotu.pipeline.outgroup_taxonomy")
 }
 

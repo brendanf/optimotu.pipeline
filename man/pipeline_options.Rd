@@ -90,6 +90,7 @@
 \alias{epa_params}
 \alias{epa_outgroup}
 \alias{do_outgroup}
+\alias{outgroup_libraries}
 \alias{outgroup_reference}
 \alias{outgroup_taxonomy}
 \alias{top_dist_config}
@@ -297,6 +298,8 @@ epa_params()
 epa_outgroup()
 
 do_outgroup()
+
+outgroup_libraries()
 
 outgroup_reference()
 

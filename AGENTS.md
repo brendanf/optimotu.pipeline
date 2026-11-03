@@ -41,7 +41,9 @@ External tool wrappers:
 - `R/vsearch.R` — vsearch wrappers including paired-read merging
   (`vsearch_fastq_merge_pairs()`) and UNOISE clustering
   (`vsearch_cluster_unoise2()`, which pipes `--fastx_uniques` into
-  `--cluster_unoise`)
+  `--cluster_unoise`). `vsearch_uchime_ref()` /
+  `vsearch_usearch_global()` accept `outgroup_libraries()` as `ref` and
+  stream them to a fifo `--db` (not `--db -`).
 - `R/unoise.R` — UNOISE per-read fate mapping (`unoise_read_map()`); also
   takes a shared `denoise_map`. Sequence tables from `uc_cluster` objects
   use `make_denoise_map()` / `denoise_map_to_seqtable()`.
@@ -131,7 +133,9 @@ families include:
   `classifier_is_open()`, `do_best_hit()`) and helpers
   (`ids_needing_reclassify()`, `combine_tax_prob()`, `assigned_ranks()`,
   `scope_prior_taxonomy()`, `study_ingroup_membership()`,
-  `best_hit_ingroup_exceptions()`). Optional `taxonomy.reclassify` runs a
+  `best_hit_ingroup_exceptions()`, `outgroup_libraries()`,
+  `outgroup_library_taxonomy()`, `outgroup_hit_ref_ids()`,
+  `reduce_library_best_hits()`). Optional `taxonomy.reclassify` runs a
   fallback on low-confidence / closed-scope-screened ASVs. Per-classifier
   `scope:` is independent of the study-ingroup named prefix of
   `taxonomy.ranks`.

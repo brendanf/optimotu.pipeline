@@ -5,12 +5,147 @@ find_vsearch <- function() {
   find_executable("vsearch")
 }
 
+#' Whether `ref` is a list of named outgroup FASTA libraries
+#'
+#' @param x object passed as `ref`
+#' @return (`logical(1)`)
+#' @keywords internal
+#' @noRd
+is_outgroup_library_spec <- function(x) {
+  if (!is.list(x) || is.data.frame(x) || length(x) < 1L) {
+    return(FALSE)
+  }
+  all(vapply(
+    x,
+    function(el) {
+      is.list(el) &&
+        checkmate::test_string(el$sequences, min.chars = 1L)
+    },
+    logical(1)
+  ))
+}
+
+normalize_outgroup_library_spec <- function(x) {
+  nms <- names(x)
+  lapply(seq_along(x), function(i) {
+    el <- x[[i]]
+    nm <- el$name
+    if (is.null(nm) || !nzchar(nm)) {
+      nm <- if (!is.null(nms) && nzchar(nms[[i]])) nms[[i]] else NA_character_
+    }
+    checkmate::assert_string(nm, min.chars = 1L)
+    checkmate::assert_file_exists(el$sequences, "r")
+    list(name = nm, sequences = el$sequences, taxonomy = el$taxonomy)
+  })
+}
+
+outgroup_db_stream_is_gzip <- function(path) {
+  grepl("\\.gz$", path, ignore.case = TRUE)
+}
+
+#' Shell that writes prefixed FASTA from several libraries to a fifo
+#'
+#' @param libraries (`list`) each with `name` and `sequences`
+#' @param fifo (`character(1)`) fifo path
+#' @return (`character(1)`) bash script
+#' @keywords internal
+#' @noRd
+outgroup_db_stream_script <- function(libraries, fifo) {
+  parts <- vapply(
+    libraries,
+    function(lib) {
+      prefix <- paste0(lib$name, ":")
+      awk <- paste(
+        "awk -v p=",
+        shQuote(prefix, type = "sh"),
+        " '/^>/{print \">\" p substr($0,2); next} {print}'",
+        sep = ""
+      )
+      file <- shQuote(lib$sequences, type = "sh")
+      if (outgroup_db_stream_is_gzip(lib$sequences)) {
+        sprintf("{ gzip -dc %s | %s; }", file, awk)
+      } else {
+        sprintf("%s %s", awk, file)
+      }
+    },
+    character(1)
+  )
+  sprintf(
+    "{ %s; } > %s",
+    paste(parts, collapse = "; "),
+    shQuote(fifo, type = "sh")
+  )
+}
+
+#' Run an expression with `--db` pointing at a streamed multi-library FASTA
+#'
+#' Opens a fifo, writes `{library}:{header}` FASTA from `libraries`, and
+#' evaluates `fun(fifo)`. Does not write a concatenated FASTA or UDB.
+#' `--db -` is not used (vsearch rejects it).
+#'
+#' @param libraries (`list`) as from [outgroup_libraries()]
+#' @param fun (`function`) called with the fifo path
+#' @return the value of `fun(fifo)`
+#' @keywords internal
+#' @noRd
+with_outgroup_db_fifo <- function(libraries, fun) {
+  libraries <- normalize_outgroup_library_spec(libraries)
+  fifo <- tempfile(pattern = "outgroup_db_", fileext = ".fasta")
+  # tempfile() may create an empty file; mkfifo needs a free path.
+  if (file.exists(fifo)) {
+    unlink(fifo)
+  }
+  processx::run("mkfifo", fifo)
+  on.exit(unlink(fifo), add = TRUE)
+  writer <- processx::process$new(
+    command = "bash",
+    args = c("-c", outgroup_db_stream_script(libraries, fifo)),
+    stderr = "|",
+    supervise = TRUE
+  )
+  on.exit(
+    {
+      if (writer$is_alive()) {
+        writer$kill()
+      }
+    },
+    add = TRUE
+  )
+  result <- fun(fifo)
+  writer$wait()
+  status <- writer$get_exit_status()
+  if (!identical(status, 0L)) {
+    err <- paste(writer$read_error_lines(), collapse = "\n")
+    stop(
+      "Failed to stream outgroup libraries to vsearch --db",
+      if (nzchar(err)) paste0(":\n", err) else ".",
+      call. = FALSE
+    )
+  }
+  result
+}
+
+resolve_vsearch_db <- function(ref, fun) {
+  if (is_outgroup_library_spec(ref)) {
+    with_outgroup_db_fifo(ref, fun)
+  } else if (is.character(ref) && length(ref) == 1L && file.exists(ref)) {
+    fun(ref)
+  } else {
+    tref <- withr::local_tempfile(pattern = "ref", fileext = ".fasta")
+    write_sequence(ref, tref)
+    fun(tref)
+  }
+}
+
 #' "usearch_global" function of vsearch
 #'
 #' @param query (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
 #' `character` vector, or file name) query sequences
 #' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
-#' `character` vector, or file name) reference sequences
+#' `character` vector, file name, or a list of outgroup libraries as from
+#' [outgroup_libraries()]) reference sequences. A library list is streamed
+#' as one `--db` with `{library}:` header prefixes; no merged FASTA is
+#' written.
 #' @param threshold (`numeric` scalar) identity threshold, in range 0.0-1.0
 #' @param global (`logical` flag) if `TRUE`, end gaps and internal gaps are
 #' penalized equally.  Otherwise end gaps are not penalized.
@@ -40,33 +175,30 @@ vsearch_usearch_global <- function(
     tquery <- withr::local_tempfile(pattern = "query", fileext = ".fasta")
     write_sequence(query, tquery)
   }
-  if (is.character(ref) && length(ref) == 1 && file.exists(ref)) {
-    tref <- ref
-  } else {
-    tref <- withr::local_tempfile(pattern = "ref", fileext = ".fasta")
-    write_sequence(ref, tref)
-  }
   checkmate::assert_flag(global)
   gap <- if (global) "1" else "1I/0E"
-  # fmt: skip
-  uc <- system(
-    paste(
-      vsearch,
-      "--usearch_global", tquery,
-      "--db", tref,
-      "--id", threshold,
-      "--uc", "-",
-      "--maxaccepts", "100",
-      "--top_hits_only",
-      "--threads", ncpu,
-      "--gapopen", gap,
-      "--gapext", gap,
-      "--match", "1",
-      "--mismatch", "-1",
-      "| awk '$1==\"H\" {print $9,$10,$4}'"
-    ),
-    intern = TRUE
-  )
+  run_search <- function(tref) {
+    # fmt: skip
+    system(
+      paste(
+        vsearch,
+        "--usearch_global", tquery,
+        "--db", tref,
+        "--id", threshold,
+        "--uc", "-",
+        "--maxaccepts", "100",
+        "--top_hits_only",
+        "--threads", ncpu,
+        "--gapopen", gap,
+        "--gapext", gap,
+        "--match", "1",
+        "--mismatch", "-1",
+        "| awk '$1==\"H\" {print $9,$10,$4}'"
+      ),
+      intern = TRUE
+    )
+  }
+  uc <- resolve_vsearch_db(ref, run_search)
   stopifnot(attr(uc, "status") == 0)
   if (length(uc) > 0) {
     readr::read_delim(
@@ -94,7 +226,9 @@ vsearch_usearch_global <- function(
 #' @param query (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
 #' `character` vector, or file name) query sequences
 #' @param ref (`data.frame`, [`DNAStringSet`][Biostrings::XStringSet-class],
-#' `character` vector, or file name) reference sequences
+#' `character` vector, file name, or a list of outgroup libraries as from
+#' [outgroup_libraries()]) reference sequences. A library list is streamed
+#' as one `--db` with `{library}:` header prefixes.
 #' @param ncpu (`integer` count) number of threads passed to vsearch
 #'   (`--threads`).
 #' @param id_only (`logical` flag) if `TRUE`, return only the sequence IDs
@@ -173,41 +307,38 @@ vsearch_uchime_ref <- function(
     return(tibble::tibble(seq_id = character(), seq = character()))
   }
   tquery <- qfiles[[1L]]
-  if (checkmate::test_file_exists(ref, "r")) {
-    tref <- ref
-  } else {
-    tref <- withr::local_tempfile(pattern = "ref", fileext = ".fasta")
-    write_sequence(ref, tref)
-  }
   tchimeras <- withr::local_tempfile(pattern = "chimeras", fileext = ".fasta")
-  vs <- system2(
-    vsearch,
-    # fmt: skip
-    args = c(
-      "--uchime_ref", tquery,
-      "--db", tref,
-      "--chimeras", tchimeras,
-      "--threads", ncpu
+  run_uchime <- function(tref) {
+    vs <- system2(
+      vsearch,
+      # fmt: skip
+      args = c(
+        "--uchime_ref", tquery,
+        "--db", tref,
+        "--chimeras", tchimeras,
+        "--threads", ncpu
+      )
     )
-  )
-  stopifnot(vs == 0L)
-  if (id_only) {
-    out <- names(Biostrings::fasta.seqlengths(tchimeras))
-    if (id_is_int) {
-      as.integer(out)
+    stopifnot(vs == 0L)
+    if (id_only) {
+      out <- names(Biostrings::fasta.seqlengths(tchimeras))
+      if (id_is_int) {
+        as.integer(out)
+      } else {
+        out
+      }
     } else {
-      out
-    }
-  } else {
-    out <- Biostrings::readDNAStringSet(tchimeras) |>
-      as.character() |>
-      tibble::enframe(name = "seq_id", value = "seq")
-    if (id_is_int) {
-      dplyr::transmute(out, seq_idx = as.integer(seq_id), seq)
-    } else {
-      out
+      out <- Biostrings::readDNAStringSet(tchimeras) |>
+        as.character() |>
+        tibble::enframe(name = "seq_id", value = "seq")
+      if (id_is_int) {
+        dplyr::transmute(out, seq_idx = as.integer(seq_id), seq)
+      } else {
+        out
+      }
     }
   }
+  resolve_vsearch_db(ref, run_uchime)
 }
 
 #' Perform closed-reference clustering using vsearch

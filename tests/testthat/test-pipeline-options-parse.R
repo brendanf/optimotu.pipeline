@@ -1136,3 +1136,52 @@ test_that("parse_taxonomy_options validates reclassify configs", {
     "model_align"
   )
 })
+
+reset_outgroup_options <- function() {
+  options(
+    optimotu.pipeline.do_outgroup = FALSE,
+    optimotu.pipeline.outgroup_reference = NULL,
+    optimotu.pipeline.outgroup_taxonomy = NULL,
+    optimotu.pipeline.outgroup_libraries = NULL
+  )
+}
+
+test_that("parse_outgroup_options keeps a single sequences file", {
+  old <- options()
+  withr::defer(options(old))
+  reset_outgroup_options()
+  og_ref <- withr::local_tempfile(fileext = ".fasta")
+  file.create(og_ref)
+  og_tax <- withr::local_tempfile(fileext = ".tsv")
+  file.create(og_tax)
+  optimotu.pipeline:::parse_outgroup_options(
+    list(outgroup_reference = list(sequences = og_ref, taxonomy = og_tax))
+  )
+  expect_true(do_outgroup())
+  expect_equal(outgroup_reference(), og_ref)
+  expect_equal(outgroup_taxonomy(), og_tax)
+  expect_equal(outgroup_libraries()[[1L]]$name, "reference")
+  expect_equal(outgroup_libraries()[[1L]]$sequences, og_ref)
+})
+
+test_that("parse_outgroup_options accepts a named library map", {
+  old <- options()
+  withr::defer(options(old))
+  reset_outgroup_options()
+  bold <- withr::local_tempfile(fileext = ".fasta")
+  bact <- withr::local_tempfile(fileext = ".fasta.gz")
+  file.create(bold)
+  file.create(bact)
+  optimotu.pipeline:::parse_outgroup_options(
+    list(
+      outgroup_reference = list(
+        bold = list(sequences = bold),
+        bacteria = list(sequences = bact)
+      )
+    )
+  )
+  expect_true(do_outgroup())
+  expect_equal(names(outgroup_libraries()), c("bold", "bacteria"))
+  expect_error(outgroup_reference(), "outgroup_libraries")
+  expect_error(outgroup_taxonomy(), "outgroup_libraries")
+})

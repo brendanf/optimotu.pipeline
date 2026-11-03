@@ -19,7 +19,10 @@ vsearch_usearch_global(
 \code{character} vector, or file name) query sequences}
 
 \item{ref}{(\code{data.frame}, \code{\link[Biostrings:XStringSet-class]{DNAStringSet}},
-\code{character} vector, or file name) reference sequences}
+\code{character} vector, file name, or a list of outgroup libraries as from
+\code{\link[=outgroup_libraries]{outgroup_libraries()}}) reference sequences. A library list is streamed
+as one \code{--db} with \verb{\{library\}:} header prefixes; no merged FASTA is
+written.}
 
 \item{threshold}{(\code{numeric} scalar) identity threshold, in range 0.0-1.0}
 

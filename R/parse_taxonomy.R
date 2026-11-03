@@ -477,3 +477,128 @@ parse_taxonomy_header <- function(
   }
   dplyr::select(out, seq_id, dplyr::any_of(ranks))
 }
+
+#' Taxonomy table for one or more outgroup reference libraries
+#'
+#' Reads headers (or an optional sidecar) with
+#' [parse_reference_taxonomy()] and prefixes `seq_id` as
+#' `{library}:{seq_id}`. Sequence bodies are not read. Missing ranks are
+#' `NA`. Duplicate ids within one library are an error. Unrecognized
+#' headers name the library in the error.
+#'
+#' @param libraries (`list`) as returned by [outgroup_libraries()]
+#' @param ranks (`character`) taxonomic ranks to keep
+#' @return a `tibble` with `ref_id` and a column for each rank in `ranks`
+#' @export
+outgroup_library_taxonomy <- function(libraries, ranks = tax_ranks()) {
+  checkmate::assert_list(libraries, min.len = 1L)
+  checkmate::assert_character(ranks, min.len = 1L, any.missing = FALSE)
+  rows <- lapply(libraries, function(lib) {
+    checkmate::assert_list(lib)
+    checkmate::assert_string(lib$name, min.chars = 1L)
+    src <- lib$taxonomy
+    if (is.null(src) || !nzchar(src)) {
+      src <- lib$sequences
+    }
+    checkmate::assert_string(src, min.chars = 1L)
+    parsed <- tryCatch(
+      parse_reference_taxonomy(src, ranks = ranks),
+      error = function(e) {
+        stop(
+          "Outgroup library '",
+          lib$name,
+          "': ",
+          conditionMessage(e),
+          call. = FALSE
+        )
+      }
+    )
+    if (anyDuplicated(parsed$seq_id)) {
+      stop(
+        "Duplicate sequence ids in outgroup library '",
+        lib$name,
+        "'.",
+        call. = FALSE
+      )
+    }
+    parsed$ref_id <- paste(lib$name, parsed$seq_id, sep = ":")
+    parsed$seq_id <- NULL
+    missing_ranks <- setdiff(ranks, names(parsed))
+    for (rank in missing_ranks) {
+      parsed[[rank]] <- NA_character_
+    }
+    dplyr::select(parsed, "ref_id", dplyr::all_of(ranks))
+  })
+  dplyr::bind_rows(rows)
+}
+
+#' Keep the closest hit across outgroup libraries
+#'
+#' @param hits (`data.frame` or list of them) with `id_col`, `ref_id`,
+#'   and `dist`
+#' @param taxonomy (`data.frame`) from [outgroup_library_taxonomy()]
+#' @param id_col (`character(1)`) query id column (`seq_idx` or `seq_id`)
+#' @return `hits` reduced to one row per query, joined to `taxonomy`
+#' @export
+reduce_library_best_hits <- function(hits, taxonomy, id_col = "seq_idx") {
+  # NSE columns used below
+  dist <- NULL
+  checkmate::assert_string(id_col, min.chars = 1L)
+  if (is.list(hits) && !is.data.frame(hits)) {
+    hits <- dplyr::bind_rows(hits)
+  }
+  checkmate::assert_data_frame(hits)
+  checkmate::assert_names(
+    names(hits),
+    must.include = c(id_col, "ref_id", "dist")
+  )
+  checkmate::assert_data_frame(taxonomy)
+  checkmate::assert_names(names(taxonomy), must.include = "ref_id")
+  if (nrow(hits) == 0L) {
+    return(dplyr::left_join(hits, taxonomy, by = "ref_id"))
+  }
+  dplyr::slice_min(hits, dist, by = dplyr::all_of(id_col), with_ties = FALSE) |>
+    dplyr::left_join(taxonomy, by = "ref_id")
+}
+
+#' Parse streamed multi-library vsearch hit labels
+#'
+#' Headers are `{library}:{original header}`. Mixed BOLD and SINTAX
+#' labels are split on the first `:` and parsed per library.
+#'
+#' @param headers (`character`) vsearch target labels
+#' @return (`character`) `ref_id` values matching
+#'   [outgroup_library_taxonomy()]
+#' @export
+outgroup_hit_ref_ids <- function(headers) {
+  checkmate::assert_character(headers, any.missing = FALSE)
+  if (length(headers) == 0L) {
+    return(character())
+  }
+  if (any(!grepl(":", headers, fixed = TRUE))) {
+    stop(
+      "Expected library-prefixed hit labels of the form 'library:header'.",
+      call. = FALSE
+    )
+  }
+  prefix <- sub(":.*$", "", headers)
+  out <- character(length(headers))
+  split_i <- split(seq_along(headers), prefix)
+  for (lib in names(split_i)) {
+    idx <- split_i[[lib]]
+    parsed <- tryCatch(
+      fasta_header_seq_ids(headers[idx]),
+      error = function(e) {
+        stop(
+          "Outgroup library '",
+          lib,
+          "': ",
+          conditionMessage(e),
+          call. = FALSE
+        )
+      }
+    )
+    out[idx] <- parsed
+  }
+  out
+}

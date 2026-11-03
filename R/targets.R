@@ -20,6 +20,8 @@ get_target_names <- function(plan) {
 #' @param target_name (`character` string) the pre-mapping name of the target
 #' to extract variants of
 #' @return a `list` of `symbol` giving the names of the target variants
+#' @rdname tar_map_bind_rows
+#' @export
 tar_map_symbols <- function(plan, target_name = NULL) {
   if (!is.null(target_name)) {
     plan <- plan[[target_name]]
